@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -139,6 +140,12 @@
   .popover { position:absolute; margin-top:6px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px; box-shadow:var(--shadow); z-index:50; width:220px; }
   ::placeholder { color:var(--text-dim); opacity:.7; }
 
+  .mini-thumb-btn { display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .mini-thumb-btn .thumb-add { width:64px; height:64px; border:1px dashed var(--border); border-radius:6px; background:var(--surface-2); color:var(--text-dim); font-size:10.5px; display:flex; align-items:center; justify-content:center; cursor:pointer; text-align:center; line-height:1.2; padding:2px; }
+  .mini-thumb-btn .thumb-add:hover { border-color:var(--accent); color:var(--accent); }
+  .mini-thumb-btn button.chg { font-size:10px; padding:2px 6px; }
+  .status-summary { display:flex; gap:8px; flex-wrap:wrap; margin:2px 0 12px; }
+  .status-summary .chip { font-size:11.5px; font-weight:600; padding:4px 10px; border-radius:20px; border:1px solid var(--border); background:var(--surface-2); }
   .setup-overlay { position:fixed; inset:0; background:var(--bg); z-index:2000; overflow:auto; padding:30px 16px; }
   .setup-box { max-width:640px; margin:0 auto; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:26px; box-shadow:var(--shadow); }
   .setup-box h2 { margin-top:0; }
@@ -262,9 +269,12 @@
         <div class="row-flex">
           <label style="font-size:12.5px; color:var(--text-dim);">Tanggal:</label>
           <input type="date" id="dailyDate">
+          <label style="font-size:12.5px; color:var(--text-dim);">Project:</label>
+          <select id="dailyProjectFilter" style="width:auto; min-width:150px;"><option value="">Semua Project</option></select>
         </div>
-        <button class="primary" id="btnExportDaily">⬇ Export PDF (Semua Project)</button>
+        <button class="primary" id="btnExportDaily">⬇ Export PDF</button>
       </div>
+      <div class="status-summary" id="dailyStatusSummary"></div>
       <div id="dailyWrap" style="margin-top:12px;"><div class="empty-state">Memuat data…</div></div>
     </div>
   </div>
@@ -378,6 +388,23 @@
   document.getElementById("dailyDate").value = todayStr();
 
   document.getElementById("connPill").textContent = "💾 Tersinkron via Firebase";
+
+  // Reusable hidden file input for attaching/replacing a single image (used by
+  // table rows and the detail modal for both existing & expected images).
+  const hiddenImgInput = document.createElement("input");
+  hiddenImgInput.type = "file"; hiddenImgInput.accept = "image/*"; hiddenImgInput.style.display = "none";
+  document.body.appendChild(hiddenImgInput);
+  function pickImageFor(onPicked){
+    hiddenImgInput.onchange = async ()=>{
+      const f = hiddenImgInput.files && hiddenImgInput.files[0];
+      hiddenImgInput.value = "";
+      if(!f) return;
+      const dataUrl = await fileToStoredImage(f);
+      if(!dataUrl){ toast("Gambar terlalu besar, coba screenshot area lebih kecil."); return; }
+      onPicked(dataUrl);
+    };
+    hiddenImgInput.click();
+  }
 
   db.collection("projects").orderBy("createdAt","asc").onSnapshot(
     snap=>{
@@ -519,12 +546,17 @@
       wrap.innerHTML = '<div class="empty-state">Belum ada bug.</div>';
       return;
     }
-    let html = '<table><thead><tr><th style="width:74px;">Gambar</th><th>Existing</th><th>Expected</th><th style="width:120px;">Status</th><th style="width:90px;">Tanggal</th><th style="width:36px;"></th></tr></thead><tbody>';
+    let html = '<table><thead><tr><th style="width:74px;">Gambar</th><th>Existing</th><th>Expected</th><th style="width:74px;">Gambar Expected</th><th style="width:120px;">Status</th><th style="width:90px;">Tanggal</th><th style="width:36px;"></th></tr></thead><tbody>';
     for(const e of list){
       html += '<tr data-id="'+e.id+'">';
       html += '<td>'+(e.imageData ? '<img class="thumb" data-img="'+e.imageData+'" src="'+e.imageData+'">' : '<div class="thumb empty">-</div>')+'</td>';
       html += '<td><textarea data-f="existing" placeholder="Kondisi saat ini...">'+esc(e.existing)+'</textarea></td>';
       html += '<td><textarea data-f="expected" placeholder="Kondisi yang diharapkan...">'+esc(e.expected)+'</textarea></td>';
+      html += '<td><div class="mini-thumb-btn">'+
+        (e.expectedImageData
+          ? '<img class="thumb" data-img="'+e.expectedImageData+'" src="'+e.expectedImageData+'"><button class="chg" data-add-exp-img>Ganti</button>'
+          : '<div class="thumb-add" data-add-exp-img>+ gambar</div>')+
+        '</div></td>';
       html += '<td><select data-f="status">'+STATUS_OPTS.map(s=>'<option value="'+s+'" '+(e.status===s?'selected':'')+'>'+s+'</option>').join('')+'</select></td>';
       html += '<td style="font-size:12px; color:var(--text-dim);">'+fmtDate(e.date)+'</td>';
       html += '<td><button class="danger-outline" data-del-entry style="padding:5px 8px;">✕</button></td>';
@@ -547,6 +579,12 @@
     });
     wrap.querySelectorAll("[data-img]").forEach(img=>{
       img.addEventListener("click", ()=>showLightbox(img.dataset.img));
+    });
+    wrap.querySelectorAll("[data-add-exp-img]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const id = btn.closest("tr").dataset.id;
+        pickImageFor(dataUrl=>updateEntry(id, { expectedImageData: dataUrl }));
+      });
     });
   }
 
@@ -577,7 +615,7 @@
     const date = document.getElementById("quickDate").value || todayStr();
     try{
       await db.collection("entries").add({
-        projectId: proj.id, date, imageData: null,
+        projectId: proj.id, date, imageData: null, expectedImageData: null,
         existing:"", expected:"", status:"Open", createdAt: Date.now()
       });
       toast("Bug manual ditambahkan.");
@@ -595,9 +633,14 @@
     overlay.className = "modal-overlay";
     overlay.innerHTML =
       '<div class="modal-box">'+
-        (e.imageData ? '<img class="preview" src="'+e.imageData+'">' : '<div class="hint">Tanpa gambar</div>')+
+        (e.imageData ? '<img class="preview" id="mExistingImg" src="'+e.imageData+'">' : '<div class="hint" id="mExistingImg">Tanpa gambar existing</div>')+
         '<label>Existing</label><textarea id="mExisting">'+esc(e.existing)+'</textarea>'+
+        '<div id="mExpImgWrap">'+(e.expectedImageData ? '<img class="preview" id="mExpectedImg" src="'+e.expectedImageData+'">' : '')+'</div>'+
         '<label>Expected</label><textarea id="mExpected">'+esc(e.expected)+'</textarea>'+
+        '<div class="row-flex" style="margin-top:4px;">'+
+          '<button id="mAddExpImg">'+(e.expectedImageData?'Ganti gambar expected':'+ Tambah gambar expected')+'</button>'+
+          (e.expectedImageData ? '<button class="danger-outline" id="mRemoveExpImg">Hapus gambar expected</button>' : '')+
+        '</div>'+
         '<label>Status</label><select id="mStatus">'+STATUS_OPTS.map(s=>'<option value="'+s+'" '+(e.status===s?'selected':'')+'>'+s+'</option>').join('')+'</select>'+
         '<label>Tanggal</label><input type="date" id="mDate" value="'+e.date+'">'+
         '<div class="modal-actions">'+
@@ -607,15 +650,48 @@
         '</div>'+
       '</div>';
     document.body.appendChild(overlay);
+    let pendingExpectedImage; // undefined = no change; null = remove; string = replace
+    const expImgWrap = overlay.querySelector("#mExpImgWrap");
+    const addExpBtn = overlay.querySelector("#mAddExpImg");
+    let removeExpBtn = overlay.querySelector("#mRemoveExpImg");
+    function bindRemoveExpBtn(){
+      if(removeExpBtn) removeExpBtn.onclick = ()=>{ pendingExpectedImage = null; refreshExpUI(null); };
+    }
+    function refreshExpUI(dataUrl){
+      expImgWrap.innerHTML = dataUrl ? '<img class="preview" id="mExpectedImg" src="'+dataUrl+'">' : '';
+      addExpBtn.textContent = dataUrl ? "Ganti gambar expected" : "+ Tambah gambar expected";
+      if(dataUrl){
+        if(!removeExpBtn){
+          removeExpBtn = document.createElement("button");
+          removeExpBtn.className = "danger-outline";
+          removeExpBtn.textContent = "Hapus gambar expected";
+          addExpBtn.insertAdjacentElement("afterend", removeExpBtn);
+        }
+        bindRemoveExpBtn();
+      } else if(removeExpBtn){
+        removeExpBtn.remove();
+        removeExpBtn = null;
+      }
+    }
+    bindRemoveExpBtn();
+    addExpBtn.onclick = ()=>{
+      pickImageFor(dataUrl=>{
+        pendingExpectedImage = dataUrl;
+        refreshExpUI(dataUrl);
+        toast("Gambar expected siap — klik Simpan.");
+      });
+    };
     overlay.onclick = ev=>{ if(ev.target===overlay) overlay.remove(); };
     overlay.querySelector("#mCancel").onclick = ()=>overlay.remove();
     overlay.querySelector("#mSave").onclick = async ()=>{
-      await updateEntry(id, {
+      const patch = {
         existing: overlay.querySelector("#mExisting").value,
         expected: overlay.querySelector("#mExpected").value,
         status: overlay.querySelector("#mStatus").value,
         date: overlay.querySelector("#mDate").value || e.date
-      });
+      };
+      if(pendingExpectedImage !== undefined) patch.expectedImageData = pendingExpectedImage;
+      await updateEntry(id, patch);
       overlay.remove();
     };
     overlay.querySelector("#mDelete").onclick = async ()=>{
@@ -640,7 +716,7 @@
     if(!files.length) return;
     if(!projects.length){ toast("Tambahkan project dulu sebelum upload gambar."); return; }
     for(const f of files){
-      staging.push({ localId: Math.random().toString(36).slice(2), file: f, previewUrl: URL.createObjectURL(f), projectId: selectedProjectId || projects[0].id, existing:"", expected:"", status:"Open" });
+      staging.push({ localId: Math.random().toString(36).slice(2), file: f, previewUrl: URL.createObjectURL(f), projectId: selectedProjectId || projects[0].id, existing:"", expected:"", status:"Open", expectedFile:null, expectedPreviewUrl:null });
     }
     renderStaging();
   }
@@ -655,8 +731,13 @@
         '<img src="'+s.previewUrl+'">'+
         '<div class="staging-fields">'+
           '<div class="full"><label>Project</label><select data-sf="projectId">'+projOpts+'</select></div>'+
-          '<div><label>Existing</label><textarea data-sf="existing" placeholder="Kondisi saat ini"></textarea></div>'+
-          '<div><label>Expected</label><textarea data-sf="expected" placeholder="Kondisi diharapkan"></textarea></div>'+
+          '<div><label>Existing</label><textarea data-sf="existing" placeholder="Kondisi saat ini">'+esc(s.existing)+'</textarea></div>'+
+          '<div><label>Expected</label><textarea data-sf="expected" placeholder="Kondisi diharapkan">'+esc(s.expected)+'</textarea></div>'+
+          '<div class="full"><label>Gambar Expected (opsional)</label><div class="mini-thumb-btn" style="align-items:flex-start;">'+
+            (s.expectedPreviewUrl
+              ? '<img src="'+s.expectedPreviewUrl+'" style="width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"><button class="chg" data-add-staging-exp-img>Ganti</button>'
+              : '<div class="thumb-add" data-add-staging-exp-img style="width:auto; padding:8px 12px;">+ pilih gambar</div>')+
+          '</div></div>'+
           '<div><label>Status</label><select data-sf="status">'+STATUS_OPTS.map(o=>'<option value="'+o+'">'+o+'</option>').join('')+'</select></div>'+
           '<div style="display:flex; align-items:flex-end;"><button class="danger-outline" data-remove-staging style="width:100%;">Hapus</button></div>'+
         '</div></div>';
@@ -669,8 +750,22 @@
         f.addEventListener("input", ()=>{ s[f.dataset.sf]=f.value; });
         f.addEventListener("change", ()=>{ s[f.dataset.sf]=f.value; });
       });
+      el.querySelector("[data-add-staging-exp-img]").addEventListener("click", ()=>{
+        const tmpInput = document.createElement("input");
+        tmpInput.type = "file"; tmpInput.accept = "image/*";
+        tmpInput.onchange = ()=>{
+          const f = tmpInput.files && tmpInput.files[0];
+          if(!f) return;
+          if(s.expectedPreviewUrl) URL.revokeObjectURL(s.expectedPreviewUrl);
+          s.expectedFile = f;
+          s.expectedPreviewUrl = URL.createObjectURL(f);
+          renderStaging();
+        };
+        tmpInput.click();
+      });
       el.querySelector("[data-remove-staging]").addEventListener("click", ()=>{
         URL.revokeObjectURL(s.previewUrl);
+        if(s.expectedPreviewUrl) URL.revokeObjectURL(s.expectedPreviewUrl);
         staging = staging.filter(x=>x.localId!==s.localId);
         renderStaging();
       });
@@ -691,14 +786,17 @@
       if(!s.projectId) continue;
       try{
         const imageData = await fileToStoredImage(s.file);
-        if(!imageData){ tooBig++; URL.revokeObjectURL(s.previewUrl); continue; }
+        if(!imageData){ tooBig++; URL.revokeObjectURL(s.previewUrl); if(s.expectedPreviewUrl) URL.revokeObjectURL(s.expectedPreviewUrl); continue; }
+        let expectedImageData = null;
+        if(s.expectedFile){ expectedImageData = await fileToStoredImage(s.expectedFile); }
         await db.collection("entries").add({
-          projectId: s.projectId, date, imageData,
+          projectId: s.projectId, date, imageData, expectedImageData,
           existing: s.existing||"", expected: s.expected||"", status: s.status||"Open", createdAt: Date.now()
         });
         ok++;
       }catch(e){ /* continue with the rest */ }
       URL.revokeObjectURL(s.previewUrl);
+      if(s.expectedPreviewUrl) URL.revokeObjectURL(s.expectedPreviewUrl);
     }
     staging = [];
     renderStaging();
@@ -707,23 +805,44 @@
   });
 
   // ================= daily (all projects) tab =================
+  function renderDailyStatusSummary(list){
+    const el = document.getElementById("dailyStatusSummary");
+    if(!list.length){ el.innerHTML = ""; return; }
+    const counts = {}; STATUS_OPTS.forEach(s=>counts[s]=0);
+    list.forEach(e=>{ if(counts[e.status]===undefined) counts[e.status]=0; counts[e.status]++; });
+    let html = '<span class="chip">Total: '+list.length+' bug</span>';
+    STATUS_OPTS.forEach(s=>{ html += '<span class="chip" style="color:'+STATUS_COLOR[s]+';">'+s+': '+counts[s]+'</span>'; });
+    el.innerHTML = html;
+  }
+  function populateDailyProjectFilter(){
+    const sel = document.getElementById("dailyProjectFilter");
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">Semua Project</option>' + projects.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join("");
+    if(prev && projects.find(p=>p.id===prev)) sel.value = prev;
+  }
   function renderDailyTab(){
+    populateDailyProjectFilter();
     const date = document.getElementById("dailyDate").value || todayStr();
+    const projectFilter = document.getElementById("dailyProjectFilter").value;
     const wrap = document.getElementById("dailyWrap");
-    const list = entries.filter(e=>e.date===date);
-    if(!projects.length){ wrap.innerHTML = '<div class="empty-state">Belum ada project.</div>'; return; }
-    if(!list.length){ wrap.innerHTML = '<div class="empty-state">Tidak ada bug pada tanggal ini di semua project.</div>'; return; }
+    let list = entries.filter(e=>e.date===date);
+    if(projectFilter) list = list.filter(e=>e.projectId===projectFilter);
+    if(!projects.length){ wrap.innerHTML = '<div class="empty-state">Belum ada project.</div>'; document.getElementById("dailyStatusSummary").innerHTML=""; return; }
+    renderDailyStatusSummary(list);
+    if(!list.length){ wrap.innerHTML = '<div class="empty-state">Tidak ada bug pada tanggal ini'+(projectFilter?" untuk project ini.":" di semua project.")+'</div>'; return; }
     let html = "";
-    for(const p of projects){
+    const groups = projectFilter ? projects.filter(p=>p.id===projectFilter) : projects;
+    for(const p of groups){
       const rows = list.filter(e=>e.projectId===p.id);
       if(!rows.length) continue;
       html += '<div class="project-group"><h4>'+esc(p.name)+' <span class="hint" style="margin:0;">('+rows.length+' bug)</span></h4>';
-      html += '<table><thead><tr><th style="width:74px;">Gambar</th><th>Existing</th><th>Expected</th><th style="width:110px;">Status</th></tr></thead><tbody>';
+      html += '<table><thead><tr><th style="width:74px;">Gambar</th><th>Existing</th><th>Expected</th><th style="width:74px;">Gambar Expected</th><th style="width:110px;">Status</th></tr></thead><tbody>';
       for(const e of rows){
         html += '<tr>';
         html += '<td>'+(e.imageData ? '<img class="thumb" data-img="'+e.imageData+'" src="'+e.imageData+'">' : '<div class="thumb empty">-</div>')+'</td>';
         html += '<td>'+esc(e.existing || "-")+'</td>';
         html += '<td>'+esc(e.expected || "-")+'</td>';
+        html += '<td>'+(e.expectedImageData ? '<img class="thumb" data-img="'+e.expectedImageData+'" src="'+e.expectedImageData+'">' : '<div class="thumb empty">-</div>')+'</td>';
         html += '<td><span class="badge '+e.status.replace(" ","-")+'">'+e.status+'</span></td>';
         html += '</tr>';
       }
@@ -733,6 +852,7 @@
     wrap.querySelectorAll("[data-img]").forEach(img=>img.addEventListener("click", ()=>showLightbox(img.dataset.img)));
   }
   document.getElementById("dailyDate").addEventListener("change", renderDailyTab);
+  document.getElementById("dailyProjectFilter").addEventListener("change", renderDailyTab);
 
   // ================= tabs =================
   document.querySelectorAll(".tab-btn").forEach(btn=>{
@@ -750,23 +870,36 @@
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit:"mm", format:"a4" });
 
-    const imageData = await Promise.all(rows.map(async r=>{
+    const existingImgs = await Promise.all(rows.map(async r=>{
       if(!r.imageData) return null;
       const dims = await loadImageDims(r.imageData);
       return dims ? { dataUrl: r.imageData, w: dims.w, h: dims.h } : null;
+    }));
+    const expectedImgs = await Promise.all(rows.map(async r=>{
+      if(!r.expectedImageData) return null;
+      const dims = await loadImageDims(r.expectedImageData);
+      return dims ? { dataUrl: r.expectedImageData, w: dims.w, h: dims.h } : null;
     }));
 
     doc.setFont("helvetica","bold"); doc.setFontSize(14);
     doc.text(title, 12, 14);
     doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(120);
     doc.text("Dibuat: " + new Date().toLocaleString("id-ID"), 12, 20);
+
+    // total bug per status summary line
+    const counts = {}; STATUS_OPTS.forEach(s=>counts[s]=0);
+    rows.forEach(r=>{ if(counts[r.status]===undefined) counts[r.status]=0; counts[r.status]++; });
+    const summaryLine = "Total: " + rows.length + " bug   |   " + STATUS_OPTS.map(s=>s+": "+counts[s]).join("   |   ");
+    doc.setFontSize(9.5); doc.setTextColor(60);
+    doc.text(summaryLine, 12, 25.5);
     doc.setTextColor(20);
 
     const head = includeProjectCol
-      ? [["Project","Attachment","Existing","Expected","Status"]]
-      : [["Attachment","Existing","Expected","Status"]];
-    const attCol = includeProjectCol ? 1 : 0;
-    const statusCol = includeProjectCol ? 4 : 3;
+      ? [["Project","Existing (Gbr)","Existing","Expected","Expected (Gbr)","Status"]]
+      : [["Existing (Gbr)","Existing","Expected","Expected (Gbr)","Status"]];
+    const existImgCol = includeProjectCol ? 1 : 0;
+    const expImgCol = includeProjectCol ? 4 : 3;
+    const statusCol = includeProjectCol ? 5 : 4;
 
     const body = rows.map(r=>{
       const row = [];
@@ -774,17 +907,36 @@
       row.push({ content:"", styles:{ minCellHeight: 32 } });
       row.push(r.existing || "-");
       row.push(r.expected || "-");
+      row.push({ content:"", styles:{ minCellHeight: 32 } });
       row.push(r.status || "-");
       return row;
     });
 
     const columnStyles = {};
-    columnStyles[attCol] = { cellWidth: 38 };
-    columnStyles[statusCol] = { cellWidth: 22 };
-    if(includeProjectCol) columnStyles[0] = { cellWidth: 24 };
+    columnStyles[existImgCol] = { cellWidth: 32 };
+    columnStyles[expImgCol] = { cellWidth: 32 };
+    columnStyles[statusCol] = { cellWidth: 20 };
+    if(includeProjectCol) columnStyles[0] = { cellWidth: 22 };
+
+    function drawAttachment(data, info){
+      const pad = 1.5;
+      const maxW = data.cell.width - pad*2;
+      const maxH = data.cell.height - pad*2;
+      if(info){
+        const scale = Math.min(maxW/info.w, maxH/info.h);
+        const dw = info.w*scale, dh = info.h*scale;
+        const dx = data.cell.x + (data.cell.width-dw)/2;
+        const dy = data.cell.y + (data.cell.height-dh)/2;
+        try{ doc.addImage(info.dataUrl, "JPEG", dx, dy, dw, dh); }catch(e){}
+      } else {
+        doc.setFontSize(7.5); doc.setTextColor(170);
+        doc.text("(tanpa gambar)", data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2, { align:"center", baseline:"middle" });
+        doc.setFontSize(9); doc.setTextColor(20);
+      }
+    }
 
     doc.autoTable({
-      startY: 26,
+      startY: 30,
       head, body,
       theme: "grid",
       styles: { font:"helvetica", fontSize:9, cellPadding:3, overflow:"linebreak", valign:"middle", lineColor:[210,212,218], lineWidth:0.2 },
@@ -792,23 +944,9 @@
       alternateRowStyles: { fillColor:[246,247,250] },
       columnStyles,
       didDrawCell: data=>{
-        if(data.section==="body" && data.column.index===attCol){
-          const info = imageData[data.row.index];
-          const pad = 1.5;
-          const maxW = data.cell.width - pad*2;
-          const maxH = data.cell.height - pad*2;
-          if(info){
-            const scale = Math.min(maxW/info.w, maxH/info.h);
-            const dw = info.w*scale, dh = info.h*scale;
-            const dx = data.cell.x + (data.cell.width-dw)/2;
-            const dy = data.cell.y + (data.cell.height-dh)/2;
-            try{ doc.addImage(info.dataUrl, "JPEG", dx, dy, dw, dh); }catch(e){}
-          } else {
-            doc.setFontSize(7.5); doc.setTextColor(170);
-            doc.text("(tanpa gambar)", data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2, { align:"center", baseline:"middle" });
-            doc.setFontSize(9); doc.setTextColor(20);
-          }
-        }
+        if(data.section!=="body") return;
+        if(data.column.index===existImgCol) drawAttachment(data, existingImgs[data.row.index]);
+        else if(data.column.index===expImgCol) drawAttachment(data, expectedImgs[data.row.index]);
       }
     });
 
@@ -837,12 +975,16 @@
 
   document.getElementById("btnExportDaily").addEventListener("click", async ()=>{
     const date = document.getElementById("dailyDate").value || todayStr();
-    const list = entries.filter(e=>e.date===date).map(e=>({
+    const projectFilter = document.getElementById("dailyProjectFilter").value;
+    let list = entries.filter(e=>e.date===date);
+    if(projectFilter) list = list.filter(e=>e.projectId===projectFilter);
+    list = list.map(e=>({
       ...e, projectName: (projects.find(p=>p.id===e.projectId)||{}).name || "-"
     })).sort((a,b)=> (a.projectName||"").localeCompare(b.projectName||"") || (a.createdAt-b.createdAt));
     if(!list.length){ toast("Tidak ada bug pada tanggal ini."); return; }
-    const title = "Laporan Harian — Semua Project — " + fmtDate(date);
-    await buildAndSavePdf(title, list, true, "laporan_harian_" + date);
+    const projLabel = projectFilter ? (projects.find(p=>p.id===projectFilter)||{}).name || "Project" : "Semua Project";
+    const title = "Laporan Harian — " + projLabel + " — " + fmtDate(date);
+    await buildAndSavePdf(title, list, !projectFilter, "laporan_harian_" + (projectFilter?projLabel.replace(/\W+/g,"_")+"_":"") + date);
   });
 
 })();
