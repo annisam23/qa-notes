@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Daily Report — Multi Project (Firebase)</title>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+  :root {
+    --bg: #f4f5f7; --surface: #ffffff; --surface-2: #f0f1f4; --border: #e0e2e7;
+    --text: #1a1d23; --text-dim: #6b7078; --accent: #4f46e5; --accent-text: #ffffff;
+    --danger: #dc2626; --ok: #16a34a; --warn: #d97706; --gray: #6b7078;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:#16171b; --surface:#1e2025; --surface-2:#26282e; --border:#34363c;
+      --text:#e8e9ec; --text-dim:#9a9ea6; --accent:#818cf8; --accent-text:#14151a;
+      --danger:#f87171; --ok:#4ade80; --warn:#fbbf24; --gray:#9a9ea6;
+      --shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:#16171b; --surface:#1e2025; --surface-2:#26282e; --border:#34363c;
+    --text:#e8e9ec; --text-dim:#9a9ea6; --accent:#818cf8; --accent-text:#14151a;
+    --danger:#f87171; --ok:#4ade80; --warn:#fbbf24; --gray:#9a9ea6;
+    --shadow: 0 1px 3px rgba(0,0,0,0.4);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 60px; }
+  header.top { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+  header.top h1 { font-size:19px; margin:0; font-weight:700; }
+  header.top .sub { font-size:12.5px; color:var(--text-dim); margin-top:2px; }
+  .status-pill { font-size:11px; padding:4px 9px; border-radius:20px; border:1px solid var(--border); color:var(--text-dim); background:var(--surface); white-space:nowrap; }
+  .tabs { display:flex; gap:6px; margin-bottom:14px; border-bottom:1px solid var(--border); }
+  .tab-btn { background:transparent; border:none; color:var(--text-dim); font-size:14px; font-weight:600; padding:10px 14px; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
+  .tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
+  .tab-panel { display:none; } .tab-panel.active { display:block; }
+
+  .proj-tabs-wrap { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+  .proj-tabs { display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; flex:1; scrollbar-width: thin; }
+  .proj-tab {
+    display:flex; align-items:center; gap:6px; white-space:nowrap; padding:8px 12px; border-radius:20px;
+    border:1px solid var(--border); background:var(--surface); font-size:13px; font-weight:600; cursor:pointer;
+  }
+  .proj-tab.active { background:var(--accent); color:var(--accent-text); border-color:var(--accent); }
+  .proj-tab .cnt { font-size:11px; opacity:.75; font-weight:400; }
+  .proj-tab .del-x { opacity:.5; background:none; border:none; color:inherit; cursor:pointer; font-size:12px; padding:0 2px; }
+  .proj-tab .del-x:hover { opacity:1; }
+  .add-proj-btn { border-radius:20px; padding:8px 14px; white-space:nowrap; }
+
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px; box-shadow:var(--shadow); }
+  .card + .card { margin-top:14px; }
+  .card h3 { margin:0 0 10px; font-size:13px; text-transform:uppercase; letter-spacing:.03em; color:var(--text-dim); }
+
+  input[type=text], input[type=date], textarea, select {
+    background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+    border-radius:7px; padding:7px 9px; font-size:13.5px; font-family:inherit; width:100%;
+  }
+  textarea { resize:vertical; min-height:34px; line-height:1.35; }
+  button {
+    font-family:inherit; font-size:13px; font-weight:600; cursor:pointer; border-radius:7px;
+    border:1px solid var(--border); background:var(--surface-2); color:var(--text); padding:8px 12px;
+  }
+  button:hover { filter:brightness(1.05); }
+  button.primary { background:var(--accent); color:var(--accent-text); border-color:var(--accent); }
+  button.danger-outline { color:var(--danger); border-color:var(--danger); background:transparent; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .row-flex { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .between { justify-content:space-between; }
+
+  .drop-zone { border:2px dashed var(--border); border-radius:12px; padding:22px 14px; text-align:center; color:var(--text-dim); font-size:13.5px; cursor:pointer; transition:.15s; }
+  .drop-zone.drag-over { border-color:var(--accent); background:var(--surface-2); color:var(--text); }
+  .drop-zone b { color:var(--text); }
+  .staging-list { display:flex; flex-direction:column; gap:10px; margin-top:12px; }
+  .staging-item { display:grid; grid-template-columns:64px 1fr; gap:10px; padding:10px; border:1px solid var(--border); border-radius:10px; background:var(--surface-2); }
+  .staging-item img { width:64px; height:64px; object-fit:cover; border-radius:6px; border:1px solid var(--border); }
+  .staging-fields { display:grid; gap:6px; grid-template-columns:1fr 1fr; }
+  .staging-fields .full { grid-column:1/-1; }
+  .staging-fields label { font-size:10.5px; color:var(--text-dim); display:block; margin-bottom:2px; }
+
+  .view-toggle { display:flex; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .view-toggle button { border:none; border-radius:0; background:var(--surface-2); }
+  .view-toggle button.active { background:var(--accent); color:var(--accent-text); }
+
+  .board { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:4px; }
+  @media (max-width:900px) { .board { grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:520px) { .board { grid-template-columns:1fr; } }
+  .board-col { background:var(--surface-2); border-radius:10px; padding:10px; min-height:80px; }
+  .board-col h4 { margin:0 0 8px; font-size:12.5px; display:flex; align-items:center; justify-content:space-between; }
+  .board-col h4 .dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; }
+  .card-item { background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:8px; margin-bottom:8px; cursor:pointer; }
+  .card-item:hover { border-color: var(--accent); }
+  .card-item img { width:100%; height:80px; object-fit:cover; border-radius:6px; display:block; margin-bottom:6px; background:var(--surface-2); }
+  .card-item .imgless { width:100%; height:40px; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--text-dim); background:var(--surface-2); border-radius:6px; margin-bottom:6px; }
+  .card-item .exc { font-size:12px; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; margin-bottom:4px; }
+  .card-item .meta { font-size:10.5px; color:var(--text-dim); }
+  .board-empty { font-size:12px; color:var(--text-dim); text-align:center; padding:14px 4px; }
+
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  thead th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.03em; color:var(--text-dim); padding:6px 8px; border-bottom:1px solid var(--border); }
+  tbody td { padding:8px; border-bottom:1px solid var(--border); vertical-align:top; }
+  tbody tr:last-child td { border-bottom:none; }
+  .thumb { width:64px; height:64px; object-fit:cover; border-radius:6px; border:1px solid var(--border); cursor:zoom-in; background:var(--surface-2); }
+  .thumb.empty { display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--text-dim); }
+  .badge { font-size:11px; font-weight:700; padding:3px 8px; border-radius:20px; display:inline-block; }
+  .badge.Open { background:rgba(220,38,38,.15); color:var(--danger); }
+  .badge.In-Progress { background:rgba(217,119,6,.15); color:var(--warn); }
+  .badge.Fixed { background:rgba(22,163,74,.15); color:var(--ok); }
+  .badge.Rejected { background:rgba(107,112,120,.18); color:var(--gray); }
+  .empty-state { text-align:center; padding:40px 10px; color:var(--text-dim); font-size:13.5px; }
+  .toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+  .project-group { margin-bottom:18px; }
+  .project-group h4 { font-size:13.5px; margin:0 0 8px; display:flex; align-items:center; gap:8px; }
+
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; z-index:999; padding:20px; }
+  .modal-box { background:var(--surface); border-radius:12px; padding:18px; max-width:420px; width:100%; box-shadow:var(--shadow); max-height:90vh; overflow:auto; }
+  .modal-box p { font-size:13.5px; margin:0 0 14px; }
+  .modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:12px; flex-wrap:wrap; }
+  .modal-box label { font-size:11px; color:var(--text-dim); display:block; margin:10px 0 4px; }
+  .modal-box img.preview { max-width:100%; max-height:180px; border-radius:8px; border:1px solid var(--border); display:block; margin-bottom:6px; }
+
+  .lightbox { position:fixed; inset:0; background:rgba(0,0,0,.85); display:flex; align-items:center; justify-content:center; z-index:1000; padding:24px; }
+  .lightbox img { max-width:100%; max-height:100%; border-radius:8px; }
+  .toast { position:fixed; bottom:calc(20px + env(safe-area-inset-bottom, 0px)); left:50%; transform:translateX(-50%); background:var(--text); color:var(--bg); padding:9px 16px; border-radius:20px; font-size:12.5px; z-index:1001; box-shadow:var(--shadow); opacity:0; pointer-events:none; transition:opacity .2s; max-width: 90vw; text-align:center; }
+  .toast.show { opacity:1; }
+  .hint { font-size:11.5px; color:var(--text-dim); margin-top:6px; }
+  .popover { position:absolute; margin-top:6px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px; box-shadow:var(--shadow); z-index:50; width:220px; }
+  ::placeholder { color:var(--text-dim); opacity:.7; }
+
+  .setup-overlay { position:fixed; inset:0; background:var(--bg); z-index:2000; overflow:auto; padding:30px 16px; }
+  .setup-box { max-width:640px; margin:0 auto; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:26px; box-shadow:var(--shadow); }
+  .setup-box h2 { margin-top:0; }
+  .setup-box ol { padding-left: 20px; line-height:1.8; font-size:14px; }
+  .setup-box code { background:var(--surface-2); padding:2px 6px; border-radius:5px; font-size:12.5px; }
+  .setup-box pre { background:var(--surface-2); padding:12px; border-radius:8px; overflow:auto; font-size:12px; }
+</style>
+</head>
+<body>
+
+<!-- ============ FIREBASE CONFIG — GANTI BAGIAN INI SEBELUM DEPLOY ============ -->
+<script>
+  window.__FIREBASE_CONFIG__ = {
+    apiKey: "AIzaSyBbWlix5EAJ9-osukl-i6e3I_bfX-53DvU",
+    authDomain: "qa-notes-14208.firebaseapp.com",
+    projectId: "qa-notes-14208",
+    storageBucket: "qa-notes-14208.firebasestorage.app",
+    messagingSenderId: "607142109938",
+    appId: "1:607142109938:web:b6e8ea0f0ad6847460a66b"
+  };
+</script>
+<!-- ============================================================================ -->
+
+<div id="setupOverlay" class="setup-overlay" style="display:none;">
+  <div class="setup-box">
+    <h2>⚙️ Setup Firebase dulu (± 3 menit)</h2>
+    <p>Config Firebase belum diisi. Ikuti langkah ini sekali saja, lalu deploy ulang file HTML-nya:</p>
+    <ol>
+      <li>Buka <a href="https://console.firebase.google.com" target="_blank" rel="noopener">console.firebase.google.com</a> → <b>Add project</b> (boleh skip Google Analytics) → tunggu sampai selesai dibuat.</li>
+      <li>Di menu kiri: <b>Build → Firestore Database</b> → <b>Create database</b> → pilih lokasi server (misal <code>asia-southeast2</code>) → mode <b>Start in test mode</b> → Enable.</li>
+      <li>Di menu kiri: klik ikon ⚙️ (Project settings) → tab <b>General</b> → scroll ke <b>"Your apps"</b> → klik ikon <b>&lt;/&gt; (Web)</b> → beri nama app (bebas) → <b>Register app</b>.</li>
+      <li>Firebase akan menampilkan object <code>firebaseConfig</code> — copy semua isinya.</li>
+      <li>Buka file HTML ini di editor teks, cari komentar <code>GANTI_DENGAN_API_KEY</code> di paling atas, dan tempel nilai dari config yang kamu copy.</li>
+      <li>Simpan file, lalu deploy/upload ulang ke hosting kamu. Selesai — semua orang yang buka halaman ini akan berbagi data yang sama.</li>
+    </ol>
+    <p class="hint">Catatan: "test mode" bikin Firestore bisa dibaca/ditulis siapa saja yang tahu config-nya selama 30 hari (lalu terkunci otomatis). Cukup aman untuk tools internal tim jangka pendek — tapi kalau mau dipakai lebih lama, atur Firestore Rules jadi lebih ketat (bisa saya bantu kalau perlu).</p>
+  </div>
+</div>
+
+<div class="wrap" id="appRoot" style="display:none;">
+
+  <header class="top">
+    <div>
+      <h1>📋 Daily Report</h1>
+      <div class="sub">Reporting harian multi project — drag & drop screenshot, papan status per project, export PDF</div>
+    </div>
+    <span class="status-pill" id="connPill">Menghubungkan…</span>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="manage">Kelola Bug</button>
+    <button class="tab-btn" data-tab="daily">Laporan Harian (Semua Project)</button>
+  </div>
+
+  <!-- ===== TAB 1: MANAGE ===== -->
+  <div class="tab-panel active" id="tab-manage">
+
+    <div class="proj-tabs-wrap">
+      <div class="proj-tabs" id="projTabs"><div class="hint">Memuat…</div></div>
+      <div style="position:relative;">
+        <button class="add-proj-btn primary" id="btnShowAddProj">+ Project</button>
+        <div class="popover" id="addProjPopover" style="display:none; right:0;">
+          <label style="font-size:11px; color:var(--text-dim); display:block; margin-bottom:4px;">Nama project baru</label>
+          <input type="text" id="newProjName" placeholder="mis. Flexa">
+          <div class="row-flex" style="margin-top:8px; justify-content:flex-end;">
+            <button id="btnCancelAddProj">Batal</button>
+            <button class="primary" id="btnAddProj">Tambah</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row-flex between" style="margin-bottom:10px;">
+        <h3 style="margin:0;" id="curProjTitle">Pilih project</h3>
+        <div class="row-flex">
+          <input type="date" id="quickDate">
+          <button id="btnExportProj">⬇ Export PDF</button>
+        </div>
+      </div>
+
+      <div class="drop-zone" id="dropZone">
+        <div><b>Tarik & lepas screenshot</b> ke sini (boleh banyak sekaligus)</div>
+        <div class="hint">atau klik untuk pilih file — tiap gambar bisa diarahkan ke project berbeda</div>
+      </div>
+      <input type="file" id="fileInput" accept="image/*" multiple style="display:none;">
+
+      <div class="staging-list" id="stagingList"></div>
+      <div id="stagingActions" style="display:none; margin-top:10px;" class="row-flex">
+        <button class="primary" id="btnSaveStaging">Simpan Semua</button>
+        <button id="btnClearStaging">Batal</button>
+      </div>
+
+      <div class="row-flex" style="margin-top:14px;">
+        <button id="btnManualRow">+ Tambah bug manual (tanpa gambar)</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row-flex between" style="margin-bottom:10px;">
+        <h3 style="margin:0;">Bug di project ini</h3>
+        <div class="row-flex">
+          <label class="row-flex" style="font-size:12.5px; color:var(--text-dim); font-weight:500;">
+            <input type="checkbox" id="showAllDates" style="width:auto;"> semua tanggal
+          </label>
+          <div class="view-toggle">
+            <button id="btnViewBoard" class="active">Papan</button>
+            <button id="btnViewTable">Tabel</button>
+          </div>
+        </div>
+      </div>
+      <div id="boardWrap"></div>
+      <div id="tableWrap" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- ===== TAB 2: DAILY REPORT ===== -->
+  <div class="tab-panel" id="tab-daily">
+    <div class="card">
+      <div class="toolbar between" style="justify-content:space-between;">
+        <div class="row-flex">
+          <label style="font-size:12.5px; color:var(--text-dim);">Tanggal:</label>
+          <input type="date" id="dailyDate">
+        </div>
+        <button class="primary" id="btnExportDaily">⬇ Export PDF (Semua Project)</button>
+      </div>
+      <div id="dailyWrap" style="margin-top:12px;"><div class="empty-state">Memuat data…</div></div>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ================= setup check =================
+  const cfg = window.__FIREBASE_CONFIG__ || {};
+  if(!cfg.apiKey || cfg.apiKey.indexOf("GANTI") === 0){
+    document.getElementById("setupOverlay").style.display = "block";
+    return; // stop here until config is filled in
+  }
+  document.getElementById("appRoot").style.display = "block";
+
+  firebase.initializeApp(cfg);
+  const db = firebase.firestore();
+
+  // ================= utilities =================
+  function todayStr(){
+    const d = new Date();
+    return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  }
+  function fmtDate(s){
+    if(!s) return "-";
+    const [y,m,d] = s.split("-");
+    const months = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+    return d+" "+months[parseInt(m,10)-1]+" "+y;
+  }
+  function esc(s){ return (s||"").toString().replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+  function toast(msg){
+    const t = document.getElementById("toast");
+    t.textContent = msg; t.classList.add("show");
+    clearTimeout(toast._h);
+    toast._h = setTimeout(()=>t.classList.remove("show"), 2800);
+  }
+  function confirmDialog(message, okLabel){
+    return new Promise(resolve=>{
+      const overlay = document.createElement("div");
+      overlay.className = "modal-overlay";
+      overlay.innerHTML = '<div class="modal-box"><p>'+esc(message)+'</p><div class="modal-actions">'+
+        '<button id="cdCancel">Batal</button><button class="danger-outline" id="cdOk">'+esc(okLabel||"Hapus")+'</button></div></div>';
+      document.body.appendChild(overlay);
+      overlay.querySelector("#cdCancel").onclick = ()=>{ overlay.remove(); resolve(false); };
+      overlay.querySelector("#cdOk").onclick = ()=>{ overlay.remove(); resolve(true); };
+      overlay.onclick = e=>{ if(e.target===overlay){ overlay.remove(); resolve(false); } };
+    });
+  }
+  function showLightbox(url){
+    const ov = document.createElement("div");
+    ov.className = "lightbox";
+    ov.innerHTML = '<img src="'+url+'">';
+    ov.onclick = ()=>ov.remove();
+    document.body.appendChild(ov);
+  }
+  function loadImageDims(dataUrl){
+    return new Promise(resolve=>{
+      const img = new Image();
+      img.onload = ()=>resolve({w:img.naturalWidth,h:img.naturalHeight});
+      img.onerror = ()=>resolve(null);
+      img.src = dataUrl;
+    });
+  }
+  // Resize + compress an image file to a small base64 JPEG so it can live directly
+  // inside a Firestore document (no Storage bucket / no CORS setup needed).
+  function compressImage(file, maxW, quality){
+    maxW = maxW || 900; quality = quality || 0.65;
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        const img = new Image();
+        img.onload = ()=>{
+          let w = img.width, h = img.height;
+          if(w > maxW){ h = Math.round(h * maxW / w); w = maxW; }
+          const canvas = document.createElement("canvas");
+          canvas.width = w; canvas.height = h;
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL("image/jpeg", quality));
+        };
+        img.onerror = reject;
+        img.src = reader.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+  async function fileToStoredImage(file){
+    // Try progressively smaller/lower quality until it comfortably fits a Firestore doc (~900KB budget).
+    const attempts = [[900,0.65],[700,0.55],[500,0.45],[380,0.35]];
+    for(const [w,q] of attempts){
+      const dataUrl = await compressImage(file, w, q);
+      if(dataUrl.length < 900000) return dataUrl;
+    }
+    return null; // too large even after heavy compression
+  }
+  const STATUS_OPTS = ["Open","In Progress","Fixed","Rejected"];
+  const STATUS_COLOR = {"Open":"#dc2626","In Progress":"#d97706","Fixed":"#16a34a","Rejected":"#6b7078"};
+
+  // ================= state =================
+  let projects = [];   // {id,name,createdAt}
+  let entries = [];    // {id,projectId,date,imageData,existing,expected,status,createdAt}
+  let selectedProjectId = localStorage.getItem("dr_selected_project") || null;
+  let staging = [];    // {localId,file,previewUrl,projectId,existing,expected,status}
+
+  document.getElementById("quickDate").value = todayStr();
+  document.getElementById("dailyDate").value = todayStr();
+
+  document.getElementById("connPill").textContent = "💾 Tersinkron via Firebase";
+
+  db.collection("projects").orderBy("createdAt","asc").onSnapshot(
+    snap=>{
+      projects = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+      if(!selectedProjectId && projects.length) selectedProjectId = projects[0].id;
+      if(selectedProjectId && !projects.find(p=>p.id===selectedProjectId)) selectedProjectId = projects[0] ? projects[0].id : null;
+      renderAll();
+    },
+    err=>{ toast("Gagal memuat project: "+err.message); document.getElementById("connPill").textContent = "⚠ Gagal konek Firebase"; }
+  );
+  db.collection("entries").orderBy("createdAt","desc").limit(1000).onSnapshot(
+    snap=>{
+      entries = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+      renderAll();
+    },
+    err=>toast("Gagal memuat entry: "+err.message)
+  );
+
+  function renderAll(){
+    renderProjTabs();
+    renderManagePanel();
+    renderStaging();
+    renderDailyTab();
+  }
+  function currentProject(){ return projects.find(p=>p.id===selectedProjectId) || null; }
+
+  // ================= project tabs =================
+  function renderProjTabs(){
+    const wrap = document.getElementById("projTabs");
+    if(!projects.length){ wrap.innerHTML = '<div class="hint">Belum ada project — klik "+ Project".</div>'; return; }
+    wrap.innerHTML = projects.map(p=>{
+      const cnt = entries.filter(e=>e.projectId===p.id).length;
+      const active = p.id===selectedProjectId;
+      return '<div class="proj-tab '+(active?'active':'')+'" data-id="'+p.id+'">'+
+        '<span>'+esc(p.name)+'</span><span class="cnt">'+cnt+'</span>'+
+        '<button class="del-x" data-del="'+p.id+'" title="Hapus project">✕</button></div>';
+    }).join("");
+    wrap.querySelectorAll(".proj-tab").forEach(el=>{
+      el.addEventListener("click", e=>{
+        if(e.target.closest("[data-del]")) return;
+        selectedProjectId = el.dataset.id;
+        localStorage.setItem("dr_selected_project", selectedProjectId);
+        renderAll();
+      });
+    });
+    wrap.querySelectorAll("[data-del]").forEach(btn=>{
+      btn.addEventListener("click", async e=>{
+        e.stopPropagation();
+        const p = projects.find(x=>x.id===btn.dataset.del);
+        const ok = await confirmDialog('Hapus project "'+(p?p.name:"")+'" beserta semua bug di dalamnya? Ini akan menghapusnya untuk semua orang.');
+        if(!ok) return;
+        try{
+          const related = entries.filter(x=>x.projectId===btn.dataset.del);
+          const batchDeletes = related.map(r=>db.collection("entries").doc(r.id).delete());
+          await Promise.all(batchDeletes);
+          await db.collection("projects").doc(btn.dataset.del).delete();
+          toast("Project dihapus.");
+        }catch(e){ toast("Gagal menghapus project."); }
+      });
+    });
+  }
+
+  const addPop = document.getElementById("addProjPopover");
+  document.getElementById("btnShowAddProj").addEventListener("click", ()=>{
+    addPop.style.display = addPop.style.display==="none" ? "block" : "none";
+    document.getElementById("newProjName").focus();
+  });
+  document.getElementById("btnCancelAddProj").addEventListener("click", ()=>{ addPop.style.display="none"; });
+  document.getElementById("btnAddProj").addEventListener("click", addProject);
+  document.getElementById("newProjName").addEventListener("keydown", e=>{ if(e.key==="Enter") addProject(); });
+  async function addProject(){
+    const input = document.getElementById("newProjName");
+    const name = input.value.trim();
+    if(!name) return;
+    input.value = "";
+    addPop.style.display = "none";
+    try{
+      const ref = await db.collection("projects").add({ name, createdAt: Date.now() });
+      selectedProjectId = ref.id;
+      localStorage.setItem("dr_selected_project", ref.id);
+    }catch(e){ toast("Gagal menambah project."); }
+  }
+
+  // ================= manage panel (board + table) =================
+  function filteredEntries(){
+    const proj = currentProject();
+    if(!proj) return [];
+    const showAll = document.getElementById("showAllDates").checked;
+    const dateFilter = document.getElementById("quickDate").value || todayStr();
+    let list = entries.filter(e=>e.projectId===proj.id);
+    if(!showAll) list = list.filter(e=>e.date===dateFilter);
+    return list;
+  }
+
+  function renderManagePanel(){
+    const proj = currentProject();
+    document.getElementById("curProjTitle").textContent = proj ? proj.name : "Pilih project";
+    document.getElementById("btnExportProj").disabled = !proj;
+    if(!proj){
+      document.getElementById("boardWrap").innerHTML = '<div class="empty-state">Pilih atau tambahkan project di atas.</div>';
+      document.getElementById("tableWrap").innerHTML = "";
+      return;
+    }
+    renderBoard();
+    renderTable();
+  }
+
+  function renderBoard(){
+    const wrap = document.getElementById("boardWrap");
+    const list = filteredEntries();
+    let html = '<div class="board">';
+    for(const st of STATUS_OPTS){
+      const items = list.filter(e=>e.status===st).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+      html += '<div class="board-col"><h4><span><span class="dot" style="background:'+STATUS_COLOR[st]+'"></span>'+st+'</span><span>'+items.length+'</span></h4>';
+      if(!items.length){
+        html += '<div class="board-empty">Tidak ada</div>';
+      } else {
+        for(const e of items){
+          html += '<div class="card-item" data-open="'+e.id+'">';
+          html += e.imageData ? '<img src="'+e.imageData+'">' : '<div class="imgless">tanpa gambar</div>';
+          html += '<div class="exc">'+esc(e.existing || "(belum diisi)")+'</div>';
+          html += '<div class="meta">'+fmtDate(e.date)+'</div>';
+          html += '</div>';
+        }
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+    wrap.innerHTML = html;
+    wrap.querySelectorAll("[data-open]").forEach(card=>{
+      card.addEventListener("click", ()=> openEntryModal(card.dataset.open));
+    });
+  }
+
+  function renderTable(){
+    const wrap = document.getElementById("tableWrap");
+    const list = filteredEntries().slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+    if(!list.length){
+      wrap.innerHTML = '<div class="empty-state">Belum ada bug.</div>';
+      return;
+    }
+    let html = '<table><thead><tr><th style="width:74px;">Gambar</th><th>Existing</th><th>Expected</th><th style="width:120px;">Status</th><th style="width:90px;">Tanggal</th><th style="width:36px;"></th></tr></thead><tbody>';
+    for(const e of list){
+      html += '<tr data-id="'+e.id+'">';
+      html += '<td>'+(e.imageData ? '<img class="thumb" data-img="'+e.imageData+'" src="'+e.imageData+'">' : '<div class="thumb empty">-</div>')+'</td>';
+      html += '<td><textarea data-f="existing" placeholder="Kondisi saat ini...">'+esc(e.existing)+'</textarea></td>';
+      html += '<td><textarea data-f="expected" placeholder="Kondisi yang diharapkan...">'+esc(e.expected)+'</textarea></td>';
+      html += '<td><select data-f="status">'+STATUS_OPTS.map(s=>'<option value="'+s+'" '+(e.status===s?'selected':'')+'>'+s+'</option>').join('')+'</select></td>';
+      html += '<td style="font-size:12px; color:var(--text-dim);">'+fmtDate(e.date)+'</td>';
+      html += '<td><button class="danger-outline" data-del-entry style="padding:5px 8px;">✕</button></td>';
+      html += '</tr>';
+    }
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+    wrap.querySelectorAll("textarea[data-f], select[data-f]").forEach(el=>{
+      el.addEventListener("change", ()=>{
+        const id = el.closest("tr").dataset.id;
+        updateEntry(id, { [el.dataset.f]: el.value });
+      });
+    });
+    wrap.querySelectorAll("[data-del-entry]").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        const id = btn.closest("tr").dataset.id;
+        const ok = await confirmDialog("Hapus bug ini?");
+        if(ok) deleteEntry(id);
+      });
+    });
+    wrap.querySelectorAll("[data-img]").forEach(img=>{
+      img.addEventListener("click", ()=>showLightbox(img.dataset.img));
+    });
+  }
+
+  document.getElementById("btnViewBoard").addEventListener("click", ()=>{
+    document.getElementById("btnViewBoard").classList.add("active");
+    document.getElementById("btnViewTable").classList.remove("active");
+    document.getElementById("boardWrap").style.display = "";
+    document.getElementById("tableWrap").style.display = "none";
+  });
+  document.getElementById("btnViewTable").addEventListener("click", ()=>{
+    document.getElementById("btnViewTable").classList.add("active");
+    document.getElementById("btnViewBoard").classList.remove("active");
+    document.getElementById("tableWrap").style.display = "";
+    document.getElementById("boardWrap").style.display = "none";
+  });
+
+  async function updateEntry(id, patch){
+    try{ await db.collection("entries").doc(id).update(patch); }
+    catch(e){ toast("Gagal menyimpan perubahan."); }
+  }
+  async function deleteEntry(id){
+    try{ await db.collection("entries").doc(id).delete(); }
+    catch(e){ toast("Gagal menghapus bug."); }
+  }
+  async function addManualEntry(){
+    const proj = currentProject();
+    if(!proj){ toast("Pilih project dulu."); return; }
+    const date = document.getElementById("quickDate").value || todayStr();
+    try{
+      await db.collection("entries").add({
+        projectId: proj.id, date, imageData: null,
+        existing:"", expected:"", status:"Open", createdAt: Date.now()
+      });
+      toast("Bug manual ditambahkan.");
+    }catch(e){ toast("Gagal menambah bug."); }
+  }
+  document.getElementById("btnManualRow").addEventListener("click", addManualEntry);
+  document.getElementById("quickDate").addEventListener("change", renderManagePanel);
+  document.getElementById("showAllDates").addEventListener("change", renderManagePanel);
+
+  // ================= entry detail modal =================
+  function openEntryModal(id){
+    const e = entries.find(x=>x.id===id);
+    if(!e) return;
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.innerHTML =
+      '<div class="modal-box">'+
+        (e.imageData ? '<img class="preview" src="'+e.imageData+'">' : '<div class="hint">Tanpa gambar</div>')+
+        '<label>Existing</label><textarea id="mExisting">'+esc(e.existing)+'</textarea>'+
+        '<label>Expected</label><textarea id="mExpected">'+esc(e.expected)+'</textarea>'+
+        '<label>Status</label><select id="mStatus">'+STATUS_OPTS.map(s=>'<option value="'+s+'" '+(e.status===s?'selected':'')+'>'+s+'</option>').join('')+'</select>'+
+        '<label>Tanggal</label><input type="date" id="mDate" value="'+e.date+'">'+
+        '<div class="modal-actions">'+
+          '<button class="danger-outline" id="mDelete">Hapus</button>'+
+          '<button id="mCancel">Tutup</button>'+
+          '<button class="primary" id="mSave">Simpan</button>'+
+        '</div>'+
+      '</div>';
+    document.body.appendChild(overlay);
+    overlay.onclick = ev=>{ if(ev.target===overlay) overlay.remove(); };
+    overlay.querySelector("#mCancel").onclick = ()=>overlay.remove();
+    overlay.querySelector("#mSave").onclick = async ()=>{
+      await updateEntry(id, {
+        existing: overlay.querySelector("#mExisting").value,
+        expected: overlay.querySelector("#mExpected").value,
+        status: overlay.querySelector("#mStatus").value,
+        date: overlay.querySelector("#mDate").value || e.date
+      });
+      overlay.remove();
+    };
+    overlay.querySelector("#mDelete").onclick = async ()=>{
+      const ok = await confirmDialog("Hapus bug ini?");
+      if(ok){ overlay.remove(); deleteEntry(id); }
+    };
+  }
+
+  // ================= drag & drop staging =================
+  const dropZone = document.getElementById("dropZone");
+  const fileInput = document.getElementById("fileInput");
+  ["dragenter","dragover"].forEach(evt=>dropZone.addEventListener(evt, e=>{ e.preventDefault(); dropZone.classList.add("drag-over"); }));
+  ["dragleave","drop"].forEach(evt=>dropZone.addEventListener(evt, e=>{ e.preventDefault(); dropZone.classList.remove("drag-over"); }));
+  dropZone.addEventListener("drop", e=>{
+    const files = Array.from(e.dataTransfer.files || []).filter(f=>f.type.startsWith("image/"));
+    addFilesToStaging(files);
+  });
+  dropZone.addEventListener("click", ()=>fileInput.click());
+  fileInput.addEventListener("change", e=>{ addFilesToStaging(Array.from(e.target.files||[])); fileInput.value=""; });
+
+  function addFilesToStaging(files){
+    if(!files.length) return;
+    if(!projects.length){ toast("Tambahkan project dulu sebelum upload gambar."); return; }
+    for(const f of files){
+      staging.push({ localId: Math.random().toString(36).slice(2), file: f, previewUrl: URL.createObjectURL(f), projectId: selectedProjectId || projects[0].id, existing:"", expected:"", status:"Open" });
+    }
+    renderStaging();
+  }
+  function renderStaging(){
+    const wrap = document.getElementById("stagingList");
+    const actions = document.getElementById("stagingActions");
+    if(!staging.length){ wrap.innerHTML=""; actions.style.display="none"; return; }
+    actions.style.display = "flex";
+    const projOpts = projects.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join("");
+    wrap.innerHTML = staging.map(s=>{
+      return '<div class="staging-item" data-id="'+s.localId+'">'+
+        '<img src="'+s.previewUrl+'">'+
+        '<div class="staging-fields">'+
+          '<div class="full"><label>Project</label><select data-sf="projectId">'+projOpts+'</select></div>'+
+          '<div><label>Existing</label><textarea data-sf="existing" placeholder="Kondisi saat ini"></textarea></div>'+
+          '<div><label>Expected</label><textarea data-sf="expected" placeholder="Kondisi diharapkan"></textarea></div>'+
+          '<div><label>Status</label><select data-sf="status">'+STATUS_OPTS.map(o=>'<option value="'+o+'">'+o+'</option>').join('')+'</select></div>'+
+          '<div style="display:flex; align-items:flex-end;"><button class="danger-outline" data-remove-staging style="width:100%;">Hapus</button></div>'+
+        '</div></div>';
+    }).join("");
+    wrap.querySelectorAll(".staging-item").forEach(el=>{
+      const s = staging.find(x=>x.localId===el.dataset.id);
+      el.querySelector('[data-sf="projectId"]').value = s.projectId || "";
+      el.querySelector('[data-sf="status"]').value = s.status;
+      el.querySelectorAll("[data-sf]").forEach(f=>{
+        f.addEventListener("input", ()=>{ s[f.dataset.sf]=f.value; });
+        f.addEventListener("change", ()=>{ s[f.dataset.sf]=f.value; });
+      });
+      el.querySelector("[data-remove-staging]").addEventListener("click", ()=>{
+        URL.revokeObjectURL(s.previewUrl);
+        staging = staging.filter(x=>x.localId!==s.localId);
+        renderStaging();
+      });
+    });
+  }
+  document.getElementById("btnClearStaging").addEventListener("click", ()=>{
+    staging.forEach(s=>URL.revokeObjectURL(s.previewUrl));
+    staging = [];
+    renderStaging();
+  });
+  document.getElementById("btnSaveStaging").addEventListener("click", async ()=>{
+    if(!staging.length) return;
+    const date = document.getElementById("quickDate").value || todayStr();
+    const btn = document.getElementById("btnSaveStaging");
+    btn.disabled = true; btn.textContent = "Menyimpan...";
+    let ok = 0, tooBig = 0;
+    for(const s of staging){
+      if(!s.projectId) continue;
+      try{
+        const imageData = await fileToStoredImage(s.file);
+        if(!imageData){ tooBig++; URL.revokeObjectURL(s.previewUrl); continue; }
+        await db.collection("entries").add({
+          projectId: s.projectId, date, imageData,
+          existing: s.existing||"", expected: s.expected||"", status: s.status||"Open", createdAt: Date.now()
+        });
+        ok++;
+      }catch(e){ /* continue with the rest */ }
+      URL.revokeObjectURL(s.previewUrl);
+    }
+    staging = [];
+    renderStaging();
+    btn.disabled = false; btn.textContent = "Simpan Semua";
+    toast(ok+" bug tersimpan." + (tooBig ? " ("+tooBig+" gambar terlalu besar, coba screenshot area lebih kecil)" : ""));
+  });
+
+  // ================= daily (all projects) tab =================
+  function renderDailyTab(){
+    const date = document.getElementById("dailyDate").value || todayStr();
+    const wrap = document.getElementById("dailyWrap");
+    const list = entries.filter(e=>e.date===date);
+    if(!projects.length){ wrap.innerHTML = '<div class="empty-state">Belum ada project.</div>'; return; }
+    if(!list.length){ wrap.innerHTML = '<div class="empty-state">Tidak ada bug pada tanggal ini di semua project.</div>'; return; }
+    let html = "";
+    for(const p of projects){
+      const rows = list.filter(e=>e.projectId===p.id);
+      if(!rows.length) continue;
+      html += '<div class="project-group"><h4>'+esc(p.name)+' <span class="hint" style="margin:0;">('+rows.length+' bug)</span></h4>';
+      html += '<table><thead><tr><th style="width:74px;">Gambar</th><th>Existing</th><th>Expected</th><th style="width:110px;">Status</th></tr></thead><tbody>';
+      for(const e of rows){
+        html += '<tr>';
+        html += '<td>'+(e.imageData ? '<img class="thumb" data-img="'+e.imageData+'" src="'+e.imageData+'">' : '<div class="thumb empty">-</div>')+'</td>';
+        html += '<td>'+esc(e.existing || "-")+'</td>';
+        html += '<td>'+esc(e.expected || "-")+'</td>';
+        html += '<td><span class="badge '+e.status.replace(" ","-")+'">'+e.status+'</span></td>';
+        html += '</tr>';
+      }
+      html += '</tbody></table></div>';
+    }
+    wrap.innerHTML = html || '<div class="empty-state">Tidak ada bug pada tanggal ini.</div>';
+    wrap.querySelectorAll("[data-img]").forEach(img=>img.addEventListener("click", ()=>showLightbox(img.dataset.img)));
+  }
+  document.getElementById("dailyDate").addEventListener("change", renderDailyTab);
+
+  // ================= tabs =================
+  document.querySelectorAll(".tab-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("tab-"+btn.dataset.tab).classList.add("active");
+    });
+  });
+
+  // ================= PDF export (jsPDF + AutoTable) =================
+  async function buildAndSavePdf(title, rows, includeProjectCol, filenameBase){
+    if(!window.jspdf){ toast("Library PDF gagal dimuat."); return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:"mm", format:"a4" });
+
+    const imageData = await Promise.all(rows.map(async r=>{
+      if(!r.imageData) return null;
+      const dims = await loadImageDims(r.imageData);
+      return dims ? { dataUrl: r.imageData, w: dims.w, h: dims.h } : null;
+    }));
+
+    doc.setFont("helvetica","bold"); doc.setFontSize(14);
+    doc.text(title, 12, 14);
+    doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(120);
+    doc.text("Dibuat: " + new Date().toLocaleString("id-ID"), 12, 20);
+    doc.setTextColor(20);
+
+    const head = includeProjectCol
+      ? [["Project","Attachment","Existing","Expected","Status"]]
+      : [["Attachment","Existing","Expected","Status"]];
+    const attCol = includeProjectCol ? 1 : 0;
+    const statusCol = includeProjectCol ? 4 : 3;
+
+    const body = rows.map(r=>{
+      const row = [];
+      if(includeProjectCol) row.push(r.projectName || "-");
+      row.push({ content:"", styles:{ minCellHeight: 32 } });
+      row.push(r.existing || "-");
+      row.push(r.expected || "-");
+      row.push(r.status || "-");
+      return row;
+    });
+
+    const columnStyles = {};
+    columnStyles[attCol] = { cellWidth: 38 };
+    columnStyles[statusCol] = { cellWidth: 22 };
+    if(includeProjectCol) columnStyles[0] = { cellWidth: 24 };
+
+    doc.autoTable({
+      startY: 26,
+      head, body,
+      theme: "grid",
+      styles: { font:"helvetica", fontSize:9, cellPadding:3, overflow:"linebreak", valign:"middle", lineColor:[210,212,218], lineWidth:0.2 },
+      headStyles: { fillColor:[79,70,229], textColor:255, fontStyle:"bold", fontSize:9.5 },
+      alternateRowStyles: { fillColor:[246,247,250] },
+      columnStyles,
+      didDrawCell: data=>{
+        if(data.section==="body" && data.column.index===attCol){
+          const info = imageData[data.row.index];
+          const pad = 1.5;
+          const maxW = data.cell.width - pad*2;
+          const maxH = data.cell.height - pad*2;
+          if(info){
+            const scale = Math.min(maxW/info.w, maxH/info.h);
+            const dw = info.w*scale, dh = info.h*scale;
+            const dx = data.cell.x + (data.cell.width-dw)/2;
+            const dy = data.cell.y + (data.cell.height-dh)/2;
+            try{ doc.addImage(info.dataUrl, "JPEG", dx, dy, dw, dh); }catch(e){}
+          } else {
+            doc.setFontSize(7.5); doc.setTextColor(170);
+            doc.text("(tanpa gambar)", data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2, { align:"center", baseline:"middle" });
+            doc.setFontSize(9); doc.setTextColor(20);
+          }
+        }
+      }
+    });
+
+    const blob = doc.output("blob");
+    const filename = filenameBase + ".pdf";
+    try{
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 4000);
+      toast("PDF berhasil dibuat.");
+    }catch(e){ toast("Gagal membuat PDF."); }
+  }
+
+  document.getElementById("btnExportProj").addEventListener("click", async ()=>{
+    const proj = currentProject();
+    if(!proj) return;
+    const showAll = document.getElementById("showAllDates").checked;
+    const dateFilter = document.getElementById("quickDate").value || todayStr();
+    let list = filteredEntries().slice().sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+    if(!list.length){ toast("Tidak ada bug untuk diekspor."); return; }
+    const title = "Bug/Task Report — " + proj.name + (showAll ? "" : " (" + fmtDate(dateFilter) + ")");
+    await buildAndSavePdf(title, list, false, "report_" + proj.name.replace(/\W+/g,"_") + "_" + (showAll?"all":dateFilter));
+  });
+
+  document.getElementById("btnExportDaily").addEventListener("click", async ()=>{
+    const date = document.getElementById("dailyDate").value || todayStr();
+    const list = entries.filter(e=>e.date===date).map(e=>({
+      ...e, projectName: (projects.find(p=>p.id===e.projectId)||{}).name || "-"
+    })).sort((a,b)=> (a.projectName||"").localeCompare(b.projectName||"") || (a.createdAt-b.createdAt));
+    if(!list.length){ toast("Tidak ada bug pada tanggal ini."); return; }
+    const title = "Laporan Harian — Semua Project — " + fmtDate(date);
+    await buildAndSavePdf(title, list, true, "laporan_harian_" + date);
+  });
+
+})();
+</script>
+</body>
+</html>
