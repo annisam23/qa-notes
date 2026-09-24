@@ -11,159 +11,201 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
   :root {
-    --bg: #f4f5f7; --surface: #ffffff; --surface-2: #f0f1f4; --border: #e0e2e7;
-    --text: #1a1d23; --text-dim: #6b7078; --accent: #4f46e5; --accent-text: #ffffff;
-    --danger: #dc2626; --ok: #16a34a; --warn: #d97706; --gray: #6b7078;
-    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    --bg: #f3f4fa; --surface: #ffffff; --surface-2: #f2f3f9; --border: #e3e5f0;
+    --text: #1a1b26; --text-dim: #6c6f85;
+    --accent: #6d5ef5; --accent-2: #9b7cf6; --accent-text: #ffffff;
+    --accent-grad: linear-gradient(135deg, #6d5ef5, #9b6ff8);
+    --danger: #e0363c; --ok: #17a673; --warn: #e08a1c; --gray: #6c6f85;
+    --shadow: 0 2px 10px rgba(76,66,180,0.08), 0 1px 2px rgba(0,0,0,0.03);
+    --shadow-lift: 0 8px 22px rgba(76,66,180,0.14), 0 2px 6px rgba(0,0,0,0.05);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg:#16171b; --surface:#1e2025; --surface-2:#26282e; --border:#34363c;
-      --text:#e8e9ec; --text-dim:#9a9ea6; --accent:#818cf8; --accent-text:#14151a;
-      --danger:#f87171; --ok:#4ade80; --warn:#fbbf24; --gray:#9a9ea6;
-      --shadow: 0 1px 3px rgba(0,0,0,0.4);
+      --bg:#131319; --surface:#1c1c26; --surface-2:#242430; --border:#34343f;
+      --text:#eceaf7; --text-dim:#9997ac;
+      --accent:#8b7bfa; --accent-2:#b79bff; --accent-text:#14151a;
+      --accent-grad: linear-gradient(135deg, #8b7bfa, #b98bff);
+      --danger:#f5716f; --ok:#3ddb9a; --warn:#f5a742; --gray:#9997ac;
+      --shadow: 0 2px 10px rgba(0,0,0,0.35); --shadow-lift: 0 10px 26px rgba(0,0,0,0.45);
     }
   }
   :root[data-theme="dark"] {
-    --bg:#16171b; --surface:#1e2025; --surface-2:#26282e; --border:#34363c;
-    --text:#e8e9ec; --text-dim:#9a9ea6; --accent:#818cf8; --accent-text:#14151a;
-    --danger:#f87171; --ok:#4ade80; --warn:#fbbf24; --gray:#9a9ea6;
-    --shadow: 0 1px 3px rgba(0,0,0,0.4);
+    --bg:#131319; --surface:#1c1c26; --surface-2:#242430; --border:#34343f;
+    --text:#eceaf7; --text-dim:#9997ac;
+    --accent:#8b7bfa; --accent-2:#b79bff; --accent-text:#14151a;
+    --accent-grad: linear-gradient(135deg, #8b7bfa, #b98bff);
+    --danger:#f5716f; --ok:#3ddb9a; --warn:#f5a742; --gray:#9997ac;
+    --shadow: 0 2px 10px rgba(0,0,0,0.35); --shadow-lift: 0 10px 26px rgba(0,0,0,0.45);
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
   html { scroll-padding-top: env(safe-area-inset-top, 0px); }
   body {
-    background: var(--bg); color: var(--text);
+    background:
+      radial-gradient(1100px 420px at 12% -8%, rgba(109,94,245,0.10), transparent 60%),
+      radial-gradient(900px 360px at 100% 0%, rgba(155,124,246,0.09), transparent 55%),
+      var(--bg);
+    color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
     -webkit-font-smoothing: antialiased;
   }
-  .wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 60px; }
-  header.top { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
-  header.top h1 { font-size:19px; margin:0; font-weight:700; }
-  header.top .sub { font-size:12.5px; color:var(--text-dim); margin-top:2px; }
-  .status-pill { font-size:11px; padding:4px 9px; border-radius:20px; border:1px solid var(--border); color:var(--text-dim); background:var(--surface); white-space:nowrap; }
-  .tabs { display:flex; gap:6px; margin-bottom:14px; border-bottom:1px solid var(--border); }
-  .tab-btn { background:transparent; border:none; color:var(--text-dim); font-size:14px; font-weight:600; padding:10px 14px; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
-  .tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
-  .tab-panel { display:none; } .tab-panel.active { display:block; }
-
-  .proj-tabs-wrap { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
-  .proj-tabs { display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; flex:1; scrollbar-width: thin; }
-  .proj-tab {
-    display:flex; align-items:center; gap:6px; white-space:nowrap; padding:8px 12px; border-radius:20px;
-    border:1px solid var(--border); background:var(--surface); font-size:13px; font-weight:600; cursor:pointer;
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 22px 16px 60px; }
+  header.top { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+  header.top h1 {
+    font-size:21px; margin:0; font-weight:800; letter-spacing:-.01em;
+    background: var(--accent-grad); -webkit-background-clip: text; background-clip: text; color: transparent;
   }
-  .proj-tab.active { background:var(--accent); color:var(--accent-text); border-color:var(--accent); }
-  .proj-tab .cnt { font-size:11px; opacity:.75; font-weight:400; }
-  .proj-tab .del-x { opacity:.5; background:none; border:none; color:inherit; cursor:pointer; font-size:12px; padding:0 2px; }
-  .proj-tab .del-x:hover { opacity:1; }
-  .add-proj-btn { border-radius:20px; padding:8px 14px; white-space:nowrap; }
+  header.top .sub { font-size:12.5px; color:var(--text-dim); margin-top:3px; }
+  .status-pill {
+    font-size:11px; padding:5px 12px; border-radius:20px; border:1px solid var(--border);
+    color:var(--ok); background:var(--surface); white-space:nowrap; font-weight:700;
+    display:inline-flex; align-items:center; gap:6px; box-shadow: var(--shadow);
+  }
+  .tabs { display:flex; gap:6px; margin-bottom:16px; border-bottom:1px solid var(--border); position:relative; }
+  .tab-btn { background:transparent; border:none; color:var(--text-dim); font-size:14px; font-weight:700; padding:10px 14px; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; transition:.15s; border-radius:8px 8px 0 0; }
+  .tab-btn:hover { color:var(--text); background:var(--surface-2); }
+  .tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
+  .tab-panel { display:none; } .tab-panel.active { display:block; animation: fadeIn .18s ease; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(3px);} to { opacity:1; transform:none; } }
 
-  .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px; box-shadow:var(--shadow); }
-  .card + .card { margin-top:14px; }
-  .card h3 { margin:0 0 10px; font-size:13px; text-transform:uppercase; letter-spacing:.03em; color:var(--text-dim); }
+  .proj-tabs-wrap { display:flex; align-items:center; gap:8px; margin-bottom:16px; }
+  .proj-tabs { display:flex; gap:7px; overflow-x:auto; padding:2px 2px 6px; flex:1; scrollbar-width: thin; }
+  .proj-tab {
+    display:flex; align-items:center; gap:6px; white-space:nowrap; padding:8px 8px 8px 14px; border-radius:22px;
+    border:1px solid var(--border); background:var(--surface); font-size:13px; font-weight:700; cursor:pointer;
+    transition:.15s; box-shadow: var(--shadow);
+  }
+  .proj-tab:hover { transform: translateY(-1px); box-shadow: var(--shadow-lift); }
+  .proj-tab.active { background: var(--accent-grad); color:var(--accent-text); border-color:transparent; }
+  .proj-tab .cnt { font-size:11px; opacity:.75; font-weight:500; }
+  .proj-tab .icon-btn { opacity:.55; background:none; border:none; color:inherit; cursor:pointer; font-size:12px; padding:3px 5px; border-radius:6px; line-height:1; }
+  .proj-tab .icon-btn:hover { opacity:1; background:rgba(0,0,0,0.12); }
+  .add-proj-btn { border-radius:22px; padding:9px 16px; white-space:nowrap; background:var(--accent-grad); color:var(--accent-text); border:none; box-shadow: var(--shadow); }
+  .add-proj-btn:hover { box-shadow: var(--shadow-lift); transform: translateY(-1px); }
+
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:var(--shadow); }
+  .card + .card { margin-top:16px; }
+  .card h3 { margin:0 0 10px; font-size:12.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-dim); font-weight:800; }
 
   input[type=text], input[type=date], textarea, select {
     background:var(--surface-2); border:1px solid var(--border); color:var(--text);
-    border-radius:7px; padding:7px 9px; font-size:13.5px; font-family:inherit; width:100%;
+    border-radius:8px; padding:7px 9px; font-size:13.5px; font-family:inherit; width:100%;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input[type=text]:focus, input[type=date]:focus, textarea:focus, select:focus {
+    outline:none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(109,94,245,0.15);
   }
   textarea { resize:vertical; min-height:34px; line-height:1.35; }
   button {
-    font-family:inherit; font-size:13px; font-weight:600; cursor:pointer; border-radius:7px;
+    font-family:inherit; font-size:13px; font-weight:700; cursor:pointer; border-radius:8px;
     border:1px solid var(--border); background:var(--surface-2); color:var(--text); padding:8px 12px;
+    transition: transform .12s, box-shadow .12s, filter .12s;
   }
   button:hover { filter:brightness(1.05); }
-  button.primary { background:var(--accent); color:var(--accent-text); border-color:var(--accent); }
+  button.primary { background:var(--accent-grad); color:var(--accent-text); border-color:transparent; box-shadow: var(--shadow); }
+  button.primary:hover { transform: translateY(-1px); box-shadow: var(--shadow-lift); }
   button.danger-outline { color:var(--danger); border-color:var(--danger); background:transparent; }
-  button:disabled { opacity:.45; cursor:not-allowed; }
+  button:disabled { opacity:.45; cursor:not-allowed; transform:none !important; }
   .row-flex { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .between { justify-content:space-between; }
 
-  .drop-zone { border:2px dashed var(--border); border-radius:12px; padding:22px 14px; text-align:center; color:var(--text-dim); font-size:13.5px; cursor:pointer; transition:.15s; }
-  .drop-zone.drag-over { border-color:var(--accent); background:var(--surface-2); color:var(--text); }
+  .drop-zone { border:2px dashed var(--border); border-radius:14px; padding:24px 14px; text-align:center; color:var(--text-dim); font-size:13.5px; cursor:pointer; transition:.15s; background: var(--surface-2); }
+  .drop-zone.drag-over { border-color:var(--accent); background: rgba(109,94,245,0.08); color:var(--text); }
   .drop-zone b { color:var(--text); }
   .staging-list { display:flex; flex-direction:column; gap:10px; margin-top:12px; }
-  .staging-item { display:grid; grid-template-columns:64px 1fr; gap:10px; padding:10px; border:1px solid var(--border); border-radius:10px; background:var(--surface-2); }
-  .staging-item img { width:64px; height:64px; object-fit:cover; border-radius:6px; border:1px solid var(--border); }
+  .staging-item { display:grid; grid-template-columns:64px 1fr; gap:10px; padding:12px; border:1px solid var(--border); border-radius:12px; background:var(--surface-2); }
+  .staging-item img { width:64px; height:64px; object-fit:cover; border-radius:8px; border:1px solid var(--border); }
   .staging-fields { display:grid; gap:6px; grid-template-columns:1fr 1fr; }
   .staging-fields .full { grid-column:1/-1; }
-  .staging-fields label { font-size:10.5px; color:var(--text-dim); display:block; margin-bottom:2px; }
+  .staging-fields label { font-size:10.5px; color:var(--text-dim); display:block; margin-bottom:2px; font-weight:600; }
 
-  .view-toggle { display:flex; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
-  .view-toggle button { border:none; border-radius:0; background:var(--surface-2); }
-  .view-toggle button.active { background:var(--accent); color:var(--accent-text); }
+  .view-toggle { display:flex; border:1px solid var(--border); border-radius:9px; overflow:hidden; background:var(--surface-2); }
+  .view-toggle button { border:none; border-radius:0; background:transparent; }
+  .view-toggle button.active { background:var(--accent-grad); color:var(--accent-text); }
 
   .board { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:4px; }
   @media (max-width:900px) { .board { grid-template-columns:repeat(2,1fr); } }
   @media (max-width:520px) { .board { grid-template-columns:1fr; } }
-  .board-col { background:var(--surface-2); border-radius:10px; padding:10px; min-height:80px; }
-  .board-col h4 { margin:0 0 8px; font-size:12.5px; display:flex; align-items:center; justify-content:space-between; }
-  .board-col h4 .dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; }
-  .card-item { background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:8px; margin-bottom:8px; cursor:pointer; }
-  .card-item:hover { border-color: var(--accent); }
-  .card-item img { width:100%; height:80px; object-fit:cover; border-radius:6px; display:block; margin-bottom:6px; background:var(--surface-2); }
-  .card-item .imgless { width:100%; height:40px; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--text-dim); background:var(--surface-2); border-radius:6px; margin-bottom:6px; }
-  .card-item .exc { font-size:12px; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; margin-bottom:4px; }
-  .card-item .meta { font-size:10.5px; color:var(--text-dim); }
+  .board-col { background:var(--surface-2); border-radius:12px; padding:11px; min-height:80px; border-top:3px solid var(--border); }
+  .board-col h4 { margin:0 0 9px; font-size:12.5px; display:flex; align-items:center; justify-content:space-between; font-weight:800; }
+  .board-col h4 .dot { width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:7px; box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 18%, transparent); }
+  .card-item { background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:9px; margin-bottom:9px; cursor:pointer; transition:.15s; }
+  .card-item:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow-lift); }
+  .card-item img { width:100%; height:80px; object-fit:cover; border-radius:7px; display:block; margin-bottom:6px; background:var(--surface-2); }
+  .card-item .imgless { width:100%; height:40px; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--text-dim); background:var(--surface-2); border-radius:7px; margin-bottom:6px; }
+  .card-item .exc { font-size:12px; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; margin-bottom:5px; }
+  .card-item .meta { font-size:10.5px; color:var(--text-dim); margin-top:5px; }
+  .card-item.dragging { opacity:.4; }
+  .card-item { touch-action: none; }
+  .quick-status { display:flex; gap:5px; margin-top:7px; }
+  .quick-status button {
+    width:16px; height:16px; padding:0; border-radius:50%; border:2px solid transparent;
+    cursor:pointer; opacity:.45; transition:.15s;
+  }
+  .quick-status button:hover { opacity:.85; transform: scale(1.15); }
+  .quick-status button.active { opacity:1; border-color: var(--surface); box-shadow: 0 0 0 1.5px currentColor; }
+  .board-col.drop-target { background: rgba(109,94,245,0.10); outline: 2px dashed var(--accent); outline-offset: -2px; }
   .board-empty { font-size:12px; color:var(--text-dim); text-align:center; padding:14px 4px; }
 
   table { width:100%; border-collapse:collapse; font-size:13px; }
-  thead th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.03em; color:var(--text-dim); padding:6px 8px; border-bottom:1px solid var(--border); }
-  tbody td { padding:8px; border-bottom:1px solid var(--border); vertical-align:top; }
+  thead th { text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-dim); padding:7px 8px; border-bottom:1px solid var(--border); font-weight:800; }
+  tbody td { padding:9px 8px; border-bottom:1px solid var(--border); vertical-align:top; }
+  tbody tr { transition: background .12s; }
   tbody tr:last-child td { border-bottom:none; }
-  .thumb { width:64px; height:64px; object-fit:cover; border-radius:6px; border:1px solid var(--border); cursor:zoom-in; background:var(--surface-2); }
+  tbody tr.clickable-row:hover { background: var(--surface-2); cursor: pointer; }
+  .thumb { width:64px; height:64px; object-fit:cover; border-radius:8px; border:1px solid var(--border); cursor:zoom-in; background:var(--surface-2); }
   .thumb.empty { display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--text-dim); }
-  .badge { font-size:11px; font-weight:700; padding:3px 8px; border-radius:20px; display:inline-block; }
-  .badge.Open { background:rgba(220,38,38,.15); color:var(--danger); }
-  .badge.In-Progress { background:rgba(217,119,6,.15); color:var(--warn); }
-  .badge.Fixed { background:rgba(22,163,74,.15); color:var(--ok); }
-  .badge.Rejected { background:rgba(107,112,120,.18); color:var(--gray); }
-  .badge-priority { font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:20px; display:inline-block; }
-  .badge-priority.Critical { background:rgba(220,38,38,.18); color:#dc2626; }
-  .badge-priority.High { background:rgba(217,119,6,.18); color:#d97706; }
-  .badge-priority.Medium { background:rgba(37,99,235,.15); color:#2563eb; }
-  .badge-priority.Low { background:rgba(107,112,120,.18); color:#6b7078; }
-  .chip { font-size:11.5px; font-weight:600; padding:4px 10px; border-radius:20px; border:1px solid var(--border); background:var(--surface-2); display:inline-block; }
-  .empty-state { text-align:center; padding:40px 10px; color:var(--text-dim); font-size:13.5px; }
+  .badge { font-size:11px; font-weight:800; padding:3px 9px; border-radius:20px; display:inline-block; }
+  .badge.Open { background:rgba(224,54,60,.13); color:var(--danger); }
+  .badge.In-Progress { background:rgba(224,138,28,.13); color:var(--warn); }
+  .badge.Fixed { background:rgba(23,166,115,.13); color:var(--ok); }
+  .badge.Rejected { background:rgba(108,111,133,.15); color:var(--gray); }
+  .badge-priority { font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:20px; display:inline-block; }
+  .badge-priority.Critical { background:rgba(224,54,60,.15); color:#e0363c; }
+  .badge-priority.High { background:rgba(224,138,28,.15); color:#e08a1c; }
+  .badge-priority.Medium { background:rgba(79,110,247,.14); color:#4f6ef7; }
+  .badge-priority.Low { background:rgba(108,111,133,.15); color:#6c6f85; }
+  .chip { font-size:11.5px; font-weight:700; padding:4px 11px; border-radius:20px; border:1px solid var(--border); background:var(--surface-2); display:inline-block; }
+  .empty-state { text-align:center; padding:42px 10px; color:var(--text-dim); font-size:13.5px; }
   .toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
-  .project-group { margin-bottom:18px; }
-  .project-group h4 { font-size:13.5px; margin:0 0 8px; display:flex; align-items:center; gap:8px; }
+  .project-group { margin-bottom:20px; }
+  .project-group h4 { font-size:13.5px; margin:0 0 9px; display:flex; align-items:center; gap:8px; font-weight:800; }
 
-  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; z-index:999; padding:20px; }
-  .modal-box { background:var(--surface); border-radius:12px; padding:18px; max-width:420px; width:100%; box-shadow:var(--shadow); max-height:90vh; overflow:auto; }
+  .modal-overlay { position:fixed; inset:0; background:rgba(20,18,40,.55); backdrop-filter: blur(2px); display:flex; align-items:center; justify-content:center; z-index:999; padding:20px; }
+  .modal-box { background:var(--surface); border-radius:16px; padding:20px; max-width:420px; width:100%; box-shadow:var(--shadow-lift); max-height:90vh; overflow:auto; }
   .modal-box p { font-size:13.5px; margin:0 0 14px; }
-  .modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:12px; flex-wrap:wrap; }
-  .modal-box label { font-size:11px; color:var(--text-dim); display:block; margin:10px 0 4px; }
-  .modal-box img.preview { max-width:100%; max-height:180px; border-radius:8px; border:1px solid var(--border); display:block; margin-bottom:6px; }
+  .modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:14px; flex-wrap:wrap; }
+  .modal-box label { font-size:11px; color:var(--text-dim); display:block; margin:10px 0 4px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
+  .modal-box img.preview { max-width:100%; max-height:180px; border-radius:10px; border:1px solid var(--border); display:block; margin-bottom:6px; }
 
   .lightbox { position:fixed; inset:0; background:rgba(0,0,0,.85); display:flex; align-items:center; justify-content:center; z-index:1000; padding:24px; }
-  .lightbox img { max-width:100%; max-height:100%; border-radius:8px; }
-  .toast { position:fixed; bottom:calc(20px + env(safe-area-inset-bottom, 0px)); left:50%; transform:translateX(-50%); background:var(--text); color:var(--bg); padding:9px 16px; border-radius:20px; font-size:12.5px; z-index:1001; box-shadow:var(--shadow); opacity:0; pointer-events:none; transition:opacity .2s; max-width: 90vw; text-align:center; }
+  .lightbox img { max-width:100%; max-height:100%; border-radius:10px; }
+  .toast { position:fixed; bottom:calc(20px + env(safe-area-inset-bottom, 0px)); left:50%; transform:translateX(-50%); background:var(--text); color:var(--bg); padding:10px 18px; border-radius:22px; font-size:12.5px; font-weight:600; z-index:1001; box-shadow:var(--shadow-lift); opacity:0; pointer-events:none; transition:opacity .2s; max-width: 90vw; text-align:center; }
   .toast.show { opacity:1; }
   .hint { font-size:11.5px; color:var(--text-dim); margin-top:6px; }
-  .popover { position:absolute; margin-top:6px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px; box-shadow:var(--shadow); z-index:50; width:220px; }
+  .popover { position:absolute; margin-top:6px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px; box-shadow:var(--shadow-lift); z-index:50; width:230px; }
   ::placeholder { color:var(--text-dim); opacity:.7; }
 
   .mini-thumb-btn { display:flex; flex-direction:column; align-items:center; gap:4px; }
-  .mini-thumb-btn .thumb-add { width:64px; height:64px; border:1px dashed var(--border); border-radius:6px; background:var(--surface-2); color:var(--text-dim); font-size:10.5px; display:flex; align-items:center; justify-content:center; cursor:pointer; text-align:center; line-height:1.2; padding:2px; }
-  .mini-thumb-btn .thumb-add:hover { border-color:var(--accent); color:var(--accent); }
-  .mini-thumb-btn button.chg { font-size:10px; padding:2px 6px; }
+  .mini-thumb-btn .thumb-add { width:64px; height:64px; border:1.5px dashed var(--border); border-radius:8px; background:var(--surface-2); color:var(--text-dim); font-size:10.5px; display:flex; align-items:center; justify-content:center; cursor:pointer; text-align:center; line-height:1.2; padding:2px; transition:.15s; }
+  .mini-thumb-btn .thumb-add:hover { border-color:var(--accent); color:var(--accent); background: rgba(109,94,245,0.06); }
+  .mini-thumb-btn button.chg { font-size:10px; padding:3px 7px; }
   .date-stepper { display:flex; align-items:center; gap:3px; }
   .date-stepper input[type=date] { flex:1; min-width:0; }
-  .date-stepper button.step { flex:none; width:22px; height:26px; padding:0; font-size:13px; line-height:1; display:flex; align-items:center; justify-content:center; }
-  .status-summary { display:flex; gap:8px; flex-wrap:wrap; margin:2px 0 12px; }
-  .status-summary .chip { font-size:11.5px; font-weight:600; padding:4px 10px; border-radius:20px; border:1px solid var(--border); background:var(--surface-2); }
+  .date-stepper button.step { flex:none; width:24px; height:28px; padding:0; font-size:13px; line-height:1; display:flex; align-items:center; justify-content:center; }
+  .status-summary { display:flex; gap:8px; flex-wrap:wrap; margin:2px 0 14px; }
+  .status-summary .chip { font-size:11.5px; font-weight:700; padding:4px 11px; border-radius:20px; border:1px solid var(--border); background:var(--surface-2); }
   .setup-overlay { position:fixed; inset:0; background:var(--bg); z-index:2000; overflow:auto; padding:30px 16px; }
   .col-picker-list { display:grid; grid-template-columns:1fr 1fr; gap:9px 14px; margin:4px 0 6px; }
   .col-picker-list label { display:flex; align-items:center; gap:7px; font-size:13px; color:var(--text); cursor:pointer; }
   .col-picker-list input { width:16px; height:16px; }
-  .setup-box { max-width:640px; margin:0 auto; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:26px; box-shadow:var(--shadow); }
+  .setup-box { max-width:640px; margin:0 auto; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px; box-shadow:var(--shadow-lift); }
   .setup-box h2 { margin-top:0; }
   .setup-box ol { padding-left: 20px; line-height:1.8; font-size:14px; }
-  .setup-box code { background:var(--surface-2); padding:2px 6px; border-radius:5px; font-size:12.5px; }
-  .setup-box pre { background:var(--surface-2); padding:12px; border-radius:8px; overflow:auto; font-size:12px; }
+  .setup-box code { background:var(--surface-2); padding:2px 6px; border-radius:6px; font-size:12.5px; }
+  .setup-box pre { background:var(--surface-2); padding:12px; border-radius:10px; overflow:auto; font-size:12px; }
+  .rename-input-row { display:flex; gap:6px; }
 </style>
 </head>
 <body>
@@ -218,9 +260,9 @@
     <div class="proj-tabs-wrap">
       <div class="proj-tabs" id="projTabs"><div class="hint">Memuat…</div></div>
       <div style="position:relative;">
-        <button class="add-proj-btn primary" id="btnShowAddProj">+ Project</button>
+        <button class="add-proj-btn" id="btnShowAddProj">+ Project</button>
         <div class="popover" id="addProjPopover" style="display:none; right:0;">
-          <label style="font-size:11px; color:var(--text-dim); display:block; margin-bottom:4px;">Nama project baru</label>
+          <label style="font-size:11px; color:var(--text-dim); display:block; margin-bottom:4px; font-weight:700;">Nama project baru</label>
           <input type="text" id="newProjName" placeholder="mis. Flexa">
           <div class="row-flex" style="margin-top:8px; justify-content:flex-end;">
             <button id="btnCancelAddProj">Batal</button>
@@ -260,7 +302,7 @@
       <div class="row-flex between" style="margin-bottom:10px;">
         <h3 style="margin:0;">Bug di project ini</h3>
         <div class="row-flex">
-          <label class="row-flex" style="font-size:12.5px; color:var(--text-dim); font-weight:500;">
+          <label class="row-flex" style="font-size:12.5px; color:var(--text-dim); font-weight:600;">
             <input type="checkbox" id="showAllDates" style="width:auto;"> semua tanggal
           </label>
           <div class="view-toggle">
@@ -269,6 +311,7 @@
           </div>
         </div>
       </div>
+      <div class="hint" id="tableHint" style="display:none; margin:0 0 8px;">💡 Klik area kosong pada baris untuk membuka detail & edit lengkap.</div>
       <div id="boardWrap"></div>
       <div id="tableWrap" style="display:none;"></div>
     </div>
@@ -281,12 +324,16 @@
         <div class="row-flex">
           <label style="font-size:12.5px; color:var(--text-dim);">Tanggal:</label>
           <input type="date" id="dailyDate">
+          <label class="row-flex" style="font-size:12.5px; color:var(--text-dim); font-weight:600;">
+            <input type="checkbox" id="dailyShowAllDates" style="width:auto;"> semua tanggal
+          </label>
           <label style="font-size:12.5px; color:var(--text-dim);">Project:</label>
           <select id="dailyProjectFilter" style="width:auto; min-width:150px;"><option value="">Semua Project</option></select>
         </div>
         <button class="primary" id="btnExportDaily">⬇ Export PDF</button>
       </div>
       <div class="status-summary" id="dailyStatusSummary"></div>
+      <div class="hint" id="dailyFilterHint" style="display:none; margin-bottom:8px;"></div>
       <div id="dailyWrap" style="margin-top:12px;"><div class="empty-state">Memuat data…</div></div>
     </div>
   </div>
@@ -345,6 +392,23 @@
       overlay.onclick = e=>{ if(e.target===overlay){ overlay.remove(); resolve(false); } };
     });
   }
+  function promptDialog(message, defaultValue, okLabel){
+    return new Promise(resolve=>{
+      const overlay = document.createElement("div");
+      overlay.className = "modal-overlay";
+      overlay.innerHTML = '<div class="modal-box"><p>'+esc(message)+'</p>'+
+        '<div class="rename-input-row"><input type="text" id="pdInput" value="'+esc(defaultValue||"")+'"></div>'+
+        '<div class="modal-actions"><button id="pdCancel">Batal</button><button class="primary" id="pdOk">'+esc(okLabel||"Simpan")+'</button></div></div>';
+      document.body.appendChild(overlay);
+      const input = overlay.querySelector("#pdInput");
+      input.focus(); input.select();
+      const finish = val=>{ overlay.remove(); resolve(val); };
+      overlay.querySelector("#pdCancel").onclick = ()=>finish(null);
+      overlay.querySelector("#pdOk").onclick = ()=>finish(input.value.trim());
+      input.addEventListener("keydown", e=>{ if(e.key==="Enter") finish(input.value.trim()); if(e.key==="Escape") finish(null); });
+      overlay.onclick = e=>{ if(e.target===overlay) finish(null); };
+    });
+  }
   function showLightbox(url){
     const ov = document.createElement("div");
     ov.className = "lightbox";
@@ -393,9 +457,9 @@
     return null; // too large even after heavy compression
   }
   const STATUS_OPTS = ["Open","In Progress","Fixed","Rejected"];
-  const STATUS_COLOR = {"Open":"#dc2626","In Progress":"#d97706","Fixed":"#16a34a","Rejected":"#6b7078"};
+  const STATUS_COLOR = {"Open":"#e0363c","In Progress":"#e08a1c","Fixed":"#17a673","Rejected":"#6c6f85"};
   const PRIORITY_OPTS = ["Critical","High","Medium","Low"];
-  const PRIORITY_COLOR = {"Critical":"#dc2626","High":"#d97706","Medium":"#2563eb","Low":"#6b7078"};
+  const PRIORITY_COLOR = {"Critical":"#e0363c","High":"#e08a1c","Medium":"#4f6ef7","Low":"#6c6f85"};
   const PDF_COLUMNS = [
     { key:"project", label:"Project" },
     { key:"existingImg", label:"Gambar Existing" },
@@ -417,7 +481,7 @@
   document.getElementById("quickDate").value = todayStr();
   document.getElementById("dailyDate").value = todayStr();
 
-  document.getElementById("connPill").textContent = "💾 Tersinkron via Firebase";
+  document.getElementById("connPill").innerHTML = "● Menghubungkan…";
 
   // Reusable hidden file input for attaching/replacing a single image (used by
   // table rows and the detail modal for both existing & expected images).
@@ -443,12 +507,13 @@
       if(selectedProjectId && !projects.find(p=>p.id===selectedProjectId)) selectedProjectId = projects[0] ? projects[0].id : null;
       renderAll();
     },
-    err=>{ toast("Gagal memuat project: "+err.message); document.getElementById("connPill").textContent = "⚠ Gagal konek Firebase"; }
+    err=>{ toast("Gagal memuat project: "+err.message); document.getElementById("connPill").innerHTML = "⚠ Gagal konek Firebase"; }
   );
   db.collection("entries").orderBy("createdAt","desc").limit(1000).onSnapshot(
     snap=>{
       entries = snap.docs.map(d=>({ id:d.id, ...d.data() }));
       renderAll();
+      document.getElementById("connPill").innerHTML = "💾 Tersinkron via Firebase";
     },
     err=>toast("Gagal memuat entry: "+err.message)
   );
@@ -469,15 +534,30 @@
       const cnt = entries.filter(e=>e.projectId===p.id).length;
       const active = p.id===selectedProjectId;
       return '<div class="proj-tab '+(active?'active':'')+'" data-id="'+p.id+'">'+
-        '<span>'+esc(p.name)+'</span><span class="cnt">'+cnt+'</span>'+
-        '<button class="del-x" data-del="'+p.id+'" title="Hapus project">✕</button></div>';
+        '<span data-select="'+p.id+'">'+esc(p.name)+'</span><span class="cnt" data-select="'+p.id+'">'+cnt+'</span>'+
+        '<button class="icon-btn" data-rename="'+p.id+'" title="Ubah nama project">✎</button>'+
+        '<button class="icon-btn" data-del="'+p.id+'" title="Hapus project">✕</button></div>';
     }).join("");
-    wrap.querySelectorAll(".proj-tab").forEach(el=>{
-      el.addEventListener("click", e=>{
-        if(e.target.closest("[data-del]")) return;
-        selectedProjectId = el.dataset.id;
+    wrap.querySelectorAll("[data-select]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        selectedProjectId = el.dataset.select;
         localStorage.setItem("dr_selected_project", selectedProjectId);
         renderAll();
+      });
+    });
+    wrap.querySelectorAll("[data-rename]").forEach(btn=>{
+      btn.addEventListener("click", async e=>{
+        e.stopPropagation();
+        const p = projects.find(x=>x.id===btn.dataset.rename);
+        if(!p) return;
+        const newName = await promptDialog("Ubah nama project:", p.name, "Simpan");
+        if(newName === null) return;
+        if(!newName){ toast("Nama project tidak boleh kosong."); return; }
+        if(newName === p.name) return;
+        try{
+          await db.collection("projects").doc(p.id).update({ name: newName });
+          toast("Nama project diperbarui.");
+        }catch(err){ toast("Gagal mengubah nama project."); }
       });
     });
     wrap.querySelectorAll("[data-del]").forEach(btn=>{
@@ -548,16 +628,17 @@
     let html = '<div class="board">';
     for(const st of STATUS_OPTS){
       const items = list.filter(e=>e.status===st).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-      html += '<div class="board-col"><h4><span><span class="dot" style="background:'+STATUS_COLOR[st]+'"></span>'+st+'</span><span>'+items.length+'</span></h4>';
+      html += '<div class="board-col" data-col-status="'+st+'" style="border-top-color:'+STATUS_COLOR[st]+';"><h4><span><span class="dot" style="background:'+STATUS_COLOR[st]+'; color:'+STATUS_COLOR[st]+';"></span>'+st+'</span><span>'+items.length+'</span></h4>';
       if(!items.length){
         html += '<div class="board-empty">Tidak ada</div>';
       } else {
         for(const e of items){
-          html += '<div class="card-item" data-open="'+e.id+'">';
+          html += '<div class="card-item" draggable="true" data-open="'+e.id+'">';
           html += e.imageData ? '<img src="'+e.imageData+'">' : '<div class="imgless">tanpa gambar</div>';
           html += '<div class="exc">'+esc(e.existing || "(belum diisi)")+'</div>';
           html += '<span class="badge-priority '+(e.priority||"Medium")+'">'+(e.priority||"Medium")+'</span>';
           html += '<div class="meta">'+fmtDate(e.date)+(e.dueDate ? ' · Due '+fmtDate(e.dueDate) : '')+'</div>';
+          html += '<div class="quick-status">'+STATUS_OPTS.map(s=>'<button type="button" data-quick-status="'+s+'" data-quick-id="'+e.id+'" class="'+(e.status===s?'active':'')+'" style="background:'+STATUS_COLOR[s]+'; color:'+STATUS_COLOR[s]+';" title="'+s+'"></button>').join('')+'</div>';
           html += '</div>';
         }
       }
@@ -568,18 +649,47 @@
     wrap.querySelectorAll("[data-open]").forEach(card=>{
       card.addEventListener("click", ()=> openEntryModal(card.dataset.open));
     });
+    // Klik titik status kecil -> ganti status langsung tanpa buka detail.
+    wrap.querySelectorAll("[data-quick-status]").forEach(btn=>{
+      btn.addEventListener("click", e=>{
+        e.stopPropagation();
+        updateEntry(btn.dataset.quickId, { status: btn.dataset.quickStatus });
+      });
+    });
+    // Drag & drop kartu antar kolom untuk ganti status.
+    wrap.querySelectorAll(".card-item").forEach(card=>{
+      card.addEventListener("dragstart", e=>{
+        e.dataTransfer.setData("text/plain", card.dataset.open);
+        e.dataTransfer.effectAllowed = "move";
+        setTimeout(()=>card.classList.add("dragging"), 0);
+      });
+      card.addEventListener("dragend", ()=> card.classList.remove("dragging"));
+    });
+    wrap.querySelectorAll(".board-col").forEach(col=>{
+      col.addEventListener("dragover", e=>{ e.preventDefault(); col.classList.add("drop-target"); });
+      col.addEventListener("dragleave", ()=> col.classList.remove("drop-target"));
+      col.addEventListener("drop", e=>{
+        e.preventDefault();
+        col.classList.remove("drop-target");
+        const id = e.dataTransfer.getData("text/plain");
+        if(id) updateEntry(id, { status: col.dataset.colStatus });
+      });
+    });
   }
 
   function renderTable(){
     const wrap = document.getElementById("tableWrap");
+    const hint = document.getElementById("tableHint");
     const list = filteredEntries().slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
     if(!list.length){
       wrap.innerHTML = '<div class="empty-state">Belum ada bug.</div>';
+      hint.style.display = "none";
       return;
     }
+    hint.style.display = "block";
     let html = '<table><thead><tr><th style="width:74px;">Gambar</th><th>Existing</th><th>Expected</th><th style="width:74px;">Gambar Expected</th><th style="width:110px;">Priority</th><th style="width:110px;">Due Date</th><th style="width:120px;">Status</th><th style="width:90px;">Tanggal</th><th style="width:36px;"></th></tr></thead><tbody>';
     for(const e of list){
-      html += '<tr data-id="'+e.id+'">';
+      html += '<tr data-id="'+e.id+'" class="clickable-row">';
       html += '<td>'+(e.imageData ? '<img class="thumb" data-img="'+e.imageData+'" src="'+e.imageData+'">' : '<div class="thumb empty">-</div>')+'</td>';
       html += '<td><textarea data-f="existing" placeholder="Kondisi saat ini...">'+esc(e.existing)+'</textarea></td>';
       html += '<td><textarea data-f="expected" placeholder="Kondisi yang diharapkan...">'+esc(e.expected)+'</textarea></td>';
@@ -628,6 +738,13 @@
         pickImageFor(dataUrl=>updateEntry(id, { expectedImageData: dataUrl }));
       });
     });
+    // Klik di area kosong baris (bukan di input/select/textarea/button/gambar) -> buka detail modal lengkap.
+    wrap.querySelectorAll("tr.clickable-row").forEach(tr=>{
+      tr.addEventListener("click", e=>{
+        if(e.target.closest("textarea, select, input, button, .thumb, .thumb-add")) return;
+        openEntryModal(tr.dataset.id);
+      });
+    });
   }
 
   document.getElementById("btnViewBoard").addEventListener("click", ()=>{
@@ -635,15 +752,24 @@
     document.getElementById("btnViewTable").classList.remove("active");
     document.getElementById("boardWrap").style.display = "";
     document.getElementById("tableWrap").style.display = "none";
+    document.getElementById("tableHint").style.display = "none";
   });
   document.getElementById("btnViewTable").addEventListener("click", ()=>{
     document.getElementById("btnViewTable").classList.add("active");
     document.getElementById("btnViewBoard").classList.remove("active");
     document.getElementById("tableWrap").style.display = "";
     document.getElementById("boardWrap").style.display = "none";
+    renderTable();
   });
 
   async function updateEntry(id, patch){
+    // Catat tanggal saat status benar-benar berubah, supaya bug carry-over yang baru
+    // diselesaikan hari ini tetap terhitung "Fixed/Rejected" di Laporan Harian hari ini,
+    // bukan malah hilang karena tanggal aslinya sudah lewat.
+    if(patch.status){
+      const cur = entries.find(x=>x.id===id);
+      if(!cur || cur.status !== patch.status) patch.statusChangedDate = todayStr();
+    }
     try{ await db.collection("entries").doc(id).update(patch); }
     catch(e){ toast("Gagal menyimpan perubahan."); }
   }
@@ -671,10 +797,13 @@
   function openEntryModal(id){
     const e = entries.find(x=>x.id===id);
     if(!e) return;
+    const proj = projects.find(p=>p.id===e.projectId);
     const overlay = document.createElement("div");
     overlay.className = "modal-overlay";
     overlay.innerHTML =
       '<div class="modal-box">'+
+        (proj ? '<div class="chip" style="margin-bottom:10px;">'+esc(proj.name)+'</div>' : '')+
+        '<label>Gambar Existing</label>'+
         (e.imageData ? '<img class="preview" id="mExistingImg" src="'+e.imageData+'">' : '<div class="hint" id="mExistingImg">Tanpa gambar existing</div>')+
         '<label>Existing</label><textarea id="mExisting">'+esc(e.existing)+'</textarea>'+
         '<div id="mExpImgWrap">'+(e.expectedImageData ? '<img class="preview" id="mExpectedImg" src="'+e.expectedImageData+'">' : '')+'</div>'+
@@ -694,6 +823,8 @@
         '</div>'+
       '</div>';
     document.body.appendChild(overlay);
+    const existingImgEl = overlay.querySelector("#mExistingImg");
+    if(existingImgEl && existingImgEl.tagName === "IMG") existingImgEl.addEventListener("click", ()=>showLightbox(e.imageData));
     const mDateInput = overlay.querySelector("#mDate");
     overlay.querySelector("#mDatePrev").onclick = ()=>{ mDateInput.value = addDays(mDateInput.value, -1); };
     overlay.querySelector("#mDateNext").onclick = ()=>{ mDateInput.value = addDays(mDateInput.value, 1); };
@@ -706,6 +837,7 @@
     }
     function refreshExpUI(dataUrl){
       expImgWrap.innerHTML = dataUrl ? '<img class="preview" id="mExpectedImg" src="'+dataUrl+'">' : '';
+      if(dataUrl) expImgWrap.querySelector("#mExpectedImg").addEventListener("click", ()=>showLightbox(dataUrl));
       addExpBtn.textContent = dataUrl ? "Ganti gambar expected" : "+ Tambah gambar expected";
       if(dataUrl){
         if(!removeExpBtn){
@@ -721,6 +853,10 @@
       }
     }
     bindRemoveExpBtn();
+    if(e.expectedImageData){
+      const img = overlay.querySelector("#mExpectedImg");
+      if(img) img.addEventListener("click", ()=>showLightbox(e.expectedImageData));
+    }
     addExpBtn.onclick = ()=>{
       pickImageFor(dataUrl=>{
         pendingExpectedImage = dataUrl;
@@ -784,7 +920,7 @@
           '<div><label>Expected</label><textarea data-sf="expected" placeholder="Kondisi diharapkan">'+esc(s.expected)+'</textarea></div>'+
           '<div class="full"><label>Gambar Expected (opsional)</label><div class="mini-thumb-btn" style="align-items:flex-start;">'+
             (s.expectedPreviewUrl
-              ? '<img src="'+s.expectedPreviewUrl+'" style="width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"><button class="chg" data-add-staging-exp-img>Ganti</button>'
+              ? '<img src="'+s.expectedPreviewUrl+'" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--border);"><button class="chg" data-add-staging-exp-img>Ganti</button>'
               : '<div class="thumb-add" data-add-staging-exp-img style="width:auto; padding:8px 12px;">+ pilih gambar</div>')+
           '</div></div>'+
           '<div><label>Status</label><select data-sf="status">'+STATUS_OPTS.map(o=>'<option value="'+o+'">'+o+'</option>').join('')+'</select></div>'+
@@ -860,14 +996,29 @@
 
   // ================= daily (all projects) tab =================
   const UNRESOLVED_STATUSES = ["Open","In Progress"]; // belum selesai -> ikut dibawa ke laporan hari ini
+  let dailyStatusFilter = null; // null = semua status; atau salah satu STATUS_OPTS
   function renderDailyStatusSummary(list){
     const el = document.getElementById("dailyStatusSummary");
     if(!list.length){ el.innerHTML = ""; return; }
     const counts = {}; STATUS_OPTS.forEach(s=>counts[s]=0);
     list.forEach(e=>{ if(counts[e.status]===undefined) counts[e.status]=0; counts[e.status]++; });
-    let html = '<span class="chip">Total: '+list.length+' bug</span>';
-    STATUS_OPTS.forEach(s=>{ html += '<span class="chip" style="color:'+STATUS_COLOR[s]+';">'+s+': '+counts[s]+'</span>'; });
+    const totalActive = dailyStatusFilter===null;
+    let html = '<button type="button" class="chip" data-filter-status="" style="cursor:pointer; '+(totalActive?'background:var(--accent-grad); color:var(--accent-text); border-color:transparent;':'')+'">Total: '+list.length+' bug</button>';
+    STATUS_OPTS.forEach(s=>{
+      const active = dailyStatusFilter===s;
+      const style = active
+        ? 'cursor:pointer; background:'+STATUS_COLOR[s]+'; color:#fff; border-color:transparent;'
+        : 'cursor:pointer; color:'+STATUS_COLOR[s]+';';
+      html += '<button type="button" class="chip" data-filter-status="'+s+'" style="'+style+'">'+s+': '+counts[s]+'</button>';
+    });
     el.innerHTML = html;
+    el.querySelectorAll("[data-filter-status]").forEach(chip=>{
+      chip.addEventListener("click", ()=>{
+        const val = chip.dataset.filterStatus;
+        dailyStatusFilter = (val==="") ? null : (dailyStatusFilter===val ? null : val);
+        renderDailyTab();
+      });
+    });
   }
   function populateDailyProjectFilter(){
     const sel = document.getElementById("dailyProjectFilter");
@@ -876,24 +1027,65 @@
     if(prev && projects.find(p=>p.id===prev)) sel.value = prev;
   }
   function dailyListForDate(date, projectFilter){
-    // Bug tanggal ini + bug hari-hari sebelumnya yang masih Open/In Progress (belum selesai) dibawa masuk.
-    let list = entries.filter(e=>e.date===date || (e.date < date && UNRESOLVED_STATUSES.includes(e.status)));
+    // Masuk ke laporan tanggal ini jika salah satu benar:
+    // 1) memang dilaporkan di tanggal ini, atau
+    // 2) dari hari sebelumnya dan masih belum selesai (Open/In Progress) -> carry-over, atau
+    // 3) dari hari sebelumnya TAPI baru saja diselesaikan (Fixed/Rejected) tepat pada tanggal ini
+    //    -> supaya tetap terhitung di ringkasan status hari ini, bukan hilang begitu saja.
+    let list = entries.filter(e=>
+      e.date===date ||
+      (e.date < date && UNRESOLVED_STATUSES.includes(e.status)) ||
+      (e.date < date && !UNRESOLVED_STATUSES.includes(e.status) && e.statusChangedDate===date)
+    );
     if(projectFilter) list = list.filter(e=>e.projectId===projectFilter);
-    return list.map(e=>({ ...e, isCarryOver: e.date !== date }));
+    return list.map(e=>({
+      ...e,
+      isCarryOver: e.date !== date,
+      isResolvedToday: e.date !== date && !UNRESOLVED_STATUSES.includes(e.status) && e.statusChangedDate===date
+    }));
   }
   function renderDailyTab(){
     populateDailyProjectFilter();
     const date = document.getElementById("dailyDate").value || todayStr();
     const projectFilter = document.getElementById("dailyProjectFilter").value;
+    const showAllDates = document.getElementById("dailyShowAllDates").checked;
+    document.getElementById("dailyDate").disabled = showAllDates;
     const wrap = document.getElementById("dailyWrap");
-    const list = dailyListForDate(date, projectFilter);
-    if(!projects.length){ wrap.innerHTML = '<div class="empty-state">Belum ada project.</div>'; document.getElementById("dailyStatusSummary").innerHTML=""; return; }
-    renderDailyStatusSummary(list);
-    if(!list.length){ wrap.innerHTML = '<div class="empty-state">Tidak ada bug pada tanggal ini'+(projectFilter?" untuk project ini.":" di semua project.")+'</div>'; return; }
+    const hintEl = document.getElementById("dailyFilterHint");
+
+    // Mode "semua tanggal": tampilkan SEMUA bug apa adanya (termasuk yang sudah Fixed/Rejected
+    // kapan pun), tanpa logika carry-over -- supaya benar-benar merekam seluruh riwayat bug.
+    let fullList;
+    if(showAllDates){
+      fullList = entries.slice();
+      if(projectFilter) fullList = fullList.filter(e=>e.projectId===projectFilter);
+      fullList = fullList.map(e=>({ ...e, isCarryOver:false, isResolvedToday:false }));
+    } else {
+      fullList = dailyListForDate(date, projectFilter);
+    }
+
+    if(!projects.length){ wrap.innerHTML = '<div class="empty-state">Belum ada project.</div>'; document.getElementById("dailyStatusSummary").innerHTML=""; hintEl.style.display="none"; return; }
+    renderDailyStatusSummary(fullList);
+
+    let list = dailyStatusFilter ? fullList.filter(e=>e.status===dailyStatusFilter) : fullList;
+    if(dailyStatusFilter){
+      hintEl.style.display = "block";
+      hintEl.innerHTML = '🔎 Menampilkan hanya status <b>'+dailyStatusFilter+'</b> — klik chip "Total" untuk lihat semua lagi.';
+    } else {
+      hintEl.style.display = "none";
+    }
+
+    if(!list.length){ wrap.innerHTML = '<div class="empty-state">Tidak ada bug'+(dailyStatusFilter?' dengan status '+dailyStatusFilter:'')+(showAllDates?'':' pada tanggal ini')+(projectFilter?" untuk project ini.":".")+'</div>'; return; }
     let html = "";
-    const carryCount = list.filter(e=>e.isCarryOver).length;
-    if(carryCount){
-      html += '<div class="hint" style="margin:0 0 10px;">🔁 '+carryCount+' bug belum selesai dari hari sebelumnya ikut ditampilkan (ditandai badge "Carry-over").</div>';
+    if(!showAllDates){
+      const carryCount = list.filter(e=>e.isCarryOver && !e.isResolvedToday).length;
+      const resolvedTodayCount = list.filter(e=>e.isResolvedToday).length;
+      if(carryCount || resolvedTodayCount){
+        let msg = [];
+        if(carryCount) msg.push(carryCount+' bug belum selesai dari hari sebelumnya (badge "Carry-over")');
+        if(resolvedTodayCount) msg.push(resolvedTodayCount+' bug dari hari sebelumnya baru diselesaikan hari ini (badge "✅ Selesai hari ini")');
+        html += '<div class="hint" style="margin:0 0 10px;">🔁 '+msg.join(' · ')+'.</div>';
+      }
     }
     const groups = projectFilter ? projects.filter(p=>p.id===projectFilter) : projects;
     for(const p of groups){
@@ -910,7 +1102,10 @@
         html += '<td><span class="badge-priority '+(e.priority||"Medium")+'">'+(e.priority||"Medium")+'</span></td>';
         html += '<td style="font-size:12px; color:var(--text-dim);">'+(e.dueDate ? fmtDate(e.dueDate) : "-")+'</td>';
         html += '<td><span class="badge '+e.status.replace(" ","-")+'">'+e.status+'</span></td>';
-        html += '<td style="font-size:11.5px;">'+fmtDate(e.date)+(e.isCarryOver ? '<div class="badge-priority" style="background:rgba(217,119,6,.18); color:#d97706; margin-top:3px;">Carry-over</div>' : '')+'</td>';
+        html += '<td style="font-size:11.5px;">'+fmtDate(e.date)+
+          (e.isResolvedToday ? '<div class="badge-priority" style="background:rgba(23,166,115,.15); color:#17a673; margin-top:3px;">✅ Selesai hari ini</div>'
+            : (e.isCarryOver ? '<div class="badge-priority" style="background:rgba(224,138,28,.15); color:#e08a1c; margin-top:3px;">Carry-over</div>' : ''))+
+          '</td>';
         html += '</tr>';
       }
       html += '</tbody></table></div>';
@@ -920,6 +1115,7 @@
   }
   document.getElementById("dailyDate").addEventListener("change", renderDailyTab);
   document.getElementById("dailyProjectFilter").addEventListener("change", renderDailyTab);
+  document.getElementById("dailyShowAllDates").addEventListener("change", renderDailyTab);
 
   // ================= tabs =================
   document.querySelectorAll(".tab-btn").forEach(btn=>{
@@ -1051,7 +1247,7 @@
       head, body,
       theme: "grid",
       styles: { font:"helvetica", fontSize:9, cellPadding:3, overflow:"linebreak", valign:"middle", lineColor:[210,212,218], lineWidth:0.2 },
-      headStyles: { fillColor:[79,70,229], textColor:255, fontStyle:"bold", fontSize:9.5 },
+      headStyles: { fillColor:[109,94,245], textColor:255, fontStyle:"bold", fontSize:9.5 },
       alternateRowStyles: { fillColor:[246,247,250] },
       columnStyles,
       didDrawCell: data=>{
@@ -1090,14 +1286,24 @@
   document.getElementById("btnExportDaily").addEventListener("click", async ()=>{
     const date = document.getElementById("dailyDate").value || todayStr();
     const projectFilter = document.getElementById("dailyProjectFilter").value;
-    let list = dailyListForDate(date, projectFilter);
+    const showAllDates = document.getElementById("dailyShowAllDates").checked;
+    let list;
+    if(showAllDates){
+      list = entries.slice();
+      if(projectFilter) list = list.filter(e=>e.projectId===projectFilter);
+    } else {
+      list = dailyListForDate(date, projectFilter);
+    }
+    if(dailyStatusFilter) list = list.filter(e=>e.status===dailyStatusFilter);
     list = list.map(e=>({
       ...e, projectName: (projects.find(p=>p.id===e.projectId)||{}).name || "-"
     })).sort((a,b)=> (a.projectName||"").localeCompare(b.projectName||"") || (a.createdAt-b.createdAt));
-    if(!list.length){ toast("Tidak ada bug pada tanggal ini."); return; }
+    if(!list.length){ toast("Tidak ada bug untuk diekspor."); return; }
     const projLabel = projectFilter ? (projects.find(p=>p.id===projectFilter)||{}).name || "Project" : "Semua Project";
-    const title = "Laporan Harian — " + projLabel + " — " + fmtDate(date);
-    const filenameBase = "laporan_harian_" + (projectFilter?projLabel.replace(/\W+/g,"_")+"_":"") + date;
+    const periodLabel = showAllDates ? "Semua Tanggal" : fmtDate(date);
+    const statusLabel = dailyStatusFilter ? (" — Status "+dailyStatusFilter) : "";
+    const title = "Laporan Harian — " + projLabel + " — " + periodLabel + statusLabel;
+    const filenameBase = "laporan_" + (projectFilter?projLabel.replace(/\W+/g,"_")+"_":"") + (showAllDates?"semua_tanggal":date) + (dailyStatusFilter?"_"+dailyStatusFilter.replace(/\W+/g,"_"):"");
     openColumnPickerModal(!projectFilter, async selectedCols=>{
       await buildAndSavePdf(title, list, !projectFilter, filenameBase, selectedCols);
     });
