@@ -69,20 +69,134 @@
   .tab-panel { display:none; } .tab-panel.active { display:block; animation: fadeIn .18s ease; }
   @keyframes fadeIn { from { opacity:0; transform:translateY(3px);} to { opacity:1; transform:none; } }
 
-  .proj-tabs-wrap { display:flex; align-items:center; gap:8px; margin-bottom:16px; }
-  .proj-tabs { display:flex; gap:7px; overflow-x:auto; padding:2px 2px 6px; flex:1; scrollbar-width: thin; }
-  .proj-tab {
-    display:flex; align-items:center; gap:6px; white-space:nowrap; padding:8px 8px 8px 14px; border-radius:22px;
-    border:1px solid var(--border); background:var(--surface); font-size:13px; font-weight:700; cursor:pointer;
-    transition:.15s; box-shadow: var(--shadow);
+  .proj-picker { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:16px; margin-bottom:16px; box-shadow:var(--shadow); }
+  .proj-picker-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+  .proj-picker-head .plabel { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim); font-weight:800; }
+  .proj-picker-head input[type=text] { width:210px; }
+  .proj-grid {
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+    gap:10px;
   }
-  .proj-tab:hover { transform: translateY(-1px); box-shadow: var(--shadow-lift); }
-  .proj-tab.active { background: var(--accent-grad); color:var(--accent-text); border-color:transparent; }
-  .proj-tab .cnt { font-size:11px; opacity:.75; font-weight:500; }
-  .proj-tab .icon-btn { opacity:.55; background:none; border:none; color:inherit; cursor:pointer; font-size:12px; padding:3px 5px; border-radius:6px; line-height:1; }
-  .proj-tab .icon-btn:hover { opacity:1; background:rgba(0,0,0,0.12); }
-  .add-proj-btn { border-radius:22px; padding:9px 16px; white-space:nowrap; background:var(--accent-grad); color:var(--accent-text); border:none; box-shadow: var(--shadow); }
-  .add-proj-btn:hover { box-shadow: var(--shadow-lift); transform: translateY(-1px); }
+  .proj-tab {
+    width:100%;
+    min-width:0;
+    min-height:86px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    gap:7px;
+    text-align:left;
+    padding:11px 12px;
+    border-radius:12px;
+    border:1px solid var(--border);
+    background:var(--surface-2);
+    font-family:inherit;
+    cursor:pointer;
+    transition:border-color .15s, background .15s, transform .15s, box-shadow .15s;
+    position:relative;
+    color:var(--text);
+  }
+  .proj-tab:hover {
+    border-color:var(--accent);
+    transform:translateY(-1px);
+    box-shadow:var(--shadow);
+  }
+  .proj-tab.active {
+    background:rgba(109,94,245,0.10);
+    border-color:var(--accent);
+    box-shadow:0 0 0 1px var(--accent) inset;
+  }
+  .proj-tab:focus-visible {
+    outline:none;
+    box-shadow:0 0 0 3px rgba(109,94,245,.18), 0 0 0 1px var(--accent) inset;
+  }
+  .proj-tab .pt-top {
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:8px;
+    min-width:0;
+  }
+  .proj-tab .pt-name {
+    font-weight:800;
+    font-size:13.5px;
+    line-height:1.25;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .proj-tab .cnt {
+    font-size:11px;
+    color:var(--text-dim);
+    font-weight:600;
+    white-space:nowrap;
+  }
+  .proj-tab .pt-actions {
+    display:flex;
+    gap:2px;
+    flex:none;
+    opacity:0;
+    transition:.15s;
+  }
+  .proj-tab:hover .pt-actions,
+  .proj-tab.active .pt-actions { opacity:1; }
+  .proj-tab .icon-btn {
+    width:24px;
+    height:24px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:transparent;
+    border:none;
+    color:var(--text-dim);
+    cursor:pointer;
+    font-size:11.5px;
+    padding:0;
+    border-radius:6px;
+    line-height:1;
+  }
+  .proj-tab .icon-btn:hover {
+    background:rgba(109,94,245,.12);
+    color:var(--text);
+  }
+  .proj-tab .pt-bar {
+    height:4px;
+    border-radius:4px;
+    background:var(--border);
+    overflow:hidden;
+    display:flex;
+  }
+  .proj-tab .pt-bar span { height:100%; }
+  .add-proj-btn {
+    border-radius:12px;
+    border:1.5px dashed var(--border);
+    background:transparent;
+    color:var(--text-dim);
+    font-weight:700;
+    font-size:13px;
+    min-height:86px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    box-shadow:none;
+  }
+  .add-proj-btn:hover {
+    border-color:var(--accent);
+    color:var(--accent);
+    transform:none;
+    box-shadow:none;
+    background:rgba(109,94,245,.04);
+  }
+  @media (max-width:1050px) {
+    .proj-grid { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+  }
+  @media (max-width:720px) {
+    .proj-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width:480px) {
+    .proj-grid { grid-template-columns:1fr; }
+  }
 
   .card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:var(--shadow); }
   .card + .card { margin-top:16px; }
@@ -257,11 +371,14 @@
   <!-- ===== TAB 1: MANAGE ===== -->
   <div class="tab-panel active" id="tab-manage">
 
-    <div class="proj-tabs-wrap">
-      <div class="proj-tabs" id="projTabs"><div class="hint">Memuat…</div></div>
+    <div class="proj-picker">
+      <div class="proj-picker-head">
+        <span class="plabel">Pilih Project</span>
+        <input type="text" id="projSearch" placeholder="Cari project…">
+      </div>
+      <div class="proj-grid" id="projTabs"><div class="hint">Memuat…</div></div>
       <div style="position:relative;">
-        <button class="add-proj-btn" id="btnShowAddProj">+ Project</button>
-        <div class="popover" id="addProjPopover" style="display:none; right:0;">
+        <div class="popover" id="addProjPopover" style="display:none; left:0;">
           <label style="font-size:11px; color:var(--text-dim); display:block; margin-bottom:4px; font-weight:700;">Nama project baru</label>
           <input type="text" id="newProjName" placeholder="mis. Flexa">
           <div class="row-flex" style="margin-top:8px; justify-content:flex-end;">
@@ -311,6 +428,7 @@
           </div>
         </div>
       </div>
+      <div class="hint" id="carryHint" style="display:none; margin:0 0 10px;"></div>
       <div class="hint" id="tableHint" style="display:none; margin:0 0 8px;">💡 Klik area kosong pada baris untuk membuka detail & edit lengkap.</div>
       <div id="boardWrap"></div>
       <div id="tableWrap" style="display:none;"></div>
@@ -458,6 +576,7 @@
   }
   const STATUS_OPTS = ["Open","In Progress","Fixed","Rejected"];
   const STATUS_COLOR = {"Open":"#e0363c","In Progress":"#e08a1c","Fixed":"#17a673","Rejected":"#6c6f85"};
+  const UNRESOLVED_STATUSES = ["Open","In Progress"]; // belum selesai -> ikut dibawa ke tanggal berikutnya
   const PRIORITY_OPTS = ["Critical","High","Medium","Low"];
   const PRIORITY_COLOR = {"Critical":"#e0363c","High":"#e08a1c","Medium":"#4f6ef7","Low":"#6c6f85"};
   const PDF_COLUMNS = [
@@ -477,6 +596,7 @@
   let entries = [];    // {id,projectId,date,imageData,existing,expected,status,createdAt}
   let selectedProjectId = localStorage.getItem("dr_selected_project") || null;
   let staging = [];    // {localId,file,previewUrl,projectId,existing,expected,status}
+  let projSearchQuery = "";
 
   document.getElementById("quickDate").value = todayStr();
   document.getElementById("dailyDate").value = todayStr();
@@ -526,23 +646,59 @@
   }
   function currentProject(){ return projects.find(p=>p.id===selectedProjectId) || null; }
 
-  // ================= project tabs =================
+  // ================= project tabs (card grid) =================
+  function projectStatusCounts(projectId){
+    const bugs = entries.filter(e=>e.projectId===projectId);
+    const counts = {}; STATUS_OPTS.forEach(s=>counts[s]=0);
+    bugs.forEach(e=>{ if(counts[e.status]!==undefined) counts[e.status]++; });
+    return { total: bugs.length, counts };
+  }
   function renderProjTabs(){
     const wrap = document.getElementById("projTabs");
-    if(!projects.length){ wrap.innerHTML = '<div class="hint">Belum ada project — klik "+ Project".</div>'; return; }
-    wrap.innerHTML = projects.map(p=>{
-      const cnt = entries.filter(e=>e.projectId===p.id).length;
-      const active = p.id===selectedProjectId;
-      return '<div class="proj-tab '+(active?'active':'')+'" data-id="'+p.id+'">'+
-        '<span data-select="'+p.id+'">'+esc(p.name)+'</span><span class="cnt" data-select="'+p.id+'">'+cnt+'</span>'+
-        '<button class="icon-btn" data-rename="'+p.id+'" title="Ubah nama project">✎</button>'+
-        '<button class="icon-btn" data-del="'+p.id+'" title="Hapus project">✕</button></div>';
-    }).join("");
+    const q = projSearchQuery.trim().toLowerCase();
+    const visible = projects.filter(p=>p.name.toLowerCase().includes(q));
+    let html = "";
+    if(!projects.length){
+      html += '<div class="hint">Belum ada project — klik "+ Project" di bawah.</div>';
+    } else if(!visible.length){
+      html += '<div class="hint">Tidak ada project yang cocok dengan pencarian.</div>';
+    } else {
+      html = visible.map(p=>{
+        const stat = projectStatusCounts(p.id);
+        const active = p.id===selectedProjectId;
+        const belum = (stat.counts["Open"]||0) + (stat.counts["In Progress"]||0);
+        const bar = STATUS_OPTS.map(s=>{
+          const n = stat.counts[s]||0;
+          if(!n) return "";
+          const pct = (n/Math.max(stat.total,1))*100;
+          return '<span style="width:'+pct+'%; background:'+STATUS_COLOR[s]+';"></span>';
+        }).join("") || '<span style="width:100%; background:var(--border);"></span>';
+        return '<div class="proj-tab '+(active?'active':'')+'" data-select="'+p.id+'" role="button" tabindex="0" aria-label="Pilih project '+esc(p.name)+'">'+
+          '<div class="pt-top"><span class="pt-name">'+esc(p.name)+'</span>'+
+            '<span class="pt-actions">'+
+              '<button type="button" class="icon-btn" data-rename="'+p.id+'" title="Ubah nama project" aria-label="Ubah nama project">✎</button>'+
+              '<button type="button" class="icon-btn" data-del="'+p.id+'" title="Hapus project" aria-label="Hapus project">✕</button>'+
+            '</span></div>'+
+          '<span class="cnt">'+stat.total+' bug · '+belum+' belum selesai</span>'+
+          '<div class="pt-bar">'+bar+'</div>'+
+        '</div>';
+      }).join("");
+    }
+    html += '<button type="button" class="proj-tab add-proj-btn" id="btnShowAddProj">+ Project</button>';
+    wrap.innerHTML = html;
     wrap.querySelectorAll("[data-select]").forEach(el=>{
-      el.addEventListener("click", ()=>{
+      const selectProject = e=>{
+        if(e.target.closest("[data-rename], [data-del]")) return;
         selectedProjectId = el.dataset.select;
         localStorage.setItem("dr_selected_project", selectedProjectId);
         renderAll();
+      };
+      el.addEventListener("click", selectProject);
+      el.addEventListener("keydown", e=>{
+        if((e.key==="Enter" || e.key===" ") && !e.target.closest("[data-rename], [data-del]")){
+          e.preventDefault();
+          selectProject(e);
+        }
       });
     });
     wrap.querySelectorAll("[data-rename]").forEach(btn=>{
@@ -575,13 +731,19 @@
         }catch(e){ toast("Gagal menghapus project."); }
       });
     });
+    const addBtn = document.getElementById("btnShowAddProj");
+    if(addBtn) addBtn.addEventListener("click", e=>{
+      e.stopPropagation();
+      addPop.style.display = addPop.style.display==="none" ? "block" : "none";
+      document.getElementById("newProjName").focus();
+    });
   }
+  document.getElementById("projSearch").addEventListener("input", e=>{
+    projSearchQuery = e.target.value;
+    renderProjTabs();
+  });
 
   const addPop = document.getElementById("addProjPopover");
-  document.getElementById("btnShowAddProj").addEventListener("click", ()=>{
-    addPop.style.display = addPop.style.display==="none" ? "block" : "none";
-    document.getElementById("newProjName").focus();
-  });
   document.getElementById("btnCancelAddProj").addEventListener("click", ()=>{ addPop.style.display="none"; });
   document.getElementById("btnAddProj").addEventListener("click", addProject);
   document.getElementById("newProjName").addEventListener("keydown", e=>{ if(e.key==="Enter") addProject(); });
@@ -605,8 +767,22 @@
     const showAll = document.getElementById("showAllDates").checked;
     const dateFilter = document.getElementById("quickDate").value || todayStr();
     let list = entries.filter(e=>e.projectId===proj.id);
-    if(!showAll) list = list.filter(e=>e.date===dateFilter);
-    return list;
+    if(!showAll){
+      // Bug yang belum selesai (Open/In Progress) dari tanggal sebelumnya ikut dibawa
+      // ke tanggal yang sedang dilihat, supaya tidak "hilang" begitu tanggal diganti.
+      // Bug yang baru saja Fixed/Rejected TEPAT pada tanggal ini juga tetap muncul,
+      // supaya tercatat sebagai selesai hari ini.
+      list = list.filter(e=>
+        e.date===dateFilter ||
+        (e.date < dateFilter && UNRESOLVED_STATUSES.includes(e.status)) ||
+        (e.date < dateFilter && !UNRESOLVED_STATUSES.includes(e.status) && e.statusChangedDate===dateFilter)
+      );
+    }
+    return list.map(e=>({
+      ...e,
+      isCarryOver: !showAll && e.date !== dateFilter,
+      isResolvedToday: !showAll && e.date !== dateFilter && !UNRESOLVED_STATUSES.includes(e.status) && e.statusChangedDate===dateFilter
+    }));
   }
 
   function renderManagePanel(){
@@ -617,6 +793,19 @@
       document.getElementById("boardWrap").innerHTML = '<div class="empty-state">Pilih atau tambahkan project di atas.</div>';
       document.getElementById("tableWrap").innerHTML = "";
       return;
+    }
+    const list = filteredEntries();
+    const hintEl = document.getElementById("carryHint");
+    const carryCount = list.filter(e=>e.isCarryOver && !e.isResolvedToday).length;
+    const resolvedTodayCount = list.filter(e=>e.isResolvedToday).length;
+    if(carryCount || resolvedTodayCount){
+      let msg = [];
+      if(carryCount) msg.push(carryCount+' bug belum selesai dibawa dari hari sebelumnya (label kuning "Carry-over")');
+      if(resolvedTodayCount) msg.push(resolvedTodayCount+' bug baru diselesaikan hari ini (label hijau "✅ Selesai hari ini")');
+      hintEl.style.display = "block";
+      hintEl.innerHTML = "🔁 " + msg.join(" · ") + ".";
+    } else {
+      hintEl.style.display = "none";
     }
     renderBoard();
     renderTable();
@@ -638,6 +827,11 @@
           html += '<div class="exc">'+esc(e.existing || "(belum diisi)")+'</div>';
           html += '<span class="badge-priority '+(e.priority||"Medium")+'">'+(e.priority||"Medium")+'</span>';
           html += '<div class="meta">'+fmtDate(e.date)+(e.dueDate ? ' · Due '+fmtDate(e.dueDate) : '')+'</div>';
+          if(e.isResolvedToday){
+            html += '<div class="badge-priority" style="background:rgba(23,166,115,.15); color:#17a673; margin-top:5px;">✅ Selesai hari ini</div>';
+          } else if(e.isCarryOver){
+            html += '<div class="badge-priority" style="background:rgba(224,138,28,.15); color:#e08a1c; margin-top:5px;">Carry-over sejak '+fmtDate(e.date)+'</div>';
+          }
           html += '<div class="quick-status">'+STATUS_OPTS.map(s=>'<button type="button" data-quick-status="'+s+'" data-quick-id="'+e.id+'" class="'+(e.status===s?'active':'')+'" style="background:'+STATUS_COLOR[s]+'; color:'+STATUS_COLOR[s]+';" title="'+s+'"></button>').join('')+'</div>';
           html += '</div>';
         }
@@ -701,7 +895,10 @@
       html += '<td><select data-f="priority">'+PRIORITY_OPTS.map(p=>'<option value="'+p+'" '+((e.priority||"Medium")===p?'selected':'')+'>'+p+'</option>').join('')+'</select></td>';
       html += '<td><input type="date" data-f="dueDate" value="'+(e.dueDate||"")+'"></td>';
       html += '<td><select data-f="status">'+STATUS_OPTS.map(s=>'<option value="'+s+'" '+(e.status===s?'selected':'')+'>'+s+'</option>').join('')+'</select></td>';
-      html += '<td><div class="date-stepper"><button type="button" class="step" data-date-step="-1" title="Mundur 1 hari">‹</button><input type="date" data-f="date" value="'+(e.date||"")+'" style="font-size:12px;"><button type="button" class="step" data-date-step="1" title="Maju 1 hari">›</button></div></td>';
+      html += '<td><div class="date-stepper"><button type="button" class="step" data-date-step="-1" title="Mundur 1 hari">‹</button><input type="date" data-f="date" value="'+(e.date||"")+'" style="font-size:12px;"><button type="button" class="step" data-date-step="1" title="Maju 1 hari">›</button></div>'+
+        (e.isResolvedToday ? '<div class="badge-priority" style="background:rgba(23,166,115,.15); color:#17a673; margin-top:4px;">✅ Selesai hari ini</div>'
+          : (e.isCarryOver ? '<div class="badge-priority" style="background:rgba(224,138,28,.15); color:#e08a1c; margin-top:4px;">Carry-over</div>' : ''))+
+        '</td>';
       html += '<td><button class="danger-outline" data-del-entry style="padding:5px 8px;">✕</button></td>';
       html += '</tr>';
     }
@@ -995,7 +1192,6 @@
   });
 
   // ================= daily (all projects) tab =================
-  const UNRESOLVED_STATUSES = ["Open","In Progress"]; // belum selesai -> ikut dibawa ke laporan hari ini
   let dailyStatusFilter = null; // null = semua status; atau salah satu STATUS_OPTS
   function renderDailyStatusSummary(list){
     const el = document.getElementById("dailyStatusSummary");
