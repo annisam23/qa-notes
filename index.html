@@ -238,8 +238,8 @@
   .view-toggle button { border:none; border-radius:0; background:transparent; }
   .view-toggle button.active { background:var(--accent-grad); color:var(--accent-text); }
 
-  .board { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:4px; }
-  @media (max-width:900px) { .board { grid-template-columns:repeat(2,1fr); } }
+  .board { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; margin-top:4px; }
+  @media (max-width:1000px) { .board { grid-template-columns:repeat(2,minmax(0,1fr)); } }
   @media (max-width:520px) { .board { grid-template-columns:1fr; } }
   .board-col { background:var(--surface-2); border-radius:12px; padding:11px; min-height:80px; border-top:3px solid var(--border); }
   .board-col h4 { margin:0 0 9px; font-size:12.5px; display:flex; align-items:center; justify-content:space-between; font-weight:800; }
@@ -275,6 +275,7 @@
   .badge.In-Progress { background:rgba(224,138,28,.13); color:var(--warn); }
   .badge.Fixed { background:rgba(23,166,115,.13); color:var(--ok); }
   .badge.Rejected { background:rgba(108,111,133,.15); color:var(--gray); }
+  .badge.Update { background:rgba(47,128,237,.14); color:#2f80ed; }
   .badge-priority { font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:20px; display:inline-block; }
   .badge-priority.Critical { background:rgba(224,54,60,.15); color:#e0363c; }
   .badge-priority.High { background:rgba(224,138,28,.15); color:#e08a1c; }
@@ -577,8 +578,8 @@
     }
     return null; // too large even after heavy compression
   }
-  const STATUS_OPTS = ["Open","In Progress","Fixed","Rejected"];
-  const STATUS_COLOR = {"Open":"#e0363c","In Progress":"#e08a1c","Fixed":"#17a673","Rejected":"#6c6f85"};
+  const STATUS_OPTS = ["Open","In Progress","Fixed","Rejected","Update"];
+  const STATUS_COLOR = {"Open":"#e0363c","In Progress":"#e08a1c","Fixed":"#17a673","Rejected":"#6c6f85","Update":"#2f80ed"};
   const UNRESOLVED_STATUSES = ["Open","In Progress"]; // belum selesai -> ikut dibawa ke tanggal berikutnya
   const PRIORITY_OPTS = ["Critical","High","Medium","Low"];
   const PRIORITY_COLOR = {"Critical":"#e0363c","High":"#e08a1c","Medium":"#4f6ef7","Low":"#6c6f85"};
@@ -828,7 +829,7 @@
           html += '<div class="card-item" draggable="true" data-open="'+e.id+'">';
           html += e.imageData ? '<img src="'+e.imageData+'">' : '<div class="imgless">tanpa gambar</div>';
           html += '<div class="exc">'+esc(e.existing || "(belum diisi)")+'</div>';
-          html += '<span class="badge-priority '+(e.priority||"Medium")+'">'+(e.priority||"Medium")+'</span>';
+          html += '<span class="badge '+e.status.replace(" ","-")+'" style="margin-right:4px;">'+e.status+'</span><span class="badge-priority '+(e.priority||"Medium")+'">'+(e.priority||"Medium")+'</span>';
           html += '<div class="meta">'+fmtDate(e.date)+(e.dueDate ? ' · Due '+fmtDate(e.dueDate) : '')+'</div>';
           if(e.isResolvedToday){
             html += '<div class="badge-priority" style="background:rgba(23,166,115,.15); color:#17a673; margin-top:5px;">✅ Selesai hari ini</div>';
@@ -1002,7 +1003,11 @@
     overlay.className = "modal-overlay";
     overlay.innerHTML =
       '<div class="modal-box">'+
-        (proj ? '<div class="chip" style="margin-bottom:10px;">'+esc(proj.name)+'</div>' : '')+
+        '<div class="row-flex" style="margin-bottom:10px; gap:6px;">'+
+          (proj ? '<span class="chip">'+esc(proj.name)+'</span>' : '')+
+          '<span class="badge '+e.status.replace(" ","-")+'" id="mStatusBadge">'+e.status+'</span>'+
+          '<span class="badge-priority '+(e.priority||"Medium")+'" id="mPriorityBadge">'+(e.priority||"Medium")+'</span>'+
+        '</div>'+
         '<label>Gambar Existing</label>'+
         (e.imageData ? '<img class="preview" id="mExistingImg" src="'+e.imageData+'">' : '<div class="hint" id="mExistingImg">Tanpa gambar existing</div>')+
         '<label>Existing</label><textarea id="mExisting">'+esc(e.existing)+'</textarea>'+
@@ -1025,6 +1030,10 @@
     document.body.appendChild(overlay);
     const existingImgEl = overlay.querySelector("#mExistingImg");
     if(existingImgEl && existingImgEl.tagName === "IMG") existingImgEl.addEventListener("click", ()=>showLightbox(e.imageData));
+    const mStatusSel = overlay.querySelector("#mStatus"), mStatusBadge = overlay.querySelector("#mStatusBadge");
+    mStatusSel.addEventListener("change", ()=>{ mStatusBadge.className = "badge "+mStatusSel.value.replace(" ","-"); mStatusBadge.textContent = mStatusSel.value; });
+    const mPrioSel = overlay.querySelector("#mPriority"), mPrioBadge = overlay.querySelector("#mPriorityBadge");
+    mPrioSel.addEventListener("change", ()=>{ mPrioBadge.className = "badge-priority "+mPrioSel.value; mPrioBadge.textContent = mPrioSel.value; });
     const mDateInput = overlay.querySelector("#mDate");
     overlay.querySelector("#mDatePrev").onclick = ()=>{ mDateInput.value = addDays(mDateInput.value, -1); };
     overlay.querySelector("#mDateNext").onclick = ()=>{ mDateInput.value = addDays(mDateInput.value, 1); };
@@ -1411,6 +1420,16 @@
     const p = o.from===o.to ? fmtDate(o.from) : fmtDate(o.from)+" s/d "+fmtDate(o.to);
     return p + (o.carry ? "" : " (tanpa carry-over)");
   }
+  function exportMetaLines(o){
+    const lines = [];
+    if(o.allDates) lines.push("Periode: Semua tanggal");
+    else {
+      const range = o.from===o.to ? fmtDate(o.from) : fmtDate(o.from)+" s/d "+fmtDate(o.to);
+      lines.push("Periode: " + range + "  ·  " + (o.carry ? "Termasuk carry-over" : "Tanpa carry-over"));
+    }
+    lines.push("Status: " + (o.statuses.length===STATUS_OPTS.length ? "Semua status" : o.statuses.join(", ")));
+    return lines;
+  }
   function exportStatusLabel(o){
     return o.statuses.length===STATUS_OPTS.length ? "" : " — Status "+o.statuses.join(", ");
   }
@@ -1438,17 +1457,36 @@
       return dims ? { dataUrl: r.expectedImageData, w: dims.w, h: dims.h } : null;
     })) : [];
 
-    doc.setFont("helvetica","bold"); doc.setFontSize(14);
-    doc.text(title, 12, 14);
-    doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(120);
-    doc.text("Dibuat: " + new Date().toLocaleString("id-ID"), 12, 20);
+    // ---- Header rapi: judul singkat + baris info (auto wrap, tidak akan terpotong) ----
+    const T = (typeof title === "string") ? { main:title, meta:[] } : title;
+    const pageW = doc.internal.pageSize.getWidth();
+    const mx = 12, maxTextW = pageW - mx*2;
+    let y = 15;
+    doc.setFont("helvetica","bold"); doc.setFontSize(16); doc.setTextColor(30);
+    const mainLines = doc.splitTextToSize(T.main, maxTextW);
+    doc.text(mainLines, mx, y);
+    y += (mainLines.length-1)*6.5 + 3.5;
+    doc.setDrawColor(109,94,245); doc.setLineWidth(0.9);
+    doc.line(mx, y, mx+24, y);
+    y += 6;
+    doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.setTextColor(90);
+    T.meta.concat(["Dibuat: " + new Date().toLocaleString("id-ID")]).forEach(t=>{
+      const ls = doc.splitTextToSize(t, maxTextW);
+      doc.text(ls, mx, y);
+      y += ls.length*4.6;
+    });
+    y += 1.5;
 
     // total bug per status summary line
     const counts = {}; STATUS_OPTS.forEach(s=>counts[s]=0);
     rows.forEach(r=>{ if(counts[r.status]===undefined) counts[r.status]=0; counts[r.status]++; });
     const summaryLine = "Total: " + rows.length + " bug   |   " + STATUS_OPTS.map(s=>s+": "+counts[s]).join("   |   ");
-    doc.setFontSize(9.5); doc.setTextColor(60);
-    doc.text(summaryLine, 12, 25.5);
+    doc.setFont("helvetica","bold"); doc.setFontSize(9.5); doc.setTextColor(50);
+    const sumLines = doc.splitTextToSize(summaryLine, maxTextW);
+    doc.text(sumLines, mx, y);
+    y += sumLines.length*4.6;
+    doc.setFont("helvetica","normal");
+    const headerBottom = y;
     doc.setTextColor(20);
 
     // build column definitions based on user selection
@@ -1504,7 +1542,7 @@
     }
 
     doc.autoTable({
-      startY: 30,
+      startY: headerBottom + 3,
       head, body,
       theme: "grid",
       styles: { font:"helvetica", fontSize:9, cellPadding:3, overflow:"linebreak", valign:"middle", lineColor:[210,212,218], lineWidth:0.2 },
@@ -1538,7 +1576,7 @@
     openColumnPickerModal(false, async (selectedCols, o)=>{
       const list = buildExportList(proj.id, o).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
       if(!list.length){ toast("Tidak ada bug untuk diekspor dengan opsi ini."); return; }
-      const title = "Bug/Task Report — " + proj.name + " (" + exportPeriodLabel(o) + ")" + exportStatusLabel(o);
+      const title = { main:"Bug/Task Report — " + proj.name, meta:exportMetaLines(o) };
       const filenameBase = "report_" + proj.name.replace(/\W+/g,"_") + "_" + (o.allDates ? "all" : (o.from===o.to ? o.from : o.from+"_sd_"+o.to));
       await buildAndSavePdf(title, list, false, filenameBase, selectedCols);
     }, { from:dateFilter, to:dateFilter, all:showAll });
@@ -1554,7 +1592,7 @@
       })).sort((a,b)=> (a.projectName||"").localeCompare(b.projectName||"") || (a.createdAt-b.createdAt));
       if(!list.length){ toast("Tidak ada bug untuk diekspor dengan opsi ini."); return; }
       const projLabel = projectFilter ? (projects.find(p=>p.id===projectFilter)||{}).name || "Project" : "Semua Project";
-      const title = "Laporan Harian — " + projLabel + " — " + exportPeriodLabel(o) + exportStatusLabel(o);
+      const title = { main:"Laporan Harian — " + projLabel, meta:exportMetaLines(o) };
       const periodFile = o.allDates ? "semua_tanggal" : (o.from===o.to ? o.from : o.from+"_sd_"+o.to);
       const filenameBase = "laporan_" + (projectFilter?projLabel.replace(/\W+/g,"_")+"_":"") + periodFile +
         (o.statuses.length===STATUS_OPTS.length ? "" : "_"+o.statuses.join("_").replace(/\W+/g,"_"));
