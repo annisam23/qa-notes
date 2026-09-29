@@ -314,6 +314,9 @@
   .col-picker-list { display:grid; grid-template-columns:1fr 1fr; gap:9px 14px; margin:4px 0 6px; }
   .col-picker-list label { display:flex; align-items:center; gap:7px; font-size:13px; color:var(--text); cursor:pointer; }
   .col-picker-list input { width:16px; height:16px; }
+  .opt-check { display:flex !important; align-items:center; gap:7px; font-size:13px !important; color:var(--text) !important;
+    text-transform:none !important; letter-spacing:0 !important; font-weight:600 !important; cursor:pointer; margin:6px 0 !important; }
+  .opt-check input { width:16px; height:16px; }
   .setup-box { max-width:640px; margin:0 auto; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px; box-shadow:var(--shadow-lift); }
   .setup-box h2 { margin-top:0; }
   .setup-box ol { padding-left: 20px; line-height:1.8; font-size:14px; }
@@ -1323,15 +1326,31 @@
     });
   });
 
-  // ================= PDF export (jsPDF + AutoTable) =================
-  function openColumnPickerModal(includeProjectOption, onConfirm){
+  // ================= PDF export options (status, tanggal, carry-over, kolom) =================
+  function openColumnPickerModal(includeProjectOption, onConfirm, defaults){
+    defaults = defaults || {};
     const cols = includeProjectOption ? PDF_COLUMNS : PDF_COLUMNS.filter(c=>c.key!=="project");
+    const from = defaults.from || todayStr();
+    const to = defaults.to || from;
+    const preStatuses = defaults.statuses || STATUS_OPTS;
     const overlay = document.createElement("div");
     overlay.className = "modal-overlay";
     overlay.innerHTML =
       '<div class="modal-box">'+
-        '<h3 style="margin:0 0 4px;">Pilih Kolom PDF</h3>'+
-        '<div class="hint" style="margin:0 0 10px;">Centang kolom yang ingin ditampilkan di PDF (landscape).</div>'+
+        '<h3 style="margin:0 0 4px;">Opsi Export PDF</h3>'+
+        '<label>Status yang di-export</label>'+
+        '<div class="col-picker-list">'+
+          STATUS_OPTS.map(s=>'<label><input type="checkbox" data-status="'+s+'" '+(preStatuses.includes(s)?'checked':'')+'> '+s+'</label>').join('')+
+        '</div>'+
+        '<label>Tanggal</label>'+
+        '<label class="opt-check"><input type="checkbox" id="cpAllDates" '+(defaults.all?'checked':'')+'> Semua tanggal</label>'+
+        '<div class="row-flex" id="cpDateRow" style="flex-wrap:nowrap;">'+
+          '<input type="date" id="cpFrom" value="'+from+'" style="flex:1; min-width:0;">'+
+          '<span style="font-size:12px; color:var(--text-dim);">s/d</span>'+
+          '<input type="date" id="cpTo" value="'+to+'" style="flex:1; min-width:0;">'+
+        '</div>'+
+        '<label class="opt-check" id="cpCarryLabel"><input type="checkbox" id="cpCarry" checked> Sertakan carry-over (bug belum selesai dari tanggal sebelumnya)</label>'+
+        '<label>Kolom PDF</label>'+
         '<div class="col-picker-list">'+
           cols.map(c=>'<label><input type="checkbox" data-col="'+c.key+'" checked> '+c.label+'</label>').join('')+
         '</div>'+
@@ -1341,16 +1360,62 @@
         '</div>'+
       '</div>';
     document.body.appendChild(overlay);
+    const allCb = overlay.querySelector("#cpAllDates");
+    const fromEl = overlay.querySelector("#cpFrom"), toEl = overlay.querySelector("#cpTo");
+    const carryCb = overlay.querySelector("#cpCarry");
+    function syncDateUI(){
+      const all = allCb.checked;
+      fromEl.disabled = toEl.disabled = all;
+      carryCb.disabled = all; // mode semua tanggal tidak butuh carry-over
+      overlay.querySelector("#cpCarryLabel").style.opacity = all ? .45 : 1;
+    }
+    allCb.addEventListener("change", syncDateUI);
+    syncDateUI();
     overlay.onclick = ev=>{ if(ev.target===overlay) overlay.remove(); };
     overlay.querySelector("#cpCancel").onclick = ()=>overlay.remove();
     overlay.querySelector("#cpConfirm").onclick = ()=>{
+      const statuses = Array.from(overlay.querySelectorAll("[data-status]")).filter(cb=>cb.checked).map(cb=>cb.dataset.status);
+      if(!statuses.length){ toast("Pilih minimal satu status."); return; }
+      const allDates = allCb.checked;
+      let f = fromEl.value, t = toEl.value;
+      if(!allDates){
+        if(!f && !t){ toast("Isi tanggal dulu."); return; }
+        if(!f) f = t;
+        if(!t) t = f;
+        if(f > t){ const tmp=f; f=t; t=tmp; }
+      }
       const selected = {};
       overlay.querySelectorAll("[data-col]").forEach(cb=>{ selected[cb.dataset.col] = cb.checked; });
       overlay.remove();
-      onConfirm(selected);
+      onConfirm(selected, { statuses, allDates, from:f, to:t, carry: carryCb.checked });
     };
   }
 
+  // Bangun daftar bug sesuai opsi export
+  function buildExportList(projectId, o){
+    let list = entries.filter(e=>!projectId || e.projectId===projectId);
+    if(o.allDates){
+      list = list.map(e=>({ ...e, isCarryOver:false, isResolvedToday:false }));
+    } else {
+      list = list.filter(e=>{
+        if(e.date >= o.from && e.date <= o.to) return true;
+        if(!o.carry || e.date >= o.from) return false;
+        if(UNRESOLVED_STATUSES.includes(e.status)) return true; // masih Open/In Progress
+        return !!e.statusChangedDate && e.statusChangedDate >= o.from && e.statusChangedDate <= o.to; // baru selesai di rentang
+      }).map(e=>({ ...e, isCarryOver: e.date < o.from, isResolvedToday:false }));
+    }
+    return list.filter(e=>o.statuses.includes(e.status));
+  }
+  function exportPeriodLabel(o){
+    if(o.allDates) return "Semua Tanggal";
+    const p = o.from===o.to ? fmtDate(o.from) : fmtDate(o.from)+" s/d "+fmtDate(o.to);
+    return p + (o.carry ? "" : " (tanpa carry-over)");
+  }
+  function exportStatusLabel(o){
+    return o.statuses.length===STATUS_OPTS.length ? "" : " — Status "+o.statuses.join(", ");
+  }
+
+  // ================= PDF export (jsPDF + AutoTable) =================
   async function buildAndSavePdf(title, rows, includeProjectCol, filenameBase, selectedCols){
     if(!window.jspdf){ toast("Library PDF gagal dimuat."); return; }
     const { jsPDF } = window.jspdf;
@@ -1413,7 +1478,7 @@
         case "priority": return r.priority || "Medium";
         case "dueDate": return r.dueDate ? fmtDate(r.dueDate) : "-";
         case "status": return r.status || "-";
-        case "date": return fmtDate(r.date);
+        case "date": return fmtDate(r.date) + (r.isCarryOver ? "\n(carry-over)" : "");
         default: return "-";
       }
     }));
@@ -1465,44 +1530,36 @@
     }catch(e){ toast("Gagal membuat PDF."); }
   }
 
-  document.getElementById("btnExportProj").addEventListener("click", async ()=>{
+  document.getElementById("btnExportProj").addEventListener("click", ()=>{
     const proj = currentProject();
     if(!proj) return;
     const showAll = document.getElementById("showAllDates").checked;
     const dateFilter = document.getElementById("quickDate").value || todayStr();
-    let list = filteredEntries().slice().sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
-    if(!list.length){ toast("Tidak ada bug untuk diekspor."); return; }
-    const title = "Bug/Task Report — " + proj.name + (showAll ? "" : " (" + fmtDate(dateFilter) + ")");
-    const filenameBase = "report_" + proj.name.replace(/\W+/g,"_") + "_" + (showAll?"all":dateFilter);
-    openColumnPickerModal(false, async selectedCols=>{
+    openColumnPickerModal(false, async (selectedCols, o)=>{
+      const list = buildExportList(proj.id, o).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+      if(!list.length){ toast("Tidak ada bug untuk diekspor dengan opsi ini."); return; }
+      const title = "Bug/Task Report — " + proj.name + " (" + exportPeriodLabel(o) + ")" + exportStatusLabel(o);
+      const filenameBase = "report_" + proj.name.replace(/\W+/g,"_") + "_" + (o.allDates ? "all" : (o.from===o.to ? o.from : o.from+"_sd_"+o.to));
       await buildAndSavePdf(title, list, false, filenameBase, selectedCols);
-    });
+    }, { from:dateFilter, to:dateFilter, all:showAll });
   });
 
-  document.getElementById("btnExportDaily").addEventListener("click", async ()=>{
+  document.getElementById("btnExportDaily").addEventListener("click", ()=>{
     const date = document.getElementById("dailyDate").value || todayStr();
     const projectFilter = document.getElementById("dailyProjectFilter").value;
     const showAllDates = document.getElementById("dailyShowAllDates").checked;
-    let list;
-    if(showAllDates){
-      list = entries.slice();
-      if(projectFilter) list = list.filter(e=>e.projectId===projectFilter);
-    } else {
-      list = dailyListForDate(date, projectFilter);
-    }
-    if(dailyStatusFilter) list = list.filter(e=>e.status===dailyStatusFilter);
-    list = list.map(e=>({
-      ...e, projectName: (projects.find(p=>p.id===e.projectId)||{}).name || "-"
-    })).sort((a,b)=> (a.projectName||"").localeCompare(b.projectName||"") || (a.createdAt-b.createdAt));
-    if(!list.length){ toast("Tidak ada bug untuk diekspor."); return; }
-    const projLabel = projectFilter ? (projects.find(p=>p.id===projectFilter)||{}).name || "Project" : "Semua Project";
-    const periodLabel = showAllDates ? "Semua Tanggal" : fmtDate(date);
-    const statusLabel = dailyStatusFilter ? (" — Status "+dailyStatusFilter) : "";
-    const title = "Laporan Harian — " + projLabel + " — " + periodLabel + statusLabel;
-    const filenameBase = "laporan_" + (projectFilter?projLabel.replace(/\W+/g,"_")+"_":"") + (showAllDates?"semua_tanggal":date) + (dailyStatusFilter?"_"+dailyStatusFilter.replace(/\W+/g,"_"):"");
-    openColumnPickerModal(!projectFilter, async selectedCols=>{
+    openColumnPickerModal(!projectFilter, async (selectedCols, o)=>{
+      const list = buildExportList(projectFilter, o).map(e=>({
+        ...e, projectName: (projects.find(p=>p.id===e.projectId)||{}).name || "-"
+      })).sort((a,b)=> (a.projectName||"").localeCompare(b.projectName||"") || (a.createdAt-b.createdAt));
+      if(!list.length){ toast("Tidak ada bug untuk diekspor dengan opsi ini."); return; }
+      const projLabel = projectFilter ? (projects.find(p=>p.id===projectFilter)||{}).name || "Project" : "Semua Project";
+      const title = "Laporan Harian — " + projLabel + " — " + exportPeriodLabel(o) + exportStatusLabel(o);
+      const periodFile = o.allDates ? "semua_tanggal" : (o.from===o.to ? o.from : o.from+"_sd_"+o.to);
+      const filenameBase = "laporan_" + (projectFilter?projLabel.replace(/\W+/g,"_")+"_":"") + periodFile +
+        (o.statuses.length===STATUS_OPTS.length ? "" : "_"+o.statuses.join("_").replace(/\W+/g,"_"));
       await buildAndSavePdf(title, list, !projectFilter, filenameBase, selectedCols);
-    });
+    }, { from:date, to:date, all:showAllDates, statuses: dailyStatusFilter ? [dailyStatusFilter] : null });
   });
 
 })();
