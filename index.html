@@ -61,8 +61,8 @@
     color:var(--ok); background:var(--surface); white-space:nowrap; font-weight:700;
     display:inline-flex; align-items:center; gap:6px; box-shadow: var(--shadow);
   }
-  .tabs { display:flex; gap:6px; margin-bottom:16px; border-bottom:1px solid var(--border); position:relative; }
-  .tab-btn { background:transparent; border:none; color:var(--text-dim); font-size:14px; font-weight:700; padding:10px 14px; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; transition:.15s; border-radius:8px 8px 0 0; }
+  .tabs { display:flex; gap:6px; margin-bottom:16px; border-bottom:1px solid var(--border); position:relative; overflow-x:auto; }
+  .tab-btn { background:transparent; border:none; color:var(--text-dim); font-size:14px; font-weight:700; padding:10px 14px; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; transition:.15s; border-radius:8px 8px 0 0; white-space:nowrap; }
   .tab-btn:hover { color:var(--text); background:var(--surface-2); }
   .tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
   .tab-panel { display:none; } .tab-panel.active { display:block; animation: fadeIn .18s ease; }
@@ -323,6 +323,35 @@
   .setup-box code { background:var(--surface-2); padding:2px 6px; border-radius:6px; font-size:12.5px; }
   .setup-box pre { background:var(--surface-2); padding:12px; border-radius:10px; overflow:auto; font-size:12px; }
   .rename-input-row { display:flex; gap:6px; }
+
+  /* ===== Ceklis Scan AI ===== */
+  .scan-progress { height:8px; border-radius:8px; background:var(--border); overflow:hidden; margin:6px 0 14px; }
+  .scan-progress span { display:block; height:100%; background:var(--ok); transition:width .25s; }
+  .scan-grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px; }
+  @media (max-width:1050px) { .scan-grid { grid-template-columns:repeat(3, minmax(0, 1fr)); } }
+  @media (max-width:720px) { .scan-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+  @media (max-width:480px) { .scan-grid { grid-template-columns:1fr; } }
+  .scan-row { display:flex; flex-direction:column; gap:9px; padding:12px; min-width:0; border:1px solid var(--border); border-radius:12px; background:var(--surface-2); transition:.15s; }
+  .scan-row:hover { border-color:var(--accent); }
+  .scan-row.done { border-color:var(--ok); background:rgba(23,166,115,.08); }
+  .scan-head { display:flex; align-items:center; gap:9px; min-width:0; }
+  .scan-head input[type=checkbox] { width:20px; height:20px; flex:none; cursor:pointer; }
+  .scan-name { font-weight:800; font-size:13.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0; }
+  .scan-note { font-size:12.5px; }
+  .scan-foot { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:14px; }
+  .scan-time { font-size:11px; color:var(--text-dim); font-weight:600; }
+  .scan-hist { display:flex; gap:4px; }
+  .scan-dot { width:12px; height:12px; border-radius:50%; background:var(--border); }
+  .scan-dot.on { background:var(--ok); }
+  .scan-dot.fail { background:var(--danger); }
+  .scan-progress { display:flex; }
+  .scan-row.success { border-color:var(--ok); background:rgba(23,166,115,.08); }
+  .scan-row.fail { border-color:var(--danger); background:rgba(224,54,60,.08); }
+  .scan-seg { display:flex; gap:4px; }
+  .scan-seg button { flex:1; padding:6px 4px; font-size:11.5px; border-radius:7px; color:var(--text-dim); }
+  .scan-seg button.on-none { background:var(--gray); color:#fff; border-color:transparent; }
+  .scan-seg button.on-success { background:var(--ok); color:#fff; border-color:transparent; }
+  .scan-seg button.on-fail { background:var(--danger); color:#fff; border-color:transparent; }
 </style>
 </head>
 <body>
@@ -369,6 +398,7 @@
   <div class="tabs">
     <button class="tab-btn active" data-tab="manage">Kelola Bug</button>
     <button class="tab-btn" data-tab="daily">Laporan Harian (Semua Project)</button>
+    <button class="tab-btn" data-tab="scan">Ceklis Scan AI</button>
   </div>
 
   <!-- ===== TAB 1: MANAGE ===== -->
@@ -457,6 +487,33 @@
       <div class="status-summary" id="dailyStatusSummary"></div>
       <div class="hint" id="dailyFilterHint" style="display:none; margin-bottom:8px;"></div>
       <div id="dailyWrap" style="margin-top:12px;"><div class="empty-state">Memuat data…</div></div>
+    </div>
+  </div>
+
+  <!-- ===== TAB 3: CEKLIS SCAN AI ===== -->
+  <div class="tab-panel" id="tab-scan">
+    <div class="card">
+      <div class="toolbar between" style="justify-content:space-between;">
+        <div class="row-flex">
+          <label style="font-size:12.5px; color:var(--text-dim);">Tanggal:</label>
+          <div class="date-stepper" style="width:200px;">
+            <button type="button" class="step" id="scanPrev" title="Mundur 1 hari">‹</button>
+            <input type="date" id="scanDate">
+            <button type="button" class="step" id="scanNext" title="Maju 1 hari">›</button>
+          </div>
+          <button id="scanToday">Hari ini</button>
+        </div>
+        <div class="row-flex">
+          <button id="scanAddProj">+ Project Baru</button>
+          <button id="scanPick">⚙ Pilih Project AI</button>
+          <button id="scanCheckAll">✔ Semua berhasil</button>
+          <button class="danger-outline" id="scanUncheckAll">Reset hari ini</button>
+        </div>
+      </div>
+      <div class="status-summary" id="scanSummary"></div>
+      <div class="scan-progress" id="scanBar"></div>
+      <div id="scanList"></div>
+      <div class="hint">Titik di kanan = riwayat 7 hari terakhir (hijau = berhasil, merah = gagal, abu = belum).</div>
     </div>
   </div>
 
@@ -598,12 +655,14 @@
   // ================= state =================
   let projects = [];   // {id,name,createdAt}
   let entries = [];    // {id,projectId,date,imageData,existing,expected,status,createdAt}
+  let scanChecks = {}; // key "YYYY-MM-DD_projectId" -> {date,projectId,done,note,checkedAt}
   let selectedProjectId = localStorage.getItem("dr_selected_project") || null;
   let staging = [];    // {localId,file,previewUrl,projectId,existing,expected,status}
   let projSearchQuery = "";
 
   document.getElementById("quickDate").value = todayStr();
   document.getElementById("dailyDate").value = todayStr();
+  document.getElementById("scanDate").value = todayStr();
 
   document.getElementById("connPill").innerHTML = "● Menghubungkan…";
 
@@ -641,12 +700,21 @@
     },
     err=>toast("Gagal memuat entry: "+err.message)
   );
+  db.collection("scanChecks").onSnapshot(
+    snap=>{
+      scanChecks = {};
+      snap.docs.forEach(d=>{ scanChecks[d.id] = d.data(); });
+      renderScanTab();
+    },
+    err=>toast("Gagal memuat ceklis scan: "+err.message)
+  );
 
   function renderAll(){
     renderProjTabs();
     renderManagePanel();
     renderStaging();
     renderDailyTab();
+    renderScanTab();
   }
   function currentProject(){ return projects.find(p=>p.id===selectedProjectId) || null; }
 
@@ -1325,6 +1393,199 @@
   document.getElementById("dailyProjectFilter").addEventListener("change", renderDailyTab);
   document.getElementById("dailyShowAllDates").addEventListener("change", renderDailyTab);
 
+  // ================= ceklis harian scan AI =================
+  let scanFilter = null; // null = semua; "success" | "fail" | "none"
+  const SCAN_META = { success:{label:"Berhasil", color:"#17a673"}, fail:{label:"Gagal", color:"#e0363c"}, none:{label:"Belum", color:"#6c6f85"} };
+  function scanKey(date, pid){ return date+"_"+pid; }
+  function scanState(c){
+    if(!c) return "none";
+    if(c.result === "success" || c.result === "fail" || c.result === "none") return c.result;
+    return c.done ? "success" : "none"; // data lama (hanya checkbox)
+  }
+  function scanSet(date, pid, patch){
+    return db.collection("scanChecks").doc(scanKey(date,pid))
+      .set({ date, projectId:pid, ...patch }, { merge:true })
+      .catch(()=>toast("Gagal menyimpan ceklis."));
+  }
+  function scanPatch(res){
+    return { result:res, done:res==="success", checkedAt: res==="none" ? null : Date.now() };
+  }
+  function renderScanTab(){
+    const list = document.getElementById("scanList");
+    // Jangan render ulang saat user sedang mengetik catatan, supaya input tidak hilang fokus.
+    const ae = document.activeElement;
+    if(ae && ae.classList && ae.classList.contains("scan-note") && list.contains(ae)) return;
+
+    const date = document.getElementById("scanDate").value || todayStr();
+    const sumEl = document.getElementById("scanSummary"), barEl = document.getElementById("scanBar");
+    if(!projects.length){
+      list.innerHTML = '<div class="empty-state">Belum ada project.</div>';
+      sumEl.innerHTML = ""; barEl.innerHTML = "";
+      return;
+    }
+    const aiProjects = projects.filter(p=>p.scanAi);
+    if(!aiProjects.length){
+      list.innerHTML = '<div class="empty-state">Belum ada project yang dipilih memakai AI.<br>Klik <b>⚙ Pilih Project AI</b> untuk memilih.</div>';
+      sumEl.innerHTML = ""; barEl.innerHTML = "";
+      return;
+    }
+    const days = [6,5,4,3,2,1,0].map(n=>addDays(date,-n));
+    const counts = { success:0, fail:0, none:0 };
+    const items = aiProjects.map(p=>{
+      const c = scanChecks[scanKey(date,p.id)] || {};
+      const st = scanState(c);
+      counts[st]++;
+      return { p, c, st };
+    });
+
+    // ringkasan (chip bisa diklik untuk filter)
+    const total = aiProjects.length;
+    let chips = '<button type="button" class="chip" data-scan-filter="" style="cursor:pointer; '+(scanFilter===null?'background:var(--accent-grad); color:var(--accent-text); border-color:transparent;':'')+'">Project AI: '+total+'</button>';
+    ["success","fail","none"].forEach(k=>{
+      const m = SCAN_META[k], active = scanFilter===k;
+      chips += '<button type="button" class="chip" data-scan-filter="'+k+'" style="cursor:pointer; '+
+        (active ? 'background:'+m.color+'; color:#fff; border-color:transparent;' : 'color:'+m.color+';')+'">'+m.label+': '+counts[k]+'</button>';
+    });
+    sumEl.innerHTML = chips;
+    barEl.innerHTML =
+      '<span style="width:'+(counts.success/total*100)+'%; background:'+SCAN_META.success.color+';"></span>'+
+      '<span style="width:'+(counts.fail/total*100)+'%; background:'+SCAN_META.fail.color+';"></span>';
+    sumEl.querySelectorAll("[data-scan-filter]").forEach(chip=>{
+      chip.addEventListener("click", ()=>{
+        const v = chip.dataset.scanFilter;
+        scanFilter = v==="" ? null : (scanFilter===v ? null : v);
+        renderScanTab();
+      });
+    });
+
+    const shown = scanFilter ? items.filter(i=>i.st===scanFilter) : items;
+    if(!shown.length){
+      list.innerHTML = '<div class="empty-state">Tidak ada project dengan status '+SCAN_META[scanFilter].label+'.</div>';
+      return;
+    }
+    list.innerHTML = '<div class="scan-grid">'+shown.map(({p,c,st})=>{
+      const hist = days.map(d=>{
+        const hs = scanState(scanChecks[scanKey(d,p.id)]);
+        return '<span class="scan-dot '+(hs==="success"?'on':hs==="fail"?'fail':'')+'" title="'+fmtDate(d)+' — '+SCAN_META[hs].label+'"></span>';
+      }).join("");
+      const time = st!=="none" && c.checkedAt
+        ? new Date(c.checkedAt).toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"})
+        : "";
+      const seg = ["none","success","fail"].map(k=>
+        '<button type="button" data-res="'+k+'" class="'+(st===k?'on-'+k:'')+'">'+
+        (k==="success"?'✔ ':k==="fail"?'✕ ':'')+SCAN_META[k].label+'</button>'
+      ).join("");
+      return '<div class="scan-row '+st+'" data-pid="'+p.id+'">'+
+        '<div class="scan-head"><span class="scan-name" title="'+esc(p.name)+'">'+esc(p.name)+'</span></div>'+
+        '<div class="scan-seg">'+seg+'</div>'+
+        '<input type="text" class="scan-note" placeholder="Catatan scan (opsional)" value="'+esc(c.note||"")+'">'+
+        '<div class="scan-foot">'+
+          '<span class="scan-time">'+(time ? SCAN_META[st].label+' · '+time : '')+'</span>'+
+          '<span class="scan-hist">'+hist+'</span>'+
+        '</div>'+
+      '</div>';
+    }).join("")+'</div>';
+
+    list.querySelectorAll(".scan-row").forEach(row=>{
+      const pid = row.dataset.pid;
+      row.querySelectorAll("[data-res]").forEach(btn=>{
+        btn.addEventListener("click", ()=> scanSet(date, pid, scanPatch(btn.dataset.res)));
+      });
+      row.querySelector(".scan-note").addEventListener("change", e=>{
+        scanSet(date, pid, { note:e.target.value });
+      });
+    });
+  }
+  async function scanBulk(res){
+    const date = document.getElementById("scanDate").value || todayStr();
+    const ai = projects.filter(p=>p.scanAi);
+    if(!ai.length){ toast("Pilih project AI dulu."); return; }
+    const ok = await confirmDialog(
+      res==="success" ? "Tandai semua project AI berhasil untuk "+fmtDate(date)+"?" : "Reset semua ceklis project AI untuk "+fmtDate(date)+"?",
+      res==="success" ? "Tandai" : "Reset"
+    );
+    if(!ok) return;
+    const batch = db.batch();
+    ai.forEach(p=>{
+      batch.set(db.collection("scanChecks").doc(scanKey(date,p.id)),
+        { date, projectId:p.id, ...scanPatch(res) }, { merge:true });
+    });
+    try{ await batch.commit(); }catch(e){ toast("Gagal menyimpan."); }
+  }
+
+  // pilih project mana saja yang memakai AI
+  function openScanProjectsModal(){
+    if(!projects.length){ toast("Belum ada project."); return; }
+    const sel = new Set(projects.filter(p=>p.scanAi).map(p=>p.id));
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.innerHTML =
+      '<div class="modal-box" style="max-width:460px;">'+
+        '<h3 style="margin:0 0 4px;">Project yang memakai AI</h3>'+
+        '<div class="hint" style="margin:0 0 8px;">Hanya project yang dicentang yang muncul di ceklis scan AI.</div>'+
+        '<input type="text" id="spSearch" placeholder="Cari project…">'+
+        '<div class="row-flex" style="margin:8px 0 4px;"><button id="spAll">Pilih semua</button><button id="spNone">Kosongkan</button><span class="hint" id="spCount" style="margin:0 0 0 auto;"></span></div>'+
+        '<div id="spList" style="max-height:44vh; overflow:auto;"></div>'+
+        '<div class="modal-actions"><button id="spCancel">Batal</button><button class="primary" id="spSave">Simpan</button></div>'+
+      '</div>';
+    document.body.appendChild(overlay);
+    const listEl = overlay.querySelector("#spList"), searchEl = overlay.querySelector("#spSearch"), countEl = overlay.querySelector("#spCount");
+    function visible(){
+      const q = searchEl.value.trim().toLowerCase();
+      return projects.filter(p=>p.name.toLowerCase().includes(q));
+    }
+    function draw(){
+      listEl.innerHTML = visible().map(p=>
+        '<label class="opt-check"><input type="checkbox" data-id="'+p.id+'" '+(sel.has(p.id)?'checked':'')+'> '+esc(p.name)+'</label>'
+      ).join("") || '<div class="hint">Tidak ada yang cocok.</div>';
+      listEl.querySelectorAll("[data-id]").forEach(cb=>{
+        cb.addEventListener("change", ()=>{ cb.checked ? sel.add(cb.dataset.id) : sel.delete(cb.dataset.id); updCount(); });
+      });
+      updCount();
+    }
+    function updCount(){ countEl.textContent = sel.size+" dari "+projects.length+" dipilih"; }
+    searchEl.addEventListener("input", draw);
+    overlay.querySelector("#spAll").onclick = ()=>{ visible().forEach(p=>sel.add(p.id)); draw(); };
+    overlay.querySelector("#spNone").onclick = ()=>{ visible().forEach(p=>sel.delete(p.id)); draw(); };
+    overlay.onclick = ev=>{ if(ev.target===overlay) overlay.remove(); };
+    overlay.querySelector("#spCancel").onclick = ()=>overlay.remove();
+    overlay.querySelector("#spSave").onclick = async ()=>{
+      const batch = db.batch();
+      let n = 0;
+      projects.forEach(p=>{
+        const want = sel.has(p.id);
+        if(!!p.scanAi !== want){ batch.update(db.collection("projects").doc(p.id), { scanAi: want }); n++; }
+      });
+      try{ if(n) await batch.commit(); overlay.remove(); toast("Pilihan project AI disimpan."); }
+      catch(e){ toast("Gagal menyimpan pilihan."); }
+    };
+    draw();
+  }
+  document.getElementById("scanPick").addEventListener("click", openScanProjectsModal);
+  // Tambah project baru langsung dari tab ini (otomatis ikut ceklis AI)
+  document.getElementById("scanAddProj").addEventListener("click", async ()=>{
+    const name = await promptDialog("Nama project baru (otomatis masuk daftar project AI):", "", "Tambah");
+    if(name === null) return;
+    if(!name){ toast("Nama project tidak boleh kosong."); return; }
+    if(projects.some(p=>p.name.toLowerCase()===name.toLowerCase())){ toast("Project dengan nama itu sudah ada."); return; }
+    try{
+      await db.collection("projects").add({ name, createdAt: Date.now(), scanAi: true });
+      toast("Project ditambahkan.");
+    }catch(e){ toast("Gagal menambah project."); }
+  });
+  document.getElementById("scanDate").addEventListener("change", renderScanTab);
+  document.getElementById("scanPrev").addEventListener("click", ()=>{
+    const i = document.getElementById("scanDate"); i.value = addDays(i.value || todayStr(), -1); renderScanTab();
+  });
+  document.getElementById("scanNext").addEventListener("click", ()=>{
+    const i = document.getElementById("scanDate"); i.value = addDays(i.value || todayStr(), 1); renderScanTab();
+  });
+  document.getElementById("scanToday").addEventListener("click", ()=>{
+    document.getElementById("scanDate").value = todayStr(); renderScanTab();
+  });
+  document.getElementById("scanCheckAll").addEventListener("click", ()=>scanBulk("success"));
+  document.getElementById("scanUncheckAll").addEventListener("click", ()=>scanBulk("none"));
+
   // ================= tabs =================
   document.querySelectorAll(".tab-btn").forEach(btn=>{
     btn.addEventListener("click", ()=>{
@@ -1433,6 +1694,7 @@
           '<input type="date" id="cpTo" value="'+to+'" style="flex:1; min-width:0;">'+
         '</div>'+
         '<label class="opt-check" id="cpCarryLabel"><input type="checkbox" id="cpCarry" checked> Sertakan carry-over (bug belum selesai dari tanggal sebelumnya)</label>'+
+        '<label class="opt-check"><input type="checkbox" id="cpAi" '+(defaults.ai===false?'':'checked')+'> Sertakan section "Hasil Test AI" (project AI)</label>'+
         '<label>Kolom PDF</label>'+
         '<div class="col-picker-list">'+
           cols.map(c=>'<label><input type="checkbox" data-col="'+c.key+'" checked> '+c.label+'</label>').join('')+
@@ -1470,7 +1732,7 @@
       const selected = {};
       overlay.querySelectorAll("[data-col]").forEach(cb=>{ selected[cb.dataset.col] = cb.checked; });
       overlay.remove();
-      onConfirm(selected, { statuses, allDates, from:f, to:t, carry: carryCb.checked });
+      onConfirm(selected, { statuses, allDates, from:f, to:t, carry: carryCb.checked, ai: overlay.querySelector("#cpAi").checked });
     };
   }
 
@@ -1488,6 +1750,29 @@
       }).map(e=>({ ...e, isCarryOver: e.date < o.from, isResolvedToday:false }));
     }
     return list.filter(e=>o.statuses.includes(e.status));
+  }
+  // Baris "Hasil Test AI" untuk PDF. Satu tanggal -> semua project AI (yang belum dicek = "Belum").
+  // Rentang / semua tanggal -> hanya catatan yang ada (sudah dicek atau punya catatan).
+  function buildAiRows(projectId, o){
+    const ai = projects.filter(p=>p.scanAi && (!projectId || p.id===projectId));
+    const rows = [];
+    if(!o.allDates && o.from===o.to){
+      ai.forEach(p=>{
+        const c = scanChecks[scanKey(o.from,p.id)] || {};
+        rows.push({ date:o.from, projectName:p.name, state:scanState(c), note:c.note||"" });
+      });
+    } else {
+      const byId = {}; ai.forEach(p=>byId[p.id]=p);
+      Object.values(scanChecks).forEach(c=>{
+        const p = byId[c.projectId];
+        if(!p) return;
+        if(!o.allDates && (c.date < o.from || c.date > o.to)) return;
+        const st = scanState(c);
+        if(st==="none" && !c.note) return;
+        rows.push({ date:c.date, projectName:p.name, state:st, note:c.note||"" });
+      });
+    }
+    return rows.sort((a,b)=> (a.date<b.date?-1:a.date>b.date?1:0) || a.projectName.localeCompare(b.projectName));
   }
   function exportPeriodLabel(o){
     if(o.allDates) return "Semua Tanggal";
@@ -1509,7 +1794,7 @@
   }
 
   // ================= PDF export (jsPDF + AutoTable) =================
-  async function buildAndSavePdf(title, rows, includeProjectCol, filenameBase, selectedCols){
+  async function buildAndSavePdf(title, rows, includeProjectCol, filenameBase, selectedCols, aiRows){
     if(!window.jspdf){ toast("Library PDF gagal dimuat."); return; }
     const { jsPDF } = window.jspdf;
     const cols = selectedCols || { project:true, existingImg:true, existing:true, expected:true, expectedImg:true, priority:true, dueDate:true, status:true, date:true };
@@ -1574,7 +1859,7 @@
     if(cols.dueDate) colDefs.push({ key:"dueDate", label:"Due Date", width:24 });
     if(cols.status) colDefs.push({ key:"status", label:"Status", width:22 });
     if(cols.date) colDefs.push({ key:"date", label:"Tanggal", width:24 });
-    if(!colDefs.length){ toast("Pilih minimal satu kolom."); return; }
+    if(rows.length && !colDefs.length){ toast("Pilih minimal satu kolom."); return; }
 
     const head = [colDefs.map(c=>c.label)];
     const existImgColIdx = colDefs.findIndex(c=>c.key==="existingImg");
@@ -1622,7 +1907,7 @@
       }
     }
 
-    doc.autoTable({
+    if(rows.length) doc.autoTable({
       startY: headerBottom + 3,
       margin: { left: mx, right: mx },
       tableWidth: textCols.length ? availW : "auto",
@@ -1638,6 +1923,58 @@
         else if(data.column.index===expImgColIdx) drawAttachment(data, expectedImgs[data.row.index]);
       }
     });
+
+    // ---- Section khusus: Hasil Test AI ----
+    if(aiRows && aiRows.length){
+      const pageH = doc.internal.pageSize.getHeight();
+      let y2 = (rows.length && doc.lastAutoTable) ? doc.lastAutoTable.finalY + 12 : headerBottom + 8;
+      if(y2 > pageH - 45){ doc.addPage(); y2 = 16; }
+      doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.setTextColor(30);
+      doc.text("Hasil Test AI", mx, y2);
+      doc.setDrawColor(109,94,245); doc.setLineWidth(0.9);
+      doc.line(mx, y2+2, mx+24, y2+2);
+      const ac = { success:0, fail:0, none:0 };
+      aiRows.forEach(r=>{ ac[r.state]++; });
+      doc.setFont("helvetica","bold"); doc.setFontSize(9.5); doc.setTextColor(50);
+      doc.text("Total: "+aiRows.length+"   |   Berhasil: "+ac.success+"   |   Gagal: "+ac.fail+"   |   Belum: "+ac.none, mx, y2+8.5);
+      doc.setFont("helvetica","normal");
+
+      const aiCols = [{ label:"Tanggal", width:28 }];
+      if(includeProjectCol) aiCols.push({ label:"Project", width:42 });
+      aiCols.push({ label:"Hasil", width:24 });
+      aiCols.push({ label:"Catatan" });
+      const hasilIdx = aiCols.findIndex(c=>c.label==="Hasil");
+      const aiFixed = aiCols.reduce((a,c)=>a+(c.width||0),0);
+      const aiStyles = {};
+      aiCols.forEach((c,i)=>{ aiStyles[i] = { cellWidth: c.width || Math.max(30, availW - aiFixed) }; });
+      const AI_LABEL = { success:"Berhasil", fail:"Gagal", none:"Belum" };
+      const AI_RGB = { success:[23,166,115], fail:[224,54,60], none:[108,111,133] };
+      doc.autoTable({
+        startY: y2 + 12,
+        margin: { left: mx, right: mx },
+        tableWidth: availW,
+        head: [aiCols.map(c=>c.label)],
+        body: aiRows.map(r=>{
+          const row = [fmtDate(r.date)];
+          if(includeProjectCol) row.push(r.projectName);
+          row.push(AI_LABEL[r.state]);
+          row.push(r.note || "-");
+          return row;
+        }),
+        theme: "grid",
+        styles: { font:"helvetica", fontSize:9, cellPadding:3, overflow:"linebreak", valign:"middle", lineColor:[210,212,218], lineWidth:0.2 },
+        headStyles: { fillColor:[109,94,245], textColor:255, fontStyle:"bold", fontSize:9.5 },
+        alternateRowStyles: { fillColor:[246,247,250] },
+        columnStyles: aiStyles,
+        didParseCell: data=>{
+          if(data.section==="body" && data.column.index===hasilIdx){
+            const st = aiRows[data.row.index].state;
+            data.cell.styles.textColor = AI_RGB[st];
+            data.cell.styles.fontStyle = "bold";
+          }
+        }
+      });
+    }
 
     const blob = doc.output("blob");
     const filename = filenameBase + ".pdf";
@@ -1658,10 +1995,11 @@
     const dateFilter = document.getElementById("quickDate").value || todayStr();
     openColumnPickerModal(false, async (selectedCols, o)=>{
       const list = buildExportList(proj.id, o).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
-      if(!list.length){ toast("Tidak ada bug untuk diekspor dengan opsi ini."); return; }
+      const aiRows = o.ai ? buildAiRows(proj.id, o) : null;
+      if(!list.length && !(aiRows && aiRows.length)){ toast("Tidak ada data untuk diekspor dengan opsi ini."); return; }
       const title = { main:"Bug/Task Report — " + proj.name, meta:exportMetaLines(o) };
       const filenameBase = "report_" + proj.name.replace(/\W+/g,"_") + "_" + (o.allDates ? "all" : (o.from===o.to ? o.from : o.from+"_sd_"+o.to));
-      await buildAndSavePdf(title, list, false, filenameBase, selectedCols);
+      await buildAndSavePdf(title, list, false, filenameBase, selectedCols, aiRows);
     }, { from:dateFilter, to:dateFilter, all:showAll });
   });
 
@@ -1673,13 +2011,14 @@
       const list = buildExportList(projectFilter, o).map(e=>({
         ...e, projectName: (projects.find(p=>p.id===e.projectId)||{}).name || "-"
       })).sort((a,b)=> (a.projectName||"").localeCompare(b.projectName||"") || (a.createdAt-b.createdAt));
-      if(!list.length){ toast("Tidak ada bug untuk diekspor dengan opsi ini."); return; }
+      const aiRows = o.ai ? buildAiRows(projectFilter, o) : null;
+      if(!list.length && !(aiRows && aiRows.length)){ toast("Tidak ada data untuk diekspor dengan opsi ini."); return; }
       const projLabel = projectFilter ? (projects.find(p=>p.id===projectFilter)||{}).name || "Project" : "Semua Project";
       const title = { main:"Laporan Harian — " + projLabel, meta:exportMetaLines(o) };
       const periodFile = o.allDates ? "semua_tanggal" : (o.from===o.to ? o.from : o.from+"_sd_"+o.to);
       const filenameBase = "laporan_" + (projectFilter?projLabel.replace(/\W+/g,"_")+"_":"") + periodFile +
         (o.statuses.length===STATUS_OPTS.length ? "" : "_"+o.statuses.join("_").replace(/\W+/g,"_"));
-      await buildAndSavePdf(title, list, !projectFilter, filenameBase, selectedCols);
+      await buildAndSavePdf(title, list, !projectFilter, filenameBase, selectedCols, aiRows);
     }, { from:date, to:date, all:showAllDates, statuses: dailyStatusFilter ? [dailyStatusFilter] : null });
   });
 
