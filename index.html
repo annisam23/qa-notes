@@ -429,6 +429,17 @@
   .kn-note { border-left:3px solid var(--warn); background:var(--surface-2); padding:10px 12px; border-radius:0 10px 10px 0; font-size:12.5px; line-height:1.55; white-space:pre-wrap; }
   .kn-foot { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; padding:18px 20px 20px; }
   .kn-foot .spacer { margin-right:auto; }
+  /* warna per perusahaan */
+  .ak-chips .chip.chip-co { border-color:color-mix(in srgb, var(--co) 50%, var(--border)); background:color-mix(in srgb, var(--co) 11%, var(--surface-2)); }
+  .ak-chips .chip.chip-co .dot { background:var(--co) !important; }
+  .ak-chips .chip.chip-co.on { background:var(--co); color:#fff; border-color:transparent; }
+  .ak-chips .chip.chip-co.on .dot { background:#fff !important; }
+  .ak-card { background:color-mix(in srgb, var(--co) 5%, var(--surface)); border-color:color-mix(in srgb, var(--co) 28%, var(--border)); border-top-color:var(--co); }
+  .ak-head { background:color-mix(in srgb, var(--co) 13%, transparent); }
+  .ak-co { color:color-mix(in srgb, var(--co) 70%, var(--text-dim)); }
+  .kn-tile { background:color-mix(in srgb, var(--co) 9%, var(--surface)); border-color:color-mix(in srgb, var(--co) 28%, var(--border)); border-left-color:var(--co); }
+  .kn-tile:hover { background:color-mix(in srgb, var(--co) 16%, var(--surface)); }
+  .kn-cotag.co-tag { background:color-mix(in srgb, var(--co) 16%, var(--surface)); border-color:color-mix(in srgb, var(--co) 45%, var(--border)); color:var(--text); }
   /* bahasa default */
   .kn-lang { display:inline-flex; align-items:center; gap:7px; font-size:13.5px; font-weight:700; padding:6px 12px; border-radius:10px; background:var(--surface-2); border:1px solid var(--border); }
   .kn-lang .fl { font-size:20px; line-height:1; font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif; }
@@ -771,6 +782,22 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   const UNRESOLVED_STATUSES = ["Open","In Progress"]; // belum selesai -> ikut dibawa ke tanggal berikutnya
   const PRIORITY_OPTS = ["Critical","High","Medium","Low"];
   const PRIORITY_COLOR = {"Critical":"#e0363c","High":"#e08a1c","Medium":"#4f6ef7","Low":"#6c6f85"};
+  // Ketentuan priority otomatis (berdasarkan kata di Existing/Expected):
+  //  - masalah hasil scan (PDF/OCR tidak sesuai, dll)  -> High
+  //  - masalah wording / penulisan / typo               -> Low
+  // Kalau dua-duanya muncul, High menang. Tanpa kata kunci -> tidak mengubah apa pun.
+  const PRIORITY_RULES = [
+    { priority:"High", words:["hasil scan","scan","ocr","hasil pdf","pdf tidak sesuai","pdf ga sesuai","pdf gak sesuai","pdf salah","hasil ekstrak","hasil extract","tidak sesuai dengan pdf","ga sesuai pdf","gak sesuai pdf","salah baca","tidak terbaca","ga terbaca","gak terbaca"] },
+    { priority:"Low",  words:["wording","typo","salah ketik","penulisan","ejaan","redaksi","kalimat","susunan kata","pemilihan kata","narasi","copywriting"] }
+  ];
+  function suggestPriority(text){
+    const t = String(text||"").toLowerCase();
+    if(!t.trim()) return null;
+    for(const rule of PRIORITY_RULES){
+      if(rule.words.some(w=>t.includes(w))) return rule.priority;
+    }
+    return null;
+  }
   const PDF_COLUMNS = [
     { key:"project", label:"Project" },
     { key:"existingImg", label:"Gambar Existing" },
@@ -1111,7 +1138,16 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       el.addEventListener("change", ()=>{
         const id = el.closest("tr").dataset.id;
         if(el.dataset.f==="date" && !el.value){ el.value = el.defaultValue; return; }
-        updateEntry(id, { [el.dataset.f]: el.value });
+        const patch = { [el.dataset.f]: el.value };
+        if(el.dataset.f==="existing" || el.dataset.f==="expected"){
+          const cur = entries.find(x=>x.id===id);
+          if(cur && (cur.priority||"Medium")==="Medium"){
+            const other = el.dataset.f==="existing" ? cur.expected : cur.existing;
+            const sug = suggestPriority(el.value+" "+(other||""));
+            if(sug){ patch.priority = sug; toast("Priority otomatis: "+sug); }
+          }
+        }
+        updateEntry(id, patch);
       });
     });
     wrap.querySelectorAll("[data-date-step]").forEach(btn=>{
@@ -1233,6 +1269,19 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     mStatusSel.addEventListener("change", ()=>{ mStatusBadge.className = "badge "+mStatusSel.value.replace(" ","-"); mStatusBadge.textContent = mStatusSel.value; });
     const mPrioSel = overlay.querySelector("#mPriority"), mPrioBadge = overlay.querySelector("#mPriorityBadge");
     mPrioSel.addEventListener("change", ()=>{ mPrioBadge.className = "badge-priority "+mPrioSel.value; mPrioBadge.textContent = mPrioSel.value; });
+    let mPrioTouched = false;
+    mPrioSel.addEventListener("change", ()=>{ mPrioTouched = true; });
+    function autoPrio(){
+      if(mPrioTouched) return;
+      const sug = suggestPriority(overlay.querySelector("#mExisting").value+" "+overlay.querySelector("#mExpected").value);
+      if(sug && mPrioSel.value!==sug){
+        mPrioSel.value = sug;
+        mPrioBadge.className = "badge-priority "+sug; mPrioBadge.textContent = sug;
+        toast("Priority otomatis: "+sug);
+      }
+    }
+    overlay.querySelector("#mExisting").addEventListener("input", autoPrio);
+    overlay.querySelector("#mExpected").addEventListener("input", autoPrio);
     const mDateInput = overlay.querySelector("#mDate");
     overlay.querySelector("#mDatePrev").onclick = ()=>{ mDateInput.value = addDays(mDateInput.value, -1); };
     overlay.querySelector("#mDateNext").onclick = ()=>{ mDateInput.value = addDays(mDateInput.value, 1); };
@@ -1344,8 +1393,21 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       el.querySelector('[data-sf="priority"]').value = s.priority || "Medium";
       el.querySelector('[data-sf="dueDate"]').value = s.dueDate || "";
       el.querySelectorAll("[data-sf]").forEach(f=>{
-        f.addEventListener("input", ()=>{ s[f.dataset.sf]=f.value; });
-        f.addEventListener("change", ()=>{ s[f.dataset.sf]=f.value; });
+        f.addEventListener("input", ()=>{
+          s[f.dataset.sf]=f.value;
+          if(f.dataset.sf==="existing" || f.dataset.sf==="expected"){
+            const sug = suggestPriority(s.existing+" "+s.expected);
+            if(sug && !s.prioTouched && s.priority!==sug){
+              s.priority = sug;
+              el.querySelector('[data-sf="priority"]').value = sug;
+              toast("Priority otomatis: "+sug);
+            }
+          }
+        });
+        f.addEventListener("change", ()=>{
+          s[f.dataset.sf]=f.value;
+          if(f.dataset.sf==="priority") s.prioTouched = true; // pilihan manual tidak ditimpa lagi
+        });
       });
       el.querySelector("[data-add-staging-exp-img]").addEventListener("click", ()=>{
         const tmpInput = document.createElement("input");
@@ -1724,7 +1786,23 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   function akHost(u){ return String(u).replace(/^https?:\/\//i,"").replace(/\/$/,""); }
   function akHref(u){ return /^https?:\/\//i.test(u) ? u : "https://"+u; }
   function akShortCo(c){ return (c||"Lainnya").replace(/^PT\s+/i,"").replace(/\s+Sdn\.?\s*Bhd\.?$/i,""); }
-  function akColor(c){ let h = 7; for(const ch of String(c||"")) h = (h*31 + ch.charCodeAt(0)) % 360; return "hsl("+h+",58%,50%)"; }
+  // Warna per perusahaan: perusahaan yang sudah dikenal dapat warna tetap yang jelas berbeda,
+  // perusahaan baru otomatis kebagian salah satu warna dari palet (konsisten tiap kali dibuka).
+  const CO_FIXED = {
+    "seleris":"#6d5ef5",   // ungu
+    "flexa":"#f08a24",     // oranye
+    "aurora":"#0fa3a3",    // teal
+    "medi risk":"#2f80ed", // biru
+    "salvion":"#d6336c",   // magenta
+    "lainnya":"#7b7f93"    // abu
+  };
+  const CO_PALETTE = ["#17a673","#e0363c","#8e44ad","#c29a00","#00a0d6","#e0679a","#5d7b2f","#a0522d"];
+  function akColor(c){
+    const name = String(c||"Lainnya").toLowerCase();
+    for(const k in CO_FIXED){ if(name.indexOf(k)!==-1) return CO_FIXED[k]; }
+    let h = 7; for(const ch of name) h = (h*31 + ch.charCodeAt(0)) >>> 0;
+    return CO_PALETTE[h % CO_PALETTE.length];
+  }
   function akSlug(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""); }
   function akCopyBtn(val, what){
     return '<button type="button" class="ak-ib" data-copy="'+esc(val)+'" data-what="'+what+'" title="Salin">📋</button>';
@@ -1756,7 +1834,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     if(akCo !== null && !akCosList.includes(akCo)) akCo = null;
     chipsEl.innerHTML = akData.length
       ? '<button type="button" class="chip '+(akCo===null?'on':'')+'" data-co="">Semua ('+akData.length+')</button>' +
-        akCosList.map((c,i)=>'<button type="button" class="chip '+(akCo===c?'on':'')+'" data-co="'+i+'"><span class="dot" style="background:'+akColor(c)+';"></span>'+esc(akShortCo(c))+' ('+akData.filter(p=>(p.company||"Lainnya")===c).length+')</button>').join("")
+        akCosList.map((c,i)=>'<button type="button" class="chip chip-co '+(akCo===c?'on':'')+'" style="--co:'+akColor(c)+';" data-co="'+i+'"><span class="dot" style="background:'+akColor(c)+';"></span>'+esc(akShortCo(c))+' ('+akData.filter(p=>(p.company||"Lainnya")===c).length+')</button>').join("")
       : "";
 
     if(!akData.length){
@@ -2033,7 +2111,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     if(knCo !== null && !knCosList.includes(knCo)) knCo = null;
     chipsEl.innerHTML = knData.length
       ? '<button type="button" class="chip '+(knCo===null?'on':'')+'" data-co="">Semua ('+knData.length+')</button>' +
-        knCosList.map((c,i)=>'<button type="button" class="chip '+(knCo===c?'on':'')+'" data-co="'+i+'"><span class="dot" style="background:'+akColor(c)+';"></span>'+esc(akShortCo(c))+' ('+knData.filter(p=>(p.company||"Lainnya")===c).length+')</button>').join("")
+        knCosList.map((c,i)=>'<button type="button" class="chip chip-co '+(knCo===c?'on':'')+'" style="--co:'+akColor(c)+';" data-co="'+i+'"><span class="dot" style="background:'+akColor(c)+';"></span>'+esc(akShortCo(c))+' ('+knData.filter(p=>(p.company||"Lainnya")===c).length+')</button>').join("")
       : "";
 
     if(!knData.length){
@@ -2076,7 +2154,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         '<div class="kn-mhead">'+
           '<button type="button" class="kn-x" id="kdX" title="Tutup" aria-label="Tutup">✕</button>'+
           '<div class="kn-mtop"><span class="ak-av kn-mav">'+esc((p.name||"?").trim().charAt(0).toUpperCase())+'</span>'+
-            '<div><div class="kn-dname">'+esc(p.name)+'</div><span class="kn-cotag">'+esc(co)+'</span>'+
+            '<div><div class="kn-dname">'+esc(p.name)+'</div><span class="kn-cotag co-tag">'+esc(co)+'</span>'+
             (L ? '<span class="kn-cotag" style="margin-left:6px;"><span class="kn-flag">'+L.flag+'</span> '+esc(L.label)+'</span>' : '')+'</div></div>'+
           (p.tagline ? '<div class="kn-dlead">'+esc(p.tagline)+'</div>' : '')+
         '</div>'+
