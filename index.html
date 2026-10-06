@@ -352,6 +352,87 @@
   .scan-seg button.on-none { background:var(--gray); color:#fff; border-color:transparent; }
   .scan-seg button.on-success { background:var(--ok); color:#fff; border-color:transparent; }
   .scan-seg button.on-fail { background:var(--danger); color:#fff; border-color:transparent; }
+
+  /* ===== All Akses ===== */
+  .ak-toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+  .ak-toolbar .ak-search { flex:1; min-width:200px; max-width:320px; }
+  .ak-spacer { flex:1; }
+  .ak-chips { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
+  .ak-chips .chip { cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+  .ak-chips .chip .dot { width:8px; height:8px; border-radius:50%; flex:none; }
+  .ak-chips .chip.on { background:var(--accent-grad); color:var(--accent-text); border-color:transparent; }
+  .ak-cols { column-count:3; column-gap:14px; }
+  @media (max-width:1050px) { .ak-cols { column-count:2; } }
+  @media (max-width:720px) { .ak-cols { column-count:1; } }
+  .ak-card { break-inside:avoid; margin-bottom:14px; background:var(--surface); border:1px solid var(--border); border-top:3px solid var(--co); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; transition:box-shadow .15s; }
+  .ak-card:hover { box-shadow:var(--shadow-lift); }
+  .ak-head { display:flex; align-items:center; gap:10px; padding:11px 12px; cursor:pointer; }
+  .ak-av { width:34px; height:34px; border-radius:10px; background:var(--co); color:#fff; font-weight:800; font-size:14px; display:flex; align-items:center; justify-content:center; flex:none; }
+  .ak-ttl { flex:1; min-width:0; }
+  .ak-name { font-weight:800; font-size:14.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ak-co { font-size:11px; color:var(--text-dim); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ak-acts { display:flex; gap:3px; opacity:0; transition:.15s; }
+  .ak-card:hover .ak-acts { opacity:1; }
+  @media (hover:none) { .ak-acts { opacity:1; } }
+  .ak-caret { color:var(--text-dim); font-size:12px; width:12px; text-align:center; flex:none; }
+  .ak-body { padding:0 12px 12px; }
+  .ak-sec { font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-dim); font-weight:800; margin:2px 0 6px; }
+  .ak-sec:not(:first-child) { margin-top:12px; }
+  .ak-line { display:flex; align-items:center; gap:6px; min-width:0; padding:3px 3px 3px 9px; border-radius:8px; background:var(--surface-2); margin-bottom:4px; }
+  .ak-line .k { flex:none; font-size:9.5px; font-weight:800; color:var(--text-dim); width:30px; text-transform:uppercase; }
+  .ak-line .v { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12.5px; }
+  .ak-line .v[data-copy] { cursor:pointer; }
+  .ak-line .v[data-copy]:hover { color:var(--accent); }
+  .ak-line .mono { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12px; }
+  .ak-line a { color:var(--accent); text-decoration:none; font-weight:600; }
+  .ak-line a:hover { text-decoration:underline; }
+  .ak-ib { flex:none; width:26px; height:26px; padding:0; display:flex; align-items:center; justify-content:center; font-size:12px; border-radius:7px; background:transparent; border:1px solid var(--border); }
+  .ak-ib:hover { border-color:var(--accent); background:rgba(109,94,245,.08); }
+  .ak-tag { flex:none; font-size:9.5px; font-weight:800; padding:1px 6px; border-radius:20px; background:rgba(224,138,28,.15); color:var(--warn); }
+  .ak-acc { padding:8px 0 4px; border-top:1px dashed var(--border); }
+  .ak-sec + .ak-acc { border-top:none; padding-top:0; }
+  .ak-role { font-size:11.5px; font-weight:800; margin-bottom:5px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .ak-prod { font-size:9.5px; font-weight:800; padding:1px 7px; border-radius:20px; background:rgba(224,54,60,.15); color:var(--danger); }
+  .ak-note { font-size:11.5px; color:var(--text-dim); margin-top:10px; line-height:1.4; padding:7px 9px; border-radius:8px; background:var(--surface-2); }
+  .ak-empty { font-size:12px; color:var(--text-dim); padding:2px 0 4px; }
+  .ak-erow { display:grid; grid-template-columns:1fr 1.3fr 1fr auto auto; gap:6px; align-items:center; margin-bottom:6px; }
+  @media (max-width:560px) { .ak-erow { grid-template-columns:1fr 1fr; } }
+  .modal-box label.ak-prodcb { display:flex; align-items:center; gap:4px; margin:0; font-size:11px; text-transform:none; letter-spacing:0; color:var(--text); cursor:pointer; }
+  .ak-prodcb input { width:14px; height:14px; }
+  /* ===== Knowledge ===== */
+  .kn-grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px; }
+  @media (max-width:1050px) { .kn-grid { grid-template-columns:repeat(3, minmax(0, 1fr)); } }
+  @media (max-width:720px) { .kn-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+  @media (max-width:420px) { .kn-grid { grid-template-columns:1fr; } }
+  .kn-tile { display:flex; align-items:center; gap:10px; min-width:0; padding:12px; background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--co); border-radius:12px; box-shadow:var(--shadow); cursor:pointer; transition:transform .15s, box-shadow .15s; }
+  .kn-tile:hover { transform:translateY(-2px); box-shadow:var(--shadow-lift); }
+  .kn-tile:focus-visible { outline:none; box-shadow:0 0 0 3px rgba(109,94,245,.28); }
+
+  .kn-modal { padding:0 !important; max-width:680px !important; }
+  .kn-mhead { position:relative; padding:20px 20px 16px; background:color-mix(in srgb, var(--co) 13%, var(--surface)); border-top:4px solid var(--co); border-bottom:1px solid var(--border); }
+  .kn-mtop { display:flex; align-items:center; gap:14px; padding-right:36px; }
+  .kn-mav { width:48px !important; height:48px !important; border-radius:14px !important; font-size:20px !important; }
+  .kn-dname { font-size:20px; font-weight:800; line-height:1.2; }
+  .kn-cotag { display:inline-block; margin-top:5px; font-size:11px; font-weight:700; padding:2px 10px; border-radius:20px; background:var(--surface); border:1px solid var(--border); color:var(--text-dim); }
+  .kn-dlead { margin:12px 0 0; font-size:13.5px; font-weight:600; line-height:1.5; }
+  .kn-x { position:absolute; top:12px; right:12px; width:30px; height:30px; padding:0; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; background:var(--surface); }
+  .kn-mbody { padding:4px 20px 2px; }
+  .kn-dsec { margin-top:16px; }
+  .kn-dsec h4 { margin:0 0 8px; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-dim); font-weight:800; display:flex; align-items:center; gap:7px; }
+  .kn-dsec h4 .n { font-size:10px; padding:1px 8px; border-radius:20px; background:var(--surface-2); border:1px solid var(--border); letter-spacing:0; }
+  .kn-text { font-size:13px; line-height:1.65; white-space:pre-wrap; }
+  .kn-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .kn-chip { font-size:12.5px; font-weight:600; padding:5px 11px; border-radius:10px; background:var(--surface-2); border:1px solid var(--border); line-height:1.35; }
+  .kn-chip.feat { border-left:3px solid var(--co); }
+  .kn-chip.role { background:color-mix(in srgb, var(--accent) 10%, transparent); border-color:color-mix(in srgb, var(--accent) 30%, var(--border)); }
+  .kn-muted { font-size:12.5px; color:var(--text-dim); font-style:italic; }
+  .kn-note { border-left:3px solid var(--warn); background:var(--surface-2); padding:10px 12px; border-radius:0 10px 10px 0; font-size:12.5px; line-height:1.55; white-space:pre-wrap; }
+  .kn-foot { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; padding:18px 20px 20px; }
+  .kn-foot .spacer { margin-right:auto; }
+  /* bahasa default */
+  .kn-lang { display:inline-flex; align-items:center; gap:7px; font-size:13.5px; font-weight:700; padding:6px 12px; border-radius:10px; background:var(--surface-2); border:1px solid var(--border); }
+  .kn-lang .fl { font-size:20px; line-height:1; font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif; }
+  .kn-flag { font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif; }
 </style>
 </head>
 <body>
@@ -399,6 +480,8 @@
     <button class="tab-btn active" data-tab="manage">Kelola Bug</button>
     <button class="tab-btn" data-tab="daily">Laporan Harian (Semua Project)</button>
     <button class="tab-btn" data-tab="scan">Ceklis Scan AI</button>
+    <button class="tab-btn" data-tab="akses">All Akses</button>
+    <button class="tab-btn" data-tab="knowledge">Knowledge</button>
   </div>
 
   <!-- ===== TAB 1: MANAGE ===== -->
@@ -517,9 +600,57 @@
     </div>
   </div>
 
+  <!-- ===== TAB 4: ALL AKSES ===== -->
+  <div class="tab-panel" id="tab-akses">
+    <div class="card">
+      <div class="ak-toolbar">
+        <input type="text" id="akSearch" class="ak-search" placeholder="Cari project, email, atau link…">
+        <label class="row-flex" style="font-size:12.5px; color:var(--text-dim); font-weight:600;">
+          <input type="checkbox" id="akReveal" style="width:auto;"> tampilkan semua password
+        </label>
+        <span class="ak-spacer"></span>
+        <button id="akRestore" style="display:none;" title="Kembalikan project awal yang hilang (tidak menimpa yang sudah ada)"></button>
+        <button id="akExpand" title="Buka semua kartu">Buka semua</button>
+        <button id="akCollapse" title="Ringkas semua kartu">Ringkas semua</button>
+        <button class="primary" id="akAdd">+ Project</button>
+      </div>
+      <div class="ak-chips" id="akChips"></div>
+      <div id="akGrid"></div>
+      <div class="hint" id="akCount"></div>
+      <div class="hint">Klik email/password, atau tombol 📋, untuk menyalin. Password tersembunyi sampai kamu klik 👁. Arahkan kursor ke kartu untuk edit ✎ atau hapus 🗑.</div>
+    </div>
+  </div>
+
+  <!-- ===== TAB 5: KNOWLEDGE ===== -->
+  <div class="tab-panel" id="tab-knowledge">
+    <div class="card">
+      <div class="ak-toolbar">
+        <input type="text" id="knSearch" class="ak-search" placeholder="Cari produk, fitur, atau peran…">
+        <span class="ak-spacer"></span>
+        <button id="knRestore" style="display:none;" title="Kembalikan produk awal yang hilang (tidak menimpa yang sudah ada)"></button>
+        <button class="primary" id="knAdd">+ Produk</button>
+      </div>
+      <div class="ak-chips" id="knChips"></div>
+      <div id="knGrid"></div>
+      <div class="hint" id="knCount"></div>
+      <div class="hint">Klik nama produk untuk membuka detailnya. Isi deskripsi, fitur, peran, dan bahasa default lewat tombol Edit di dalam detail; semua orang di tim melihat perubahan yang sama.</div>
+    </div>
+  </div>
+
 </div>
 
 <div id="toast" class="toast"></div>
+
+<!-- DATA AWAL ALL AKSES (dari PDF). Setelah klik "Impor data awal" dan data muncul, HAPUS seluruh blok <script> ini
+     supaya password tidak lagi ada di source file. Data tetap tersimpan di Firestore. -->
+<script id="akSeed">
+window.AK_SEED = [{"name":"TSS (Takaful Smart Submit)","company":"PT Seleris Meditekno Internasional","links":[],"acc":[{"r":"Role asuransi","u":"nisa.takaful@tss.com"},{"r":"App staging","u":"nisa@takaful.com","p":"masuk123"},{"r":"App prod","u":"nisa.matahari@tss.com","p":"masuk123","prod":true},{"r":"Akun lain","u":"nisa.admin@takaful.com"}],"note":""},{"name":"elife (seleris-apps-elife)","company":"PT Seleris Meditekno Internasional","links":["https://elife.seleris.ai/sign-in"],"acc":[{"r":"Role checker","u":"grmchecker@elife.com","p":"masuk123"},{"r":"Role asuransi","u":"equity.elife@elife.com"}],"note":""},{"name":"EHD (seleris-apps-chubb)","company":"PT Seleris Meditekno Internasional","links":["https://ehd-backoffice.com"],"acc":[{"r":"Role asuransi","u":"uat.chubb@gmail.com","p":"masuk123"},{"r":"Akun app","u":"nisa.bjb@ehd.com","p":"nisaehd"}],"note":""},{"name":"Care","company":"PT Seleris Meditekno Internasional","links":["https://admin-care.seleris.ai/"],"acc":[{"r":"Admin","u":"yusuf@seleris.id","p":"masuk123"}],"note":""},{"name":"Admin","company":"PT Seleris Meditekno Internasional","links":["https://staging-admin.seleris.ai/","https://admin.seleris.ai/login"],"acc":[{"r":"Super admin","u":"raka@seleris.ai","p":"masuk123"},{"r":"Akun Chubb","u":"uat.nisa@seleris.com"}],"note":""},{"name":"Landing Page","company":"PT Seleris Meditekno Internasional","links":["https://cms-lp.seleris.ai/blogs","https://seleris.ai/","https://seleris.id/"],"acc":[{"r":"Admin CMS","u":"smi_media@seleris.id","p":"masuk123"}],"note":""},{"name":"Sentris New","company":"PT Seleris Meditekno Internasional","links":["https://renhoran.cloud/login","https://sentris.seleris.ai/employee/attendance"],"acc":[{"r":"Admin","u":"fendy@seleris.id","p":"masuk123"}],"note":""},{"name":"SCC (seleris-apps-scc)","company":"PT Seleris Meditekno Internasional","links":["https://scc.seleris.ai/"],"acc":[{"r":"Akun 1","u":"uat.chubb@gmail.com","p":"masuk123"},{"r":"Akun 2","u":"uat.nisa.xyz@seleris.com","p":"masuk123"}],"note":""},{"name":"SC","company":"PT Seleris Meditekno Internasional","links":[],"acc":[{"r":"Akun","u":"uat.daffa.sc@seleris.com","p":"masuk123"}],"note":""},{"name":"Seleris Care Aplikator (SCA)","company":"PT Seleris Meditekno Internasional","links":["https://staging-sca.seleris.ai/","https://sca.seleriscare.ai","https://selica-bo.seleriscare.ai/login"],"acc":[{"r":"Prod · Atasan","u":"anni21070ti@student.nurulfikri.ac.id","prod":true},{"r":"Prod · Anak buah","u":"28fph@dollicons.com","prod":true},{"r":"Prod · Akun lain","u":"5899t@dollicons.com","prod":true},{"r":"Staging · Atasan","u":"qrufh@dollicons.com"},{"r":"Staging · Bawahan","u":"trrwa@dollicons.com"},{"r":"Staging · Akun lain","u":"2be9e@dollicons.com"},{"r":"Akun lain","u":"7jcti3ymdk@ruutukf.com"},{"r":"Akun lain","u":"tqeh6@dollicons.com"}],"note":"Label “Akun lain” tidak tertulis jelas di PDF sumber."},{"name":"Klop","company":"PT Seleris Meditekno Internasional","links":["https://myklop.id"],"acc":[{"r":"Client","u":"081200000100"},{"r":"Driver Motor · Andi Wijaya","u":"+6281200000011"},{"r":"Driver Motor · Rian Saputra","u":"+6281200000014"},{"r":"Driver Mobil · Agus Salim","u":"+6281200000022"},{"r":"Driver Mobil · Rini Hartati","u":"+6281200000021"},{"r":"Merchant KlopEat · Warung Padang Bu Tini","u":"+6281200000040"},{"r":"Merchant Market · Batik & Tenun Rahayu","u":"+628111110001"}],"note":""},{"name":"Superapp (Seleris Superapps)","company":"PT Seleris Meditekno Internasional","links":[],"acc":[{"r":"Akun","u":"test1@seleris.id"}],"note":""},{"name":"Agentic AI","company":"PT Seleris Meditekno Internasional","links":["https://seleris-sentris-app.svasti.id/","https://seleris-agent-app.svasti.id/","https://seleris-lp.svasti.id/"],"acc":[{"r":"Sentris · prod","u":"owner","p":"SentrisProd#2026","prod":true},{"r":"Seleris-agentic-v2","u":"admin@seleris.ai","p":"zjzcGw2IvxQmiEqK"}],"note":""},{"name":"Autoclaim","company":"PT Seleris Meditekno Internasional","links":["https://autoclaim-v1.pages.dev/","https://admin-autoclaim.pages.dev"],"acc":[{"r":"Mitra asuransi","u":"chubb@gmail.com","p":"masuk123"},{"r":"Pengguna","u":"anceyowww@gmail.com","p":"masuk123"},{"r":"Admin","u":"nisa@autoclaim.com","p":"masuk1234"}],"note":""},{"name":"SILOGIN","company":"PT Seleris Meditekno Internasional","links":["https://silogin.id"],"acc":[{"r":"Admin","u":"admin@gmail.com","p":"masuk123"}],"note":""},{"name":"DRIVE (selerisauto.ai)","company":"PT Seleris Meditekno Internasional","links":["https://bo.selerisauto.ai/login"],"acc":[{"r":"Admin","u":"admin@autoclaim.com","p":"!Autoclaim_Admin2026_!"}],"note":""},{"name":"Proper","company":"PT Seleris Meditekno Internasional","links":["https://proper.seleris.ai"],"acc":[],"note":""},{"name":"Flexa","company":"PT Flexa Asia Solusi","links":["https://flexa-bo.flexa.asia/","https://staging-flexa-bo.flexa.asia/","https://flexa.asia/","https://staging.flexa.asia/"],"acc":[{"r":"Akun Bumida","u":"nisabumida@flexa.asia"},{"r":"Akun AJB","u":"nisabumiputera@flexa.asia"},{"r":"Akun CS","u":"cs1@flexa.asia"}],"note":"Di akhir daftar sumber tertulis “flexa” tanpa keterangan (mungkin password). Cek dulu sebelum dipakai."},{"name":"Aurora","company":"PT Aurora Medika","links":["https://auroracare.ai"],"acc":[],"note":""},{"name":"MyMedix","company":"Medi Risk Technologies Sdn. Bhd","links":["https://mymedix.ai/","https://backoffice.mymedix.ai/","https://medihub.mymedix.ai/"],"acc":[{"r":"Superadmin","u":"superadmin","p":"Admin@12345"},{"r":"Demo life","u":"demo_life@mymedix.ai","p":"mymedix123"},{"r":"CC agent","u":"cc.agent@mymedix.ai","p":"mymedix123"},{"r":"Demo 7","u":"demo7@mymedix.ai","p":"mymedix123"}],"note":""},{"name":"Trust","company":"Medi Risk Technologies Sdn. Bhd","links":["https://trust2scan.app","https://backoffice.trust2scan.ai/login","https://studio.trust2scan.ai","https://trust2scan.ai/"],"acc":[{"r":"Demo","u":"demo.jatra@trust.ai","p":"trust123"}],"note":""},{"name":"Salvion","company":"Salvion","links":["https://salvion.ai/","https://backoffice.salvion.ai/","https://studio.salvion.ai/","https://salvion.app"],"acc":[{"r":"Superadmin","u":"superadmin","p":"Admin@12345"}],"note":""},{"name":"Allegra","company":"Medi Risk Technologies Sdn. Bhd","links":["https://app-allegra.seleris.ai/","https://bo-allegra.seleris.ai/","https://studio-allegra.seleris.ai/"],"acc":[{"r":"Demo 1","u":"demo1@allegra.ai","p":"allegra123"}],"note":""},{"name":"Assure","company":"Medi Risk Technologies Sdn. Bhd","links":["https://assure.seleris.ai/","https://assure-bo.seleris.ai","https://assure-studio.seleris.ai"],"acc":[],"note":""}];
+</script>
+
+<!-- DATA AWAL KNOWLEDGE (tanpa password). Aman dibiarkan; dipakai tombol "Isi dengan data awal" / "Pulihkan produk awal". -->
+<script id="knSeed">
+window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris Meditekno Internasional", "tagline": "Aplikasi Takaful Smart Submit.", "desc": "Punya role asuransi, akun aplikasi di staging dan production, serta akun admin.", "features": [], "roles": ["Asuransi", "Pengguna aplikasi (staging)", "Pengguna aplikasi (production)", "Admin"], "note": ""}, {"name": "elife (seleris-apps-elife)", "company": "PT Seleris Meditekno Internasional", "tagline": "Aplikasi seleris-apps-elife.", "desc": "Halaman masuk di elife.seleris.ai.", "features": [], "roles": ["Checker", "Asuransi"], "note": ""}, {"name": "EHD (seleris-apps-chubb)", "company": "PT Seleris Meditekno Internasional", "tagline": "Aplikasi seleris-apps-chubb.", "desc": "Backoffice di ehd-backoffice.com.", "features": [], "roles": ["Asuransi", "Pengguna aplikasi"], "note": ""}, {"name": "Care", "company": "PT Seleris Meditekno Internasional", "tagline": "Panel admin Seleris Care.", "desc": "Diakses di admin-care.seleris.ai.", "features": [], "roles": ["Admin"], "note": ""}, {"name": "Admin", "company": "PT Seleris Meditekno Internasional", "tagline": "Panel admin Seleris (staging dan production).", "desc": "Tersedia di staging-admin.seleris.ai dan admin.seleris.ai.", "features": [], "roles": ["Super admin", "Akun Chubb"], "note": ""}, {"name": "Landing Page", "company": "PT Seleris Meditekno Internasional", "tagline": "Situs Seleris dan CMS blog.", "desc": "Situs publik di seleris.ai dan seleris.id. Konten blog dikelola lewat CMS di cms-lp.seleris.ai.", "features": ["Blog (CMS)"], "roles": ["Admin CMS"], "note": ""}, {"name": "Sentris New", "company": "PT Seleris Meditekno Internasional", "tagline": "Sentris: modul absensi karyawan.", "desc": "Halaman absensi karyawan di sentris.seleris.ai/employee/attendance. Halaman login lain di renhoran.cloud.", "features": ["Absensi karyawan"], "roles": ["Admin"], "note": ""}, {"name": "SCC (seleris-apps-scc)", "company": "PT Seleris Meditekno Internasional", "tagline": "Aplikasi seleris-apps-scc.", "desc": "Diakses di scc.seleris.ai.", "features": [], "roles": [], "note": ""}, {"name": "SC", "company": "PT Seleris Meditekno Internasional", "tagline": "Aplikasi SC.", "desc": "", "features": [], "roles": [], "note": ""}, {"name": "Seleris Care Aplikator (SCA)", "company": "PT Seleris Meditekno Internasional", "tagline": "Aplikator Seleris Care dengan peran atasan dan bawahan.", "desc": "Lingkungan staging di staging-sca.seleris.ai dan production di sca.seleriscare.ai. Backoffice terkait: selica-bo.seleriscare.ai.", "features": [], "roles": ["Atasan", "Bawahan"], "note": "", "lang": "id"}, {"name": "Klop", "company": "PT Seleris Meditekno Internasional", "tagline": "Aplikasi dengan client, driver, dan merchant.", "desc": "Diakses di myklop.id. Punya peran client, driver motor, driver mobil, dan merchant.", "features": ["KlopEat (merchant kuliner)", "Market (merchant produk)"], "roles": ["Client", "Driver motor", "Driver mobil", "Merchant KlopEat", "Merchant Market"], "note": ""}, {"name": "Superapp (Seleris Superapps)", "company": "PT Seleris Meditekno Internasional", "tagline": "Seleris Superapps.", "desc": "", "features": [], "roles": [], "note": ""}, {"name": "Agentic AI", "company": "PT Seleris Meditekno Internasional", "tagline": "Aplikasi agentic AI Seleris.", "desc": "Tiga aplikasi: Sentris (seleris-sentris-app.svasti.id), agent app (seleris-agent-app.svasti.id), dan landing page (seleris-lp.svasti.id).", "features": ["Sentris app", "Agent app (Seleris-agentic-v2)", "Landing page"], "roles": ["Owner", "Admin"], "note": ""}, {"name": "Autoclaim", "company": "PT Seleris Meditekno Internasional", "tagline": "Aplikasi Autoclaim untuk mitra asuransi, pengguna, dan admin.", "desc": "Aplikasi di autoclaim-v1.pages.dev, admin di admin-autoclaim.pages.dev.", "features": [], "roles": ["Mitra asuransi", "Pengguna", "Admin"], "note": ""}, {"name": "SILOGIN", "company": "PT Seleris Meditekno Internasional", "tagline": "Aplikasi SILOGIN.", "desc": "Diakses di silogin.id.", "features": [], "roles": ["Admin"], "note": ""}, {"name": "DRIVE (selerisauto.ai)", "company": "PT Seleris Meditekno Internasional", "tagline": "DRIVE di selerisauto.ai.", "desc": "Backoffice di bo.selerisauto.ai.", "features": [], "roles": ["Admin"], "note": ""}, {"name": "Proper", "company": "PT Seleris Meditekno Internasional", "tagline": "Proper di proper.seleris.ai.", "desc": "", "features": [], "roles": [], "note": ""}, {"name": "Flexa", "company": "PT Flexa Asia Solusi", "tagline": "Flexa memiliki 6 produk: Persona, Life, Home, Auto, Travel, dan Care.", "desc": "Struktur produk Flexa mengacu pada PDF panduan produk Flexa (flexa-panduan-produk.pdf). Tersedia situs dan backoffice, masing-masing di lingkungan staging dan production (flexa.asia dan flexa-bo.flexa.asia).", "features": ["Flex Persona", "Flex Life", "Flex Home", "Flex Auto", "Flex Travel", "Flex Care"], "roles": ["Akun mitra Bumida", "Akun mitra AJB (Bumiputera)", "Customer service (CS)"], "note": ""}, {"name": "Aurora", "company": "PT Aurora Medika", "tagline": "Sistem administrasi manfaat kesehatan dan klaim, dari setup program sampai pembayaran dan laporan.", "desc": "Aurora menjalankan program manfaat kesehatan untuk perusahaan klien: Aurora menyusun program dan tabel manfaat, pembayar (asuransi atau perusahaan) menyetujuinya, lalu peserta dilayani lewat klinik dan rumah sakit jaringan. Ada dua model: ASO dan Fully insured. Situs: auroracare.ai.", "features": ["Program dan paket manfaat (tabel manfaat/TOB)", "Kepesertaan: unggah data karyawan, undangan WhatsApp, aktivasi akun", "Pemeriksaan kesehatan (BioSense)", "Keluarga di satu aplikasi (pasangan dan anak)", "Konsultasi online (TeleDoc)", "Rawat jalan cashless", "Rawat inap dan praotorisasi (surat jaminan)", "Gawat darurat", "Reimbursement", "Banding atas keputusan", "Audit klaim", "Dewan Penasihat Medis (MAB)", "Keuangan program: dana titipan, pembayaran, rekonsiliasi", "Laporan, tutup bulan, dan bordereau (Fully insured)"], "roles": ["Admin Aurora", "HR perusahaan", "Asuransi / pembayar", "Petugas klinik dan rumah sakit", "Peserta (karyawan, pasangan, anak)", "Dokter Aurora / medis", "Petugas klaim Aurora"], "note": "Update 18 Sep (sambungan antar-meja): halaman meja klaim baru /backoffice/claims/queue/[id] menggantikan halaman lama (kini redirect); tanggungan punya lingkup keluarga tersambung; roster HR yang datanya tidak lengkap masuk antrean koreksi HR; laporan darurat dari aplikasi disimpan dulu lalu tersambung ke admisi provider; praotorisasi: pemeriksa medis ambil perkara, rekomendasi wajib sebelum pembayar putuskan; katalog Halaman Klien di /backoffice/halaman-klien; beranda /backoffice/hari-ini menampilkan pekerjaan per peran menurut tenggat."}, {"name": "MyMedix", "company": "Medi Risk Technologies Sdn. Bhd", "tagline": "Produk Medi Risk Technologies.", "desc": "Penjelasan produk ada di mymedix.ai. Punya situs publik, backoffice (backoffice.mymedix.ai), dan MediHub (medihub.mymedix.ai).", "features": ["Situs publik", "Backoffice", "MediHub"], "roles": ["Superadmin", "Demo life", "CC agent", "Demo 7"], "note": "", "lang": "my"}, {"name": "Trust", "company": "Medi Risk Technologies Sdn. Bhd", "tagline": "Konsep sama dengan MyMedix, untuk tema kesehatan.", "desc": "Penjelasan produk ada di trust2scan.ai. Punya situs publik, backoffice (backoffice.trust2scan.ai), dan studio (studio.trust2scan.ai).", "features": ["Situs publik", "Backoffice", "Studio"], "roles": ["Demo"], "note": ""}, {"name": "Allegra", "company": "Medi Risk Technologies Sdn. Bhd", "tagline": "Produk Medi Risk dengan aplikasi, backoffice, dan studio.", "desc": "Aplikasi di app-allegra.seleris.ai, backoffice di bo-allegra.seleris.ai, studio di studio-allegra.seleris.ai.", "features": ["Aplikasi", "Backoffice", "Studio"], "roles": ["Demo"], "note": "", "lang": "id"}, {"name": "Assure", "company": "Medi Risk Technologies Sdn. Bhd", "tagline": "Produk Medi Risk dengan aplikasi, backoffice, dan studio.", "desc": "Aplikasi di assure.seleris.ai, backoffice di assure-bo.seleris.ai, studio di assure-studio.seleris.ai.", "features": ["Aplikasi", "Backoffice", "Studio"], "roles": [], "note": ""}, {"name": "Salvion", "company": "Salvion", "tagline": "Produk dengan perusahaan sendiri.", "desc": "Salvion punya perusahaan sendiri, terpisah dari Medi Risk. Punya situs publik (salvion.ai), backoffice (backoffice.salvion.ai), studio (studio.salvion.ai), dan aplikasi (salvion.app).", "features": ["Situs publik", "Backoffice", "Studio", "Aplikasi"], "roles": ["Superadmin"], "note": "", "lang": "en"}];
+</script>
 
 <script>
 (function(){
@@ -1586,6 +1717,486 @@
   document.getElementById("scanCheckAll").addEventListener("click", ()=>scanBulk("success"));
   document.getElementById("scanUncheckAll").addEventListener("click", ()=>scanBulk("none"));
 
+  // ================= all akses (CRUD, Firestore: koleksi "accessProjects") =================
+  let akData = [], akLoaded = false, akQuery = "", akCo = null, akCosList = [];
+  const akShown = new Set(), akCollapsed = new Set();
+
+  function akHost(u){ return String(u).replace(/^https?:\/\//i,"").replace(/\/$/,""); }
+  function akHref(u){ return /^https?:\/\//i.test(u) ? u : "https://"+u; }
+  function akShortCo(c){ return (c||"Lainnya").replace(/^PT\s+/i,"").replace(/\s+Sdn\.?\s*Bhd\.?$/i,""); }
+  function akColor(c){ let h = 7; for(const ch of String(c||"")) h = (h*31 + ch.charCodeAt(0)) % 360; return "hsl("+h+",58%,50%)"; }
+  function akSlug(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""); }
+  function akCopyBtn(val, what){
+    return '<button type="button" class="ak-ib" data-copy="'+esc(val)+'" data-what="'+what+'" title="Salin">📋</button>';
+  }
+  function akMatch(p, q){
+    if(!q) return true;
+    const hay = [p.name, p.company].concat(p.links||[]).concat((p.acc||[]).flatMap(a=>[a.r, a.u])).join(" ").toLowerCase();
+    return hay.includes(q);
+  }
+
+  db.collection("accessProjects").onSnapshot(
+    snap=>{
+      akData = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+      akLoaded = true;
+      renderAkses();
+    },
+    err=>{ akLoaded = true; toast("Gagal memuat All Akses: "+err.message); renderAkses(); }
+  );
+
+  function renderAkses(){
+    const grid = document.getElementById("akGrid"), chipsEl = document.getElementById("akChips"), countEl = document.getElementById("akCount");
+    if(!akLoaded){ grid.innerHTML = '<div class="empty-state">Memuat…</div>'; chipsEl.innerHTML = ""; countEl.textContent = ""; document.getElementById("akRestore").style.display = "none"; return; }
+    const q = akQuery.trim().toLowerCase();
+    const all = document.getElementById("akReveal").checked;
+    akUpdateRestore();
+
+    akCosList = [];
+    akData.forEach(p=>{ const c = p.company || "Lainnya"; if(!akCosList.includes(c)) akCosList.push(c); });
+    if(akCo !== null && !akCosList.includes(akCo)) akCo = null;
+    chipsEl.innerHTML = akData.length
+      ? '<button type="button" class="chip '+(akCo===null?'on':'')+'" data-co="">Semua ('+akData.length+')</button>' +
+        akCosList.map((c,i)=>'<button type="button" class="chip '+(akCo===c?'on':'')+'" data-co="'+i+'"><span class="dot" style="background:'+akColor(c)+';"></span>'+esc(akShortCo(c))+' ('+akData.filter(p=>(p.company||"Lainnya")===c).length+')</button>').join("")
+      : "";
+
+    if(!akData.length){
+      const seedN = (window.AK_SEED||[]).length;
+      grid.innerHTML = '<div class="empty-state">Belum ada project di All Akses.'+
+        '<div class="row-flex" style="justify-content:center; margin-top:14px;">'+
+        (seedN ? '<button class="primary" data-import>Impor data awal ('+seedN+' project)</button>' : '')+
+        '<button data-add>+ Project baru</button></div></div>';
+      countEl.textContent = "";
+      return;
+    }
+
+    const list = akData.filter(p=>(akCo===null || (p.company||"Lainnya")===akCo) && akMatch(p,q));
+    countEl.textContent = list.length+" dari "+akData.length+" project";
+    if(!list.length){ grid.innerHTML = '<div class="empty-state">Tidak ada project yang cocok.</div>'; return; }
+
+    grid.innerHTML = '<div class="ak-cols">' + list.map(p=>{
+      const co = p.company || "Lainnya";
+      const links = p.links || [], accs = p.acc || [];
+      const open = !akCollapsed.has(p.id);
+      let h = '<div class="ak-card" style="--co:'+akColor(co)+';">'+
+        '<div class="ak-head" data-toggle="'+p.id+'">'+
+          '<span class="ak-av">'+esc((p.name||"?").trim().charAt(0).toUpperCase())+'</span>'+
+          '<div class="ak-ttl"><div class="ak-name" title="'+esc(p.name)+'">'+esc(p.name)+'</div>'+
+            '<div class="ak-co">'+esc(akShortCo(co))+' · '+accs.length+' akun · '+links.length+' link</div></div>'+
+          '<span class="ak-acts"><button type="button" class="ak-ib" data-edit="'+p.id+'" title="Edit">✎</button>'+
+            '<button type="button" class="ak-ib" data-del="'+p.id+'" title="Hapus">🗑</button></span>'+
+          '<span class="ak-caret">'+(open?'▾':'▸')+'</span></div>';
+      if(open){
+        h += '<div class="ak-body">';
+        if(links.length){
+          h += '<div class="ak-sec">Link</div>' + links.map(u=>
+            '<div class="ak-line"><span class="v"><a href="'+esc(akHref(u))+'" target="_blank" rel="noopener" title="Buka di tab baru">'+esc(akHost(u))+'</a></span>'+
+            (/staging/i.test(u) ? '<span class="ak-tag">staging</span>' : '')+
+            akCopyBtn(u,"Link")+'</div>').join("");
+        }
+        h += '<div class="ak-sec">Akun</div>';
+        if(!accs.length){
+          h += '<div class="ak-empty">Belum ada akun tercatat.</div>';
+        } else {
+          h += accs.map((a,ai)=>{
+            const key = p.id+"-"+ai;
+            const shown = all || akShown.has(key);
+            const isNum = /^\+?\d/.test(a.u||"");
+            const what = isNum ? "Nomor" : "Email/user";
+            let x = '<div class="ak-acc"><div class="ak-role">'+esc(a.r||"Akun")+(a.prod?'<span class="ak-prod">PROD</span>':'')+'</div>';
+            x += '<div class="ak-line"><span class="k">'+(isNum?'No.':'User')+'</span><span class="v" data-copy="'+esc(a.u)+'" data-what="'+what+'" title="Klik untuk menyalin">'+esc(a.u)+'</span>'+akCopyBtn(a.u, what)+'</div>';
+            if(a.p){
+              x += '<div class="ak-line"><span class="k">Pass</span><span class="v mono"'+(shown?' data-copy="'+esc(a.p)+'" data-what="Password" title="Klik untuk menyalin"':'')+'>'+(shown?esc(a.p):'••••••••')+'</span>'+
+                '<button type="button" class="ak-ib" data-eye="'+key+'" title="'+(shown?'Sembunyikan':'Tampilkan')+'">'+(shown?'🙈':'👁')+'</button>'+
+                akCopyBtn(a.p,"Password")+'</div>';
+            }
+            return x + '</div>';
+          }).join("");
+        }
+        if(p.note) h += '<div class="ak-note">ℹ️ '+esc(p.note)+'</div>';
+        h += '</div>';
+      }
+      return h + '</div>';
+    }).join("") + '</div>';
+  }
+
+  // ---- tambah / edit project ----
+  function akRowHtml(a){
+    a = a || {};
+    return '<div class="ak-erow">'+
+      '<input type="text" data-f="r" placeholder="Peran / label" value="'+esc(a.r||"")+'">'+
+      '<input type="text" data-f="u" placeholder="Email / user / nomor" value="'+esc(a.u||"")+'">'+
+      '<input type="text" data-f="p" placeholder="Password (opsional)" value="'+esc(a.p||"")+'">'+
+      '<label class="ak-prodcb"><input type="checkbox" data-f="prod" '+(a.prod?'checked':'')+'> PROD</label>'+
+      '<button type="button" class="ak-ib" data-rm title="Hapus akun ini">✕</button></div>';
+  }
+  function openAkModal(id){
+    const cur = id ? akData.find(x=>x.id===id) : null;
+    if(id && !cur) return;
+    const d = cur || { name:"", company: akCo || "", links:[], acc:[], note:"" };
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.innerHTML =
+      '<div class="modal-box" style="max-width:680px;">'+
+        '<h3 style="margin:0 0 4px;">'+(cur?'Edit project':'Tambah project')+'</h3>'+
+        '<label>Nama project</label><input type="text" id="akfName" placeholder="mis. Salvion">'+
+        '<label>Perusahaan</label><input type="text" id="akfCo" list="akfCoList" placeholder="pilih atau ketik perusahaan baru">'+
+        '<datalist id="akfCoList">'+akCosList.map(c=>'<option value="'+esc(c)+'">').join("")+'</datalist>'+
+        '<label>Link (satu per baris)</label><textarea id="akfLinks" rows="4" placeholder="https://..."></textarea>'+
+        '<label>Akun</label><div id="akfAcc"></div>'+
+        '<button type="button" id="akfAddAcc">+ Tambah akun</button>'+
+        '<label>Catatan (opsional)</label><textarea id="akfNote" rows="2"></textarea>'+
+        '<div class="modal-actions"><button id="akfCancel">Batal</button><button class="primary" id="akfSave">Simpan</button></div>'+
+      '</div>';
+    document.body.appendChild(overlay);
+    const $f = sel=>overlay.querySelector(sel);
+    $f("#akfName").value = d.name || "";
+    $f("#akfCo").value = d.company || "";
+    $f("#akfLinks").value = (d.links||[]).join("\n");
+    $f("#akfNote").value = d.note || "";
+    const accBox = $f("#akfAcc");
+    (d.acc && d.acc.length ? d.acc : [{}]).forEach(a=>accBox.insertAdjacentHTML("beforeend", akRowHtml(a)));
+    $f("#akfAddAcc").onclick = ()=>{
+      accBox.insertAdjacentHTML("beforeend", akRowHtml({}));
+      accBox.lastElementChild.querySelector("input").focus();
+    };
+    accBox.addEventListener("click", e=>{
+      const rm = e.target.closest("[data-rm]");
+      if(rm) rm.closest(".ak-erow").remove();
+    });
+    overlay.onclick = ev=>{ if(ev.target===overlay) overlay.remove(); };
+    $f("#akfCancel").onclick = ()=>overlay.remove();
+    $f("#akfName").focus();
+    $f("#akfSave").onclick = async ()=>{
+      const name = $f("#akfName").value.trim();
+      if(!name){ toast("Nama project wajib diisi."); return; }
+      const company = $f("#akfCo").value.trim() || "Lainnya";
+      const links = $f("#akfLinks").value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).map(akHref);
+      const acc = [];
+      overlay.querySelectorAll(".ak-erow").forEach(row=>{
+        const g = f=>row.querySelector('[data-f="'+f+'"]');
+        const u = g("u").value.trim();
+        if(!u) return;
+        const o = { r: g("r").value.trim() || "Akun", u };
+        const pw = g("p").value.trim();
+        if(pw) o.p = pw;
+        if(g("prod").checked) o.prod = true;
+        acc.push(o);
+      });
+      const data = { name, company, links, acc, note: $f("#akfNote").value.trim() };
+      const btn = $f("#akfSave"); btn.disabled = true;
+      try{
+        if(cur) await db.collection("accessProjects").doc(cur.id).update(data);
+        else await db.collection("accessProjects").add({ ...data, createdAt: Date.now() });
+        overlay.remove();
+        toast(cur ? "Project diperbarui." : "Project ditambahkan.");
+      }catch(err){ btn.disabled = false; toast("Gagal menyimpan project."); }
+    };
+  }
+
+  // ---- data awal dari PDF: pulihkan hanya project yang belum ada (tidak menimpa/mengubah yang sudah ada) ----
+  function akMissingSeed(){
+    const names = new Set(akData.map(x=>(x.name||"").trim().toLowerCase()));
+    const ids = new Set(akData.map(x=>x.id));
+    return (window.AK_SEED||[]).filter(p=>!ids.has("seed-"+akSlug(p.name)) && !names.has(p.name.trim().toLowerCase()));
+  }
+  function akUpdateRestore(){
+    const btn = document.getElementById("akRestore");
+    const n = akLoaded ? akMissingSeed().length : 0;
+    btn.style.display = n ? "" : "none";
+    btn.textContent = "↺ Pulihkan project awal ("+n+")";
+  }
+  async function akImportSeed(){
+    const missing = akMissingSeed();
+    if(!missing.length){ toast("Semua project awal sudah ada."); return; }
+    const batch = db.batch();
+    missing.forEach(p=>{
+      const i = (window.AK_SEED||[]).indexOf(p);
+      batch.set(db.collection("accessProjects").doc("seed-"+akSlug(p.name)),
+        { name:p.name, company:p.company||"Lainnya", links:p.links||[], acc:p.acc||[], note:p.note||"", createdAt: 1700000000000 + i });
+    });
+    try{ await batch.commit(); toast(missing.length+" project dipulihkan."); }
+    catch(e){ toast("Gagal memulihkan project."); }
+  }
+
+  // ---- event ----
+  document.getElementById("akSearch").addEventListener("input", e=>{ akQuery = e.target.value; renderAkses(); });
+  document.getElementById("akReveal").addEventListener("change", renderAkses);
+  document.getElementById("akAdd").addEventListener("click", ()=>openAkModal(null));
+  document.getElementById("akRestore").addEventListener("click", akImportSeed);
+  document.getElementById("akExpand").addEventListener("click", ()=>{ akCollapsed.clear(); renderAkses(); });
+  document.getElementById("akCollapse").addEventListener("click", ()=>{ akData.forEach(p=>akCollapsed.add(p.id)); renderAkses(); });
+  document.getElementById("akChips").addEventListener("click", e=>{
+    const b = e.target.closest("[data-co]");
+    if(!b) return;
+    akCo = b.dataset.co === "" ? null : akCosList[parseInt(b.dataset.co,10)];
+    renderAkses();
+  });
+  document.getElementById("akGrid").addEventListener("click", async e=>{
+    const t = e.target.closest("[data-copy], [data-eye], [data-edit], [data-del], [data-import], [data-add]");
+    if(t){
+      if(t.dataset.eye !== undefined){
+        akShown.has(t.dataset.eye) ? akShown.delete(t.dataset.eye) : akShown.add(t.dataset.eye);
+        renderAkses(); return;
+      }
+      if(t.dataset.edit !== undefined){ openAkModal(t.dataset.edit); return; }
+      if(t.dataset.del !== undefined){
+        const p = akData.find(x=>x.id===t.dataset.del);
+        const ok = await confirmDialog('Hapus project "'+(p?p.name:"")+'" beserta semua akunnya? Ini akan menghapusnya untuk semua orang.');
+        if(!ok) return;
+        try{ await db.collection("accessProjects").doc(t.dataset.del).delete(); toast("Project dihapus."); }
+        catch(err){ toast("Gagal menghapus project."); }
+        return;
+      }
+      if(t.dataset.import !== undefined){ akImportSeed(); return; }
+      if(t.dataset.add !== undefined){ openAkModal(null); return; }
+      if(t.dataset.copy !== undefined){
+        copyText(t.dataset.copy).then(()=>toast((t.dataset.what||"Teks")+" disalin")).catch(()=>toast("Gagal menyalin."));
+        return;
+      }
+    }
+    if(e.target.closest("a")) return;
+    const head = e.target.closest("[data-toggle]");
+    if(head){
+      const id = head.dataset.toggle;
+      akCollapsed.has(id) ? akCollapsed.delete(id) : akCollapsed.add(id);
+      renderAkses();
+    }
+  });
+  renderAkses();
+
+  // ================= knowledge produk (CRUD, Firestore: koleksi "knowledgeProducts") =================
+  let knData = [], knLoaded = false, knQuery = "", knCo = null, knCosList = [];
+
+  // ---- bahasa default per produk ----
+  const KN_LANGS = {
+    id: { flag:"🇮🇩", label:"Indonesia" },
+    my: { flag:"🇲🇾", label:"Malaysia" },
+    en: { flag:"🇬🇧", label:"English" }
+  };
+  // Default kalau field "lang" di Firestore masih kosong (kunci = nama produk huruf kecil).
+  const KN_DEFAULT_LANG = {
+    "mymedix":"my",
+    "salvion":"en",
+    "allegra":"id",
+    "seleris care aplikator (sca)":"id"
+  };
+  function knLang(p){
+    const k = p.lang ? p.lang : KN_DEFAULT_LANG[(p.name||"").trim().toLowerCase()];
+    return KN_LANGS[k] ? { code:k, ...KN_LANGS[k] } : null;
+  }
+
+  function knMatch(p, q){
+    if(!q) return true;
+    const L = knLang(p);
+    return [p.name, p.company, p.tagline, p.desc, p.note, L ? L.label : ""].concat(p.features||[]).concat(p.roles||[]).join(" ").toLowerCase().includes(q);
+  }
+  function knLines(text){ return String(text||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean); }
+
+  db.collection("knowledgeProducts").onSnapshot(
+    snap=>{
+      knData = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+      knLoaded = true;
+      renderKnowledge();
+    },
+    err=>{ knLoaded = true; toast("Gagal memuat Knowledge: "+err.message); renderKnowledge(); }
+  );
+
+  function knMissingSeed(){
+    const names = new Set(knData.map(x=>(x.name||"").trim().toLowerCase()));
+    const ids = new Set(knData.map(x=>x.id));
+    return (window.KN_SEED||[]).filter(p=>!ids.has("kn-"+akSlug(p.name)) && !names.has(p.name.trim().toLowerCase()));
+  }
+  async function knImportSeed(){
+    const missing = knMissingSeed();
+    if(!missing.length){ toast("Semua produk awal sudah ada."); return; }
+    const batch = db.batch();
+    missing.forEach(p=>{
+      const i = (window.KN_SEED||[]).indexOf(p);
+      batch.set(db.collection("knowledgeProducts").doc("kn-"+akSlug(p.name)), {
+        name:p.name, company:p.company||"Lainnya", tagline:p.tagline||"", desc:p.desc||"",
+        features:p.features||[], roles:p.roles||[], note:p.note||"", lang:p.lang||"", createdAt: 1700000000000 + i });
+    });
+    try{ await batch.commit(); toast(missing.length+" produk ditambahkan."); }
+    catch(e){ toast("Gagal menambahkan produk awal."); }
+  }
+
+  function renderKnowledge(){
+    const grid = document.getElementById("knGrid"), chipsEl = document.getElementById("knChips"), countEl = document.getElementById("knCount");
+    const restoreBtn = document.getElementById("knRestore");
+    if(!knLoaded){ grid.innerHTML = '<div class="empty-state">Memuat…</div>'; chipsEl.innerHTML = ""; countEl.textContent = ""; restoreBtn.style.display = "none"; return; }
+    const missingN = knMissingSeed().length;
+    restoreBtn.style.display = (missingN && knData.length) ? "" : "none";
+    restoreBtn.textContent = "↺ Pulihkan produk awal ("+missingN+")";
+
+    knCosList = [];
+    knData.forEach(p=>{ const c = p.company || "Lainnya"; if(!knCosList.includes(c)) knCosList.push(c); });
+    if(knCo !== null && !knCosList.includes(knCo)) knCo = null;
+    chipsEl.innerHTML = knData.length
+      ? '<button type="button" class="chip '+(knCo===null?'on':'')+'" data-co="">Semua ('+knData.length+')</button>' +
+        knCosList.map((c,i)=>'<button type="button" class="chip '+(knCo===c?'on':'')+'" data-co="'+i+'"><span class="dot" style="background:'+akColor(c)+';"></span>'+esc(akShortCo(c))+' ('+knData.filter(p=>(p.company||"Lainnya")===c).length+')</button>').join("")
+      : "";
+
+    if(!knData.length){
+      const seedN = (window.KN_SEED||[]).length;
+      grid.innerHTML = '<div class="empty-state">Belum ada produk di Knowledge.'+
+        '<div class="row-flex" style="justify-content:center; margin-top:14px;">'+
+        (seedN ? '<button class="primary" data-import>Isi dengan data awal ('+seedN+' produk)</button>' : '')+
+        '<button data-add>+ Produk baru</button></div></div>';
+      countEl.textContent = "";
+      return;
+    }
+
+    const q = knQuery.trim().toLowerCase();
+    const list = knData.filter(p=>(knCo===null || (p.company||"Lainnya")===knCo) && knMatch(p,q));
+    countEl.textContent = list.length+" dari "+knData.length+" produk";
+    if(!list.length){ grid.innerHTML = '<div class="empty-state">Tidak ada produk yang cocok.</div>'; return; }
+
+    grid.innerHTML = '<div class="kn-grid">' + list.map(p=>{
+      const co = p.company || "Lainnya";
+      const L = knLang(p);
+      return '<div class="kn-tile" style="--co:'+akColor(co)+';" data-open="'+p.id+'" role="button" tabindex="0" aria-label="Buka detail '+esc(p.name)+'">'+
+        '<span class="ak-av">'+esc((p.name||"?").trim().charAt(0).toUpperCase())+'</span>'+
+        '<div class="ak-ttl"><div class="ak-name" title="'+esc(p.name)+'">'+esc(p.name)+'</div><div class="ak-co">'+esc(akShortCo(co))+(L?' · <span class="kn-flag" title="Bahasa default: '+esc(L.label)+'">'+L.flag+'</span>':'')+'</div></div></div>';
+    }).join("") + '</div>';
+  }
+
+  // ---- detail produk (popup) ----
+  function openKnDetail(id){
+    const p = knData.find(x=>x.id===id);
+    if(!p) return;
+    const co = p.company || "Lainnya";
+    const L = knLang(p);
+    const feats = p.features || [], roles = p.roles || [];
+    const sec = (title, n, inner)=>'<div class="kn-dsec"><h4>'+title+(n!==null?'<span class="n">'+n+'</span>':'')+'</h4>'+inner+'</div>';
+    const chips = (arr, cls)=>arr.length ? '<div class="kn-chips">'+arr.map(x=>'<span class="kn-chip '+cls+'">'+esc(x)+'</span>').join("")+'</div>' : '<div class="kn-muted">Belum diisi.</div>';
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.innerHTML =
+      '<div class="modal-box kn-modal" style="--co:'+akColor(co)+';">'+
+        '<div class="kn-mhead">'+
+          '<button type="button" class="kn-x" id="kdX" title="Tutup" aria-label="Tutup">✕</button>'+
+          '<div class="kn-mtop"><span class="ak-av kn-mav">'+esc((p.name||"?").trim().charAt(0).toUpperCase())+'</span>'+
+            '<div><div class="kn-dname">'+esc(p.name)+'</div><span class="kn-cotag">'+esc(co)+'</span>'+
+            (L ? '<span class="kn-cotag" style="margin-left:6px;"><span class="kn-flag">'+L.flag+'</span> '+esc(L.label)+'</span>' : '')+'</div></div>'+
+          (p.tagline ? '<div class="kn-dlead">'+esc(p.tagline)+'</div>' : '')+
+        '</div>'+
+        '<div class="kn-mbody">'+
+          (L ? sec("Bahasa default", null, '<span class="kn-lang"><span class="fl">'+L.flag+'</span>'+esc(L.label)+'</span>') : '')+
+          sec("Deskripsi", null, p.desc ? '<div class="kn-text">'+esc(p.desc)+'</div>' : '<div class="kn-muted">Belum diisi.</div>')+
+          sec("Fitur / modul", feats.length, chips(feats, "feat"))+
+          sec("Peran pengguna", roles.length, chips(roles, "role"))+
+          (p.note ? sec("Catatan", null, '<div class="kn-note">'+esc(p.note)+'</div>') : '')+
+        '</div>'+
+        '<div class="kn-foot">'+
+          '<button class="danger-outline spacer" id="kdDel">Hapus</button>'+
+          '<button id="kdAkses">🔑 Lihat akses</button>'+
+          '<button id="kdEdit">✎ Edit</button>'+
+          '<button class="primary" id="kdClose">Tutup</button>'+
+        '</div>'+
+      '</div>';
+    document.body.appendChild(overlay);
+    const close = ()=>{ overlay.remove(); document.removeEventListener("keydown", onKey); };
+    const onKey = ev=>{ if(ev.key==="Escape") close(); };
+    document.addEventListener("keydown", onKey);
+    overlay.onclick = ev=>{ if(ev.target===overlay) close(); };
+    overlay.querySelector("#kdClose").onclick = close;
+    overlay.querySelector("#kdX").onclick = close;
+    overlay.querySelector("#kdEdit").onclick = ()=>{ close(); openKnModal(p.id); };
+    overlay.querySelector("#kdAkses").onclick = ()=>{
+      close();
+      const key = String(p.name).split(" (")[0];
+      document.getElementById("akSearch").value = key;
+      akQuery = key; akCo = null;
+      renderAkses();
+      document.querySelector('.tab-btn[data-tab="akses"]').click();
+    };
+    overlay.querySelector("#kdDel").onclick = async ()=>{
+      const ok = await confirmDialog('Hapus produk "'+p.name+'" dari Knowledge? Ini akan menghapusnya untuk semua orang.');
+      if(!ok) return;
+      try{ await db.collection("knowledgeProducts").doc(p.id).delete(); close(); toast("Produk dihapus."); }
+      catch(err){ toast("Gagal menghapus produk."); }
+    };
+  }
+
+  // ---- tambah / edit produk ----
+  function openKnModal(id){
+    const cur = id ? knData.find(x=>x.id===id) : null;
+    if(id && !cur) return;
+    const d = cur || { name:"", company: knCo || "", tagline:"", desc:"", features:[], roles:[], note:"", lang:"" };
+    const curL = cur ? knLang(cur) : null;
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.innerHTML =
+      '<div class="modal-box" style="max-width:640px;">'+
+        '<h3 style="margin:0 0 4px;">'+(cur?'Edit produk':'Tambah produk')+'</h3>'+
+        '<label>Nama produk</label><input type="text" id="kfName" placeholder="mis. Aurora">'+
+        '<label>Perusahaan</label><input type="text" id="kfCo" list="kfCoList" placeholder="pilih atau ketik perusahaan baru">'+
+        '<datalist id="kfCoList">'+knCosList.map(c=>'<option value="'+esc(c)+'">').join("")+'</datalist>'+
+        '<label>Bahasa default</label><select id="kfLang"><option value="">(tidak diatur)</option>'+
+          Object.keys(KN_LANGS).map(k=>'<option value="'+k+'">'+KN_LANGS[k].flag+' '+esc(KN_LANGS[k].label)+'</option>').join("")+'</select>'+
+        '<label>Ringkasan satu kalimat</label><input type="text" id="kfTag" placeholder="Produk ini untuk apa?">'+
+        '<label>Deskripsi</label><textarea id="kfDesc" rows="4" placeholder="Penjelasan lebih lengkap…"></textarea>'+
+        '<label>Fitur / modul (satu per baris)</label><textarea id="kfFeat" rows="5"></textarea>'+
+        '<label>Peran pengguna (satu per baris)</label><textarea id="kfRoles" rows="4"></textarea>'+
+        '<label>Catatan (opsional)</label><textarea id="kfNote" rows="2"></textarea>'+
+        '<div class="modal-actions"><button id="kfCancel">Batal</button><button class="primary" id="kfSave">Simpan</button></div>'+
+      '</div>';
+    document.body.appendChild(overlay);
+    const $f = sel=>overlay.querySelector(sel);
+    $f("#kfName").value = d.name || "";
+    $f("#kfCo").value = d.company || "";
+    $f("#kfLang").value = d.lang || (curL ? curL.code : "");
+    $f("#kfTag").value = d.tagline || "";
+    $f("#kfDesc").value = d.desc || "";
+    $f("#kfFeat").value = (d.features||[]).join("\n");
+    $f("#kfRoles").value = (d.roles||[]).join("\n");
+    $f("#kfNote").value = d.note || "";
+    overlay.onclick = ev=>{ if(ev.target===overlay) overlay.remove(); };
+    $f("#kfCancel").onclick = ()=>overlay.remove();
+    $f("#kfName").focus();
+    $f("#kfSave").onclick = async ()=>{
+      const name = $f("#kfName").value.trim();
+      if(!name){ toast("Nama produk wajib diisi."); return; }
+      const data = {
+        name, company: $f("#kfCo").value.trim() || "Lainnya",
+        lang: $f("#kfLang").value,
+        tagline: $f("#kfTag").value.trim(), desc: $f("#kfDesc").value.trim(),
+        features: knLines($f("#kfFeat").value), roles: knLines($f("#kfRoles").value),
+        note: $f("#kfNote").value.trim()
+      };
+      const btn = $f("#kfSave"); btn.disabled = true;
+      try{
+        if(cur) await db.collection("knowledgeProducts").doc(cur.id).update(data);
+        else await db.collection("knowledgeProducts").add({ ...data, createdAt: Date.now() });
+        overlay.remove();
+        toast(cur ? "Produk diperbarui." : "Produk ditambahkan.");
+      }catch(err){ btn.disabled = false; toast("Gagal menyimpan produk."); }
+    };
+  }
+
+  document.getElementById("knSearch").addEventListener("input", e=>{ knQuery = e.target.value; renderKnowledge(); });
+  document.getElementById("knAdd").addEventListener("click", ()=>openKnModal(null));
+  document.getElementById("knRestore").addEventListener("click", knImportSeed);
+  document.getElementById("knChips").addEventListener("click", e=>{
+    const b = e.target.closest("[data-co]");
+    if(!b) return;
+    knCo = b.dataset.co === "" ? null : knCosList[parseInt(b.dataset.co,10)];
+    renderKnowledge();
+  });
+  document.getElementById("knGrid").addEventListener("keydown", e=>{
+    if(e.key!=="Enter" && e.key!==" ") return;
+    const t = e.target.closest("[data-open]");
+    if(t){ e.preventDefault(); openKnDetail(t.dataset.open); }
+  });
+  document.getElementById("knGrid").addEventListener("click", e=>{
+    const t = e.target.closest("[data-import], [data-add], [data-open]");
+    if(!t) return;
+    if(t.dataset.import !== undefined) knImportSeed();
+    else if(t.dataset.add !== undefined) openKnModal(null);
+    else if(t.dataset.open !== undefined) openKnDetail(t.dataset.open);
+  });
+  renderKnowledge();
+
   // ================= tabs =================
   document.querySelectorAll(".tab-btn").forEach(btn=>{
     btn.addEventListener("click", ()=>{
@@ -1821,18 +2432,18 @@
     const pageW = doc.internal.pageSize.getWidth();
     const mx = 12, maxTextW = pageW - mx*2;
     let y = 15;
-    doc.setFont("helvetica","bold"); doc.setFontSize(16); doc.setTextColor(30);
+    doc.setFont("helvetica","bold"); doc.setFontSize(20); doc.setTextColor(0);
     const mainLines = doc.splitTextToSize(T.main, maxTextW);
     doc.text(mainLines, mx, y);
-    y += (mainLines.length-1)*6.5 + 3.5;
+    y += (mainLines.length-1)*8 + 4;
     doc.setDrawColor(109,94,245); doc.setLineWidth(0.9);
     doc.line(mx, y, mx+24, y);
     y += 6;
-    doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.setTextColor(90);
+    doc.setFont("helvetica","normal"); doc.setFontSize(11.5); doc.setTextColor(0);
     T.meta.concat(["Dibuat: " + new Date().toLocaleString("id-ID")]).forEach(t=>{
       const ls = doc.splitTextToSize(t, maxTextW);
       doc.text(ls, mx, y);
-      y += ls.length*4.6;
+      y += ls.length*5.8;
     });
     y += 1.5;
 
@@ -1840,25 +2451,25 @@
     const counts = {}; STATUS_OPTS.forEach(s=>counts[s]=0);
     rows.forEach(r=>{ if(counts[r.status]===undefined) counts[r.status]=0; counts[r.status]++; });
     const summaryLine = "Total: " + rows.length + " bug   |   " + STATUS_OPTS.map(s=>s+": "+counts[s]).join("   |   ");
-    doc.setFont("helvetica","bold"); doc.setFontSize(9.5); doc.setTextColor(50);
+    doc.setFont("helvetica","bold"); doc.setFontSize(11.5); doc.setTextColor(0);
     const sumLines = doc.splitTextToSize(summaryLine, maxTextW);
     doc.text(sumLines, mx, y);
-    y += sumLines.length*4.6;
+    y += sumLines.length*5.8;
     doc.setFont("helvetica","normal");
     const headerBottom = y;
-    doc.setTextColor(20);
+    doc.setTextColor(0);
 
     // build column definitions based on user selection
     const colDefs = [];
-    if(includeProjectCol && cols.project) colDefs.push({ key:"project", label:"Project", width:26 });
+    if(includeProjectCol && cols.project) colDefs.push({ key:"project", label:"Project", width:30 });
     if(cols.existingImg) colDefs.push({ key:"existingImg", label:"Existing (Gbr)", width:34 });
     if(cols.existing) colDefs.push({ key:"existing", label:"Existing" });
     if(cols.expected) colDefs.push({ key:"expected", label:"Expected" });
     if(cols.expectedImg) colDefs.push({ key:"expectedImg", label:"Expected (Gbr)", width:34 });
-    if(cols.priority) colDefs.push({ key:"priority", label:"Priority", width:22 });
-    if(cols.dueDate) colDefs.push({ key:"dueDate", label:"Due Date", width:24 });
-    if(cols.status) colDefs.push({ key:"status", label:"Status", width:22 });
-    if(cols.date) colDefs.push({ key:"date", label:"Tanggal", width:24 });
+    if(cols.priority) colDefs.push({ key:"priority", label:"Priority", width:27 });
+    if(cols.dueDate) colDefs.push({ key:"dueDate", label:"Due Date", width:30 });
+    if(cols.status) colDefs.push({ key:"status", label:"Status", width:28 });
+    if(cols.date) colDefs.push({ key:"date", label:"Tanggal", width:30 });
     if(rows.length && !colDefs.length){ toast("Pilih minimal satu kolom."); return; }
 
     const head = [colDefs.map(c=>c.label)];
@@ -1901,9 +2512,9 @@
         const dy = data.cell.y + (data.cell.height-dh)/2;
         try{ doc.addImage(info.dataUrl, "JPEG", dx, dy, dw, dh); }catch(e){}
       } else {
-        doc.setFontSize(7.5); doc.setTextColor(170);
+        doc.setFontSize(9); doc.setTextColor(0);
         doc.text("(tanpa gambar)", data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2, { align:"center", baseline:"middle" });
-        doc.setFontSize(9); doc.setTextColor(20);
+        doc.setFontSize(11); doc.setTextColor(0);
       }
     }
 
@@ -1913,8 +2524,8 @@
       tableWidth: textCols.length ? availW : "auto",
       head, body,
       theme: "grid",
-      styles: { font:"helvetica", fontSize:9, cellPadding:3, overflow:"linebreak", valign:"middle", lineColor:[210,212,218], lineWidth:0.2 },
-      headStyles: { fillColor:[109,94,245], textColor:255, fontStyle:"bold", fontSize:9.5 },
+      styles: { font:"helvetica", fontSize:11, textColor:[0,0,0], cellPadding:3.5, overflow:"linebreak", valign:"middle", lineColor:[170,172,185], lineWidth:0.25 },
+      headStyles: { fillColor:[225,222,250], textColor:[0,0,0], fontStyle:"bold", fontSize:11.5 },
       alternateRowStyles: { fillColor:[246,247,250] },
       columnStyles,
       didDrawCell: data=>{
@@ -1929,28 +2540,28 @@
       const pageH = doc.internal.pageSize.getHeight();
       let y2 = (rows.length && doc.lastAutoTable) ? doc.lastAutoTable.finalY + 12 : headerBottom + 8;
       if(y2 > pageH - 45){ doc.addPage(); y2 = 16; }
-      doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.setTextColor(30);
+      doc.setFont("helvetica","bold"); doc.setFontSize(16); doc.setTextColor(0);
       doc.text("Hasil Test AI", mx, y2);
       doc.setDrawColor(109,94,245); doc.setLineWidth(0.9);
-      doc.line(mx, y2+2, mx+24, y2+2);
+      doc.line(mx, y2+2.5, mx+24, y2+2.5);
       const ac = { success:0, fail:0, none:0 };
       aiRows.forEach(r=>{ ac[r.state]++; });
-      doc.setFont("helvetica","bold"); doc.setFontSize(9.5); doc.setTextColor(50);
-      doc.text("Total: "+aiRows.length+"   |   Berhasil: "+ac.success+"   |   Gagal: "+ac.fail+"   |   Belum: "+ac.none, mx, y2+8.5);
+      doc.setFont("helvetica","bold"); doc.setFontSize(11.5); doc.setTextColor(0);
+      doc.text("Total: "+aiRows.length+"   |   Berhasil: "+ac.success+"   |   Gagal: "+ac.fail+"   |   Belum: "+ac.none, mx, y2+10);
       doc.setFont("helvetica","normal");
 
-      const aiCols = [{ label:"Tanggal", width:28 }];
-      if(includeProjectCol) aiCols.push({ label:"Project", width:42 });
-      aiCols.push({ label:"Hasil", width:24 });
+      const aiCols = [{ label:"Tanggal", width:34 }];
+      if(includeProjectCol) aiCols.push({ label:"Project", width:46 });
+      aiCols.push({ label:"Hasil", width:28 });
       aiCols.push({ label:"Catatan" });
       const hasilIdx = aiCols.findIndex(c=>c.label==="Hasil");
       const aiFixed = aiCols.reduce((a,c)=>a+(c.width||0),0);
       const aiStyles = {};
       aiCols.forEach((c,i)=>{ aiStyles[i] = { cellWidth: c.width || Math.max(30, availW - aiFixed) }; });
       const AI_LABEL = { success:"Berhasil", fail:"Gagal", none:"Belum" };
-      const AI_RGB = { success:[23,166,115], fail:[224,54,60], none:[108,111,133] };
+      const AI_RGB = { success:[0,0,0], fail:[0,0,0], none:[0,0,0] };
       doc.autoTable({
-        startY: y2 + 12,
+        startY: y2 + 14,
         margin: { left: mx, right: mx },
         tableWidth: availW,
         head: [aiCols.map(c=>c.label)],
@@ -1962,8 +2573,8 @@
           return row;
         }),
         theme: "grid",
-        styles: { font:"helvetica", fontSize:9, cellPadding:3, overflow:"linebreak", valign:"middle", lineColor:[210,212,218], lineWidth:0.2 },
-        headStyles: { fillColor:[109,94,245], textColor:255, fontStyle:"bold", fontSize:9.5 },
+        styles: { font:"helvetica", fontSize:11, textColor:[0,0,0], cellPadding:3.5, overflow:"linebreak", valign:"middle", lineColor:[170,172,185], lineWidth:0.25 },
+        headStyles: { fillColor:[225,222,250], textColor:[0,0,0], fontStyle:"bold", fontSize:11.5 },
         alternateRowStyles: { fillColor:[246,247,250] },
         columnStyles: aiStyles,
         didParseCell: data=>{
