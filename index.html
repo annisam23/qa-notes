@@ -880,6 +880,7 @@
     <button class="tab-btn" data-tab="scan"><span class="nav-icon">◎</span><span>Ceklis Scan AI</span></button>
     <button class="tab-btn" data-tab="akses"><span class="nav-icon">⌘</span><span>All Akses</span></button>
     <button class="tab-btn" data-tab="knowledge"><span class="nav-icon">◇</span><span>Knowledge</span></button>
+    <button class="tab-btn" data-tab="audit"><span class="nav-icon">☰</span><span>Riwayat</span></button>
     <div class="sidebar-footer"><div class="sidebar-footer-icon">✦</div><strong>Bekerja lebih fokus.</strong><p>Setiap detail QA, tertata di satu tempat.</p></div>
   </div>
 
@@ -992,6 +993,16 @@
       <div class="hint" style="margin:0 0 10px;">Usulan perbaikan atau fitur, dipisah dari bug. Tarik kartu antar kolom, atau klik titik warna di kartu, untuk mengganti status.</div>
       <div id="enhWrap"></div>
     </div>
+  </div>
+
+  <!-- ===== TAB: RIWAYAT PERUBAHAN ===== -->
+  <div class="tab-panel" id="tab-audit">
+    <div class="row-flex" style="justify-content:space-between; margin-bottom:8px;">
+      <h3 style="margin:0;">Riwayat Perubahan</h3>
+      <input type="text" id="auditSearch" placeholder="Cari nama, modul, item…" style="width:220px;">
+    </div>
+    <div class="hint" style="margin:0 0 10px;">300 aktivitas terakhir: siapa menambah, mengubah, atau menghapus data. Isi data (mis. password) tidak dicatat, hanya nama field yang berubah.</div>
+    <div id="auditWrap" style="overflow-x:auto;"><div class="empty-state">Memuat…</div></div>
   </div>
 
   <!-- ===== TAB 2: DAILY REPORT ===== -->
@@ -1147,6 +1158,45 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
 
   firebase.initializeApp(cfg);
   const db = firebase.firestore();
+  // ===== Riwayat perubahan (audit log): mencatat siapa mengubah apa dan kapan. Nilai field TIDAK disimpan (All Akses berisi password). =====
+  const AUDIT_MOD = { entries:"Bug", enhancements:"Enhancement", meetings:"Catatan Meeting", projects:"Project", accessProjects:"All Akses", knowledgeProducts:"Knowledge" };
+  const AUDIT_SAFE = ["status","priority","dueDate"];
+  const _dbCol = db.collection.bind(db), _dbBatch = db.batch.bind(db);
+  function auditWho(){ const u = firebase.auth().currentUser; return u ? (u.email || u.uid) : "-"; }
+  function auditLabel(coll, id, data){
+    const d = data || {};
+    const row = (coll==="entries" ? (window.__entries||[]) : coll==="enhancements" ? (window.__enh||[]) : []).find(x=>x.id===id) || {};
+    const t = d.title || d.name || d.existing || row.title || row.name || row.existing || "";
+    return String(t).slice(0,80);
+  }
+  function auditWrite(action, ref, data, lbl){
+    try{
+      const coll = ref.parent ? ref.parent.id : ""; if(!AUDIT_MOD[coll]) return;
+      const fields = data ? Object.keys(data).filter(k=>!/imageData|createdAt|^dueAuto$|^prioManual$|^statusChangedDate$/.test(k)) : [];
+      const detail = data ? AUDIT_SAFE.filter(k=>k in data && data[k]!==undefined).map(k=>k+" → "+(data[k]||"-")).join(", ") : "";
+      _dbCol("auditLog").add({ at:Date.now(), by:auditWho(), action, coll, module:AUDIT_MOD[coll], docId:ref.id, label:lbl || auditLabel(coll, ref.id, data), fields, detail });
+    }catch(e){}
+  }
+  db.collection = function(name){
+    const c = _dbCol(name); if(!AUDIT_MOD[name]) return c;
+    const _add = c.add.bind(c), _doc = c.doc.bind(c);
+    c.add = async d=>{ const r = await _add(d); auditWrite("tambah", r, d); return r; };
+    c.doc = function(){
+      const r = _doc.apply(c, arguments), _set = r.set.bind(r), _upd = r.update.bind(r), _del = r.delete.bind(r);
+      r.set = async (d,o)=>{ const x = await _set(d,o); auditWrite(o && o.merge ? "ubah" : "tambah", r, d); return x; };
+      r.update = async d=>{ const x = await _upd(d); auditWrite("ubah", r, d); return x; };
+      r.delete = async ()=>{ const lbl = auditLabel(r.parent.id, r.id, null); const x = await _del(); auditWrite("hapus", r, null, lbl); return x; };
+      return r;
+    };
+    return c;
+  };
+  db.batch = function(){
+    const b = _dbBatch(), log = [];
+    ["set","update","delete"].forEach(op=>{ const f = b[op].bind(b); b[op] = function(ref, data){ log.push([op==="delete"?"hapus":op==="set"?"tambah":"ubah", ref, op==="delete"?null:data, op==="delete"?auditLabel(ref.parent.id, ref.id, null):null]); return f.apply(b, arguments); }; });
+    const _commit = b.commit.bind(b);
+    b.commit = async ()=>{ const x = await _commit(); log.forEach(l=>auditWrite(l[0], l[1], l[2], l[3])); return x; };
+    return b;
+  };
 
   // ================= login (Firebase Authentication: email + password) =================
   // Isi aplikasi baru dijalankan setelah login. Akun dibuat manual di Firebase Console (tidak ada pendaftaran dari halaman ini).
@@ -1374,7 +1424,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   );
   db.collection("entries").orderBy("createdAt","desc").limit(1000).onSnapshot(
     snap=>{
-      entries = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+      entries = snap.docs.map(d=>({ id:d.id, ...d.data() })); window.__entries = entries;
       renderAll();
       document.getElementById("connPill").innerHTML = "💾 Tersinkron via Firebase";
     },
@@ -1728,7 +1778,32 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     renderTable();
   });
 
+  // ===== Prioritas otomatis dari kata kunci + due date otomatis dari prioritas =====
+  const PRIO_RULES = [[/wording/i,"Low"],[/scan|skrining/i,"High"],[/nominal/i,"High"],[/cetak\s*pdf/i,"Medium"],[/bahasa/i,"Medium"],[/tampilan/i,"Medium"]];
+  const PRIO_RANK = { Critical:4, High:3, Medium:2, Low:1 };
+  const PRIO_DUE_DAYS = { Critical:1, High:1, Medium:2, Low:3 };
+  function autoPriority(text){
+    let best = null;
+    PRIO_RULES.forEach(r=>{ if(r[0].test(text||"") && (!best || PRIO_RANK[r[1]] > PRIO_RANK[best])) best = r[1]; });
+    return best; // kalau beberapa kata cocok, prioritas tertinggi yang dipakai
+  }
+  function autoDue(dateStr, prio){ return addDays(dateStr || todayStr(), PRIO_DUE_DAYS[prio] || 2); }
   async function updateEntry(id, patch){
+    const cur0 = entries.find(x=>x.id===id);
+    if(cur0){
+      // perubahan manual = nilai dikirim berbeda dari yang tersimpan
+      if(patch.priority !== undefined){ if(patch.priority !== (cur0.priority||"Medium")) patch.prioManual = true; else delete patch.priority; }
+      if(patch.dueDate !== undefined){ if(patch.dueDate !== (cur0.dueDate||"")){ patch.dueAuto = false; } else delete patch.dueDate; }
+      const textChanged = ("existing" in patch && patch.existing !== cur0.existing) || ("expected" in patch && patch.expected !== cur0.expected);
+      if(textChanged && !cur0.prioManual && !patch.prioManual && patch.priority === undefined){
+        const ap = autoPriority(("existing" in patch ? patch.existing : cur0.existing)+" "+("expected" in patch ? patch.expected : cur0.expected));
+        if(ap && ap !== (cur0.priority||"Medium")) patch.priority = ap;
+      }
+      const newPrio = patch.priority || cur0.priority || "Medium";
+      if(patch.dueDate === undefined && (patch.priority !== undefined || (!cur0.dueDate && textChanged)) && (!cur0.dueDate || cur0.dueAuto === true)){
+        if(patch.priority !== undefined || !cur0.dueDate){ patch.dueDate = autoDue(patch.date || cur0.date, newPrio); patch.dueAuto = true; }
+      }
+    }
     // Catat tanggal saat status benar-benar berubah, supaya bug carry-over yang baru
     // diselesaikan hari ini tetap terhitung "Fixed/Rejected" di Laporan Harian hari ini,
     // bukan malah hilang karena tanggal aslinya sudah lewat.
@@ -1914,7 +1989,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       el.querySelector('[data-sf="dueDate"]').value = s.dueDate || "";
       el.querySelectorAll("[data-sf]").forEach(f=>{
         f.addEventListener("input", ()=>{ s[f.dataset.sf]=f.value; });
-        f.addEventListener("change", ()=>{ s[f.dataset.sf]=f.value; });
+        f.addEventListener("change", ()=>{ s[f.dataset.sf]=f.value; if(f.dataset.sf==="priority") s.prioTouched = true; });
       });
       el.querySelector("[data-add-staging-exp-img]").addEventListener("click", ()=>{
         const tmpInput = document.createElement("input");
@@ -1958,7 +2033,12 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         await db.collection("entries").add({
           projectId: s.projectId, date, imageData, expectedImageData,
           existing: s.existing||"", expected: s.expected||"", status: s.status||"Open",
-          priority: s.priority||"Medium", dueDate: s.dueDate||"", createdAt: Date.now()
+          ...(function(){
+            const ap = autoPriority((s.existing||"")+" "+(s.expected||""));
+            const pr = (!s.prioTouched && ap) ? ap : (s.priority||"Medium");
+            const dueSet = !!s.dueDate;
+            return { priority: pr, dueDate: dueSet ? s.dueDate : autoDue(date, pr), dueAuto: !dueSet, prioManual: !!s.prioTouched };
+          })(), createdAt: Date.now()
         });
         ok++;
       }catch(e){ /* continue with the rest */ }
@@ -3176,7 +3256,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   let enhItems = [];
 
   db.collection("enhancements").orderBy("createdAt","desc").limit(500).onSnapshot(
-    snap=>{ enhItems = snap.docs.map(d=>({ id:d.id, ...d.data() })); renderEnh(); renderDash(); },
+    snap=>{ enhItems = snap.docs.map(d=>({ id:d.id, ...d.data() })); window.__enh = enhItems; renderEnh(); renderDash(); },
     err=>toast("Gagal memuat enhancement: "+err.message)
   );
 
@@ -4326,6 +4406,22 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     }
   });
 
+  // ================= riwayat perubahan (tampilan) =================
+  let auditRows = [];
+  function renderAudit(){
+    const q = (document.getElementById("auditSearch").value||"").toLowerCase(), wrap = document.getElementById("auditWrap");
+    const rows = auditRows.filter(r=>!q || [r.by,r.module,r.label,r.action,(r.fields||[]).join(" "),r.detail].join(" ").toLowerCase().includes(q));
+    if(!rows.length){ wrap.innerHTML = '<div class="empty-state">'+(auditRows.length ? "Tidak ada yang cocok." : "Belum ada riwayat.")+'</div>'; return; }
+    const fmt = t=>new Intl.DateTimeFormat("id-ID",{ timeZone:"Asia/Jakarta", day:"numeric", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit", hour12:false }).format(new Date(t)).replace(/\./g,":");
+    wrap.innerHTML = '<table><thead><tr><th>Waktu (WIB)</th><th>Oleh</th><th>Aksi</th><th>Modul</th><th>Item</th><th>Detail</th></tr></thead><tbody>'+
+      rows.map(r=>'<tr><td style="white-space:nowrap;">'+esc(fmt(r.at))+'</td><td>'+esc(r.by)+'</td><td><b>'+esc(r.action)+'</b></td><td>'+esc(r.module)+'</td><td>'+esc(r.label||"-")+'</td><td style="font-size:12px; color:var(--text-dim);">'+esc(r.detail || (r.fields||[]).join(", "))+'</td></tr>').join("")+'</tbody></table>';
+  }
+  _dbCol("auditLog").orderBy("at","desc").limit(300).onSnapshot(
+    snap=>{ auditRows = snap.docs.map(d=>d.data()); renderAudit(); },
+    err=>{ document.getElementById("auditWrap").innerHTML = '<div class="empty-state">Gagal memuat riwayat: '+esc(err.message)+'</div>'; }
+  );
+  document.getElementById("auditSearch").addEventListener("input", renderAudit);
+
   // ================= generator teks laporan (untuk dikirim ke atasan) =================
   const REPORT_MENTIONS = "@\u2068~J\u2069 @\u2068SMI,-Fendy\u2069";
   function defaultGreeting(){
@@ -4341,12 +4437,34 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     });
     return projects.filter(p=>ids.has(p.id)).map(p=>p.name);
   }
-  function buildReportText(greet, names){
-    const list = names.length ? names.map((n,i)=>(i+1)+". "+n).join("\n") : "(belum ada project)";
-    return "Selamat "+greet+" semuanya "+REPORT_MENTIONS+" , izin melaporkan progress hari ini.\n"+
-      "Tim QA sudah melakukan testing untuk project berikut:\n\n"+
-      list+"\n\n"+
-      "sekian laporan untuk hari ini, dokumen bug report terlampir. Terima kasih.";
+  function buildReportText(greet, names, date){
+    date = date || todayStr();
+    const day = entries.filter(e=>e.date===date);
+    const cnt = (arr,k,v)=>arr.filter(e=>(e[k]||(k==="priority"?"Medium":""))===v).length;
+    const list = names.length ? names.map((n,i)=>{
+      const p = projects.find(x=>x.name===n), es = p ? day.filter(e=>e.projectId===p.id) : [];
+      return (i+1)+". "+n+(es.length ? " - "+es.length+" temuan ("+STATUS_OPTS.filter(st=>cnt(es,"status",st)).map(st=>st+" "+cnt(es,"status",st)).join(", ")+")" : "");
+    }).join("\n") : "(belum ada project)";
+    const L = ["Selamat "+greet+" semuanya "+REPORT_MENTIONS+" , izin melaporkan progress hari ini ("+fmtDate(date)+").", "", "Tim QA sudah melakukan testing untuk project berikut:", "", list];
+    if(day.length){
+      L.push("", "*Ringkasan temuan hari ini* (total "+day.length+")");
+      L.push(STATUS_OPTS.filter(st=>cnt(day,"status",st)).map(st=>st+": "+cnt(day,"status",st)).join(" | "));
+      L.push("Prioritas: "+PRIORITY_OPTS.filter(pr=>cnt(day,"priority",pr)).map(pr=>pr+" "+cnt(day,"priority",pr)).join(", "));
+    }
+    const open = entries.filter(e=>UNRESOLVED_STATUSES.includes(e.status) && e.dueDate);
+    const late = open.filter(e=>e.dueDate < date), soon = open.filter(e=>e.dueDate >= date && e.dueDate <= addDays(date,1));
+    if(late.length || soon.length){
+      L.push("", "*Perlu perhatian*");
+      if(late.length) L.push("Lewat due date: "+late.length+" temuan");
+      if(soon.length) L.push("Due hari ini/besok: "+soon.length+" temuan");
+    }
+    const scanP = projects.filter(p=>p.scanAi), sc = { success:0, fail:0, none:0 };
+    scanP.forEach(p=>{ sc[scanState(scanChecks[scanKey(date,p.id)])]++; });
+    if(scanP.length) L.push("", "*Ceklis Scan AI*", "Sukses "+sc.success+" | Gagal "+sc.fail+" | Belum dicek "+sc.none+" (dari "+scanP.length+" project)");
+    const moms = (typeof momItems !== "undefined" ? momItems : []).filter(m=>m.date===date);
+    if(moms.length) L.push("", "*Catatan meeting hari ini*", ...moms.map(m=>"- "+(m.title||"(tanpa judul)")));
+    L.push("", "sekian laporan untuk hari ini, dokumen bug report terlampir. Terima kasih.");
+    return L.join("\n");
   }
   function copyText(text){
     if(navigator.clipboard && window.isSecureContext){
@@ -4381,7 +4499,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       '</div>';
     document.body.appendChild(overlay);
     const greetEl = overlay.querySelector("#rtGreet"), carryEl = overlay.querySelector("#rtCarry"), textEl = overlay.querySelector("#rtText");
-    function regen(){ textEl.value = buildReportText(greetEl.value, reportProjectNames(date, carryEl.checked)); }
+    function regen(){ textEl.value = buildReportText(greetEl.value, reportProjectNames(date, carryEl.checked), date); }
     greetEl.addEventListener("change", regen);
     carryEl.addEventListener("change", regen);
     regen();
