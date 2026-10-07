@@ -483,6 +483,26 @@
   .dlegend i { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
   .dtrend { width:100%; height:auto; display:block; color:var(--text-dim); }
   .dscan-bar { display:flex; height:10px; border-radius:6px; overflow:hidden; background:var(--surface-2); margin:10px 0 8px; }
+  /* ===== Catatan Meeting (MoM) ===== */
+  .mom-group { margin-top:18px; }
+  .mom-group:first-child { margin-top:4px; }
+  .mom-ghead { display:flex; align-items:center; gap:8px; margin:0 0 10px; font-size:13.5px; font-weight:800; }
+  .mom-ghead .n { font-size:11px; font-weight:700; color:var(--text-dim); background:var(--surface-2); border-radius:20px; padding:2px 9px; }
+  .mom-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(290px, 1fr)); gap:12px; }
+  .mom-card { background:var(--surface); border:1px solid var(--border); border-radius:13px; padding:13px; cursor:pointer; transition:.15s; display:flex; flex-direction:column; gap:7px; min-width:0; }
+  .mom-card:hover { border-color:var(--accent); transform:translateY(-2px); box-shadow:var(--shadow-lift); }
+  .mom-date { font-size:11px; font-weight:800; color:var(--accent); }
+  .mom-title { font-size:14px; font-weight:800; line-height:1.3; overflow-wrap:anywhere; }
+  .mom-meta { font-size:11.5px; color:var(--text-dim); }
+  .mom-snip { font-size:12.5px; line-height:1.4; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; white-space:pre-line; overflow-wrap:anywhere; }
+  .mom-foot { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:auto; padding-top:6px; flex-wrap:wrap; }
+  .mom-ai { font-size:11px; font-weight:800; padding:2px 9px; border-radius:20px; background:rgba(224,138,28,.15); color:var(--warn); }
+  .mom-ai.ok { background:rgba(23,166,115,.15); color:var(--ok); }
+  .mom-acts { display:flex; gap:6px; }
+  .mom-acts button { padding:4px 9px; font-size:11.5px; }
+  .mom-form-row { display:flex; gap:10px; flex-wrap:wrap; }
+  .mom-form-row > div { flex:1 1 150px; min-width:0; }
+  .mom-airow { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:6px; }
 </style>
 </head>
 <body>
@@ -530,6 +550,7 @@
     <button class="tab-btn active" data-tab="dash">Dashboard</button>
     <button class="tab-btn" data-tab="manage">Kelola Bug</button>
     <button class="tab-btn" data-tab="enh">Enhancement</button>
+    <button class="tab-btn" data-tab="mom">Catatan Meeting</button>
     <button class="tab-btn" data-tab="daily">Laporan Harian (Semua Project)</button>
     <button class="tab-btn" data-tab="scan">Ceklis Scan AI</button>
     <button class="tab-btn" data-tab="akses">All Akses</button>
@@ -722,6 +743,24 @@
       <div id="knGrid"></div>
       <div class="hint" id="knCount"></div>
       <div class="hint">Klik nama produk untuk membuka detailnya. Isi deskripsi, fitur, dan peran lewat tombol Edit di dalam detail; semua orang di tim melihat perubahan yang sama.</div>
+    </div>
+  </div>
+
+
+  <!-- ===== TAB: CATATAN MEETING (MoM) ===== -->
+  <div class="tab-panel" id="tab-mom">
+    <div class="card">
+      <div class="row-flex between" style="margin-bottom:10px;">
+        <h3 style="margin:0;">Catatan Meeting (MoM)</h3>
+        <div class="row-flex">
+          <select id="momProject" style="width:auto; min-width:160px;"><option value="">Semua Project</option></select>
+          <input type="text" id="momSearch" placeholder="Cari…" style="width:170px;">
+          <button class="primary" id="momAdd">+ Catatan Meeting</button>
+          <button id="momExport">⬇ Export PDF</button>
+        </div>
+      </div>
+      <div class="hint" style="margin:0 0 10px;">Catat hasil meeting per project: peserta, pembahasan, keputusan, dan action item. Tiap catatan bisa diunduh sebagai PDF MoM atau disalin sebagai teks untuk dikirim ke atasan. Export PDF di toolbar merekap beberapa meeting sekaligus.</div>
+      <div id="momWrap"><div class="empty-state">Memuat data…</div></div>
     </div>
   </div>
 
@@ -948,6 +987,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     renderDailyTab();
     renderScanTab();
     renderEnh();
+    renderMom();
     renderDash();
   }
   function currentProject(){ return projects.find(p=>p.id===selectedProjectId) || null; }
@@ -2582,6 +2622,390 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   }
   document.getElementById("enhExport").addEventListener("click", openEnhExportModal);
   renderEnh();
+
+  // ================= catatan meeting (MoM) =================
+  let momItems = [];
+  db.collection("meetings").orderBy("createdAt","desc").limit(500).onSnapshot(
+    snap=>{ momItems = snap.docs.map(d=>({ id:d.id, ...d.data() })); renderMom(); },
+    err=>toast("Gagal memuat catatan meeting: "+err.message)
+  );
+
+  function momProjName(id){ const p = projects.find(x=>x.id===id); return p ? p.name : "(project dihapus)"; }
+  function momAiList(m){ return Array.isArray(m.actionItems) ? m.actionItems.filter(a=>a && (a.task||"").trim()) : []; }
+  function momTimeLabel(m){ return fmtDate(m.date) + (m.time ? ", "+m.time : ""); }
+  function momAttendees(m){ return (m.attendees||"").split(/[,\n]/).map(x=>x.trim()).filter(Boolean); }
+  function momFiltered(){
+    const pid = document.getElementById("momProject").value;
+    const q = document.getElementById("momSearch").value.trim().toLowerCase();
+    return momItems.filter(m=>{
+      if(pid && m.projectId !== pid) return false;
+      if(!q) return true;
+      const hay = [m.title,m.place,m.notulis,m.attendees,m.agenda,m.discussion,m.decisions,m.nextMeeting,
+        momAiList(m).map(a=>a.task+" "+(a.pic||"")).join(" ")].join(" ").toLowerCase();
+      return hay.includes(q);
+    });
+  }
+
+  function renderMom(){
+    const wrap = document.getElementById("momWrap");
+    if(!wrap) return;
+    const sel = document.getElementById("momProject");
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">Semua Project</option>' + projects.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join("");
+    if(prev && projects.find(p=>p.id===prev)) sel.value = prev;
+
+    const list = momFiltered();
+    if(!list.length){
+      wrap.innerHTML = '<div class="empty-state">'+(momItems.length ? "Tidak ada catatan yang cocok dengan filter." : 'Belum ada catatan meeting. Klik "+ Catatan Meeting" untuk mulai.')+'</div>';
+      return;
+    }
+    const order = projects.map(p=>p.id);
+    list.forEach(m=>{ if(!order.includes(m.projectId)) order.push(m.projectId); });
+    let html = "";
+    order.forEach(pid=>{
+      const items = list.filter(m=>m.projectId===pid)
+        .sort((a,b)=>(b.date||"").localeCompare(a.date||"") || (b.createdAt||0)-(a.createdAt||0));
+      if(!items.length) return;
+      html += '<div class="mom-group"><div class="mom-ghead">'+esc(momProjName(pid))+'<span class="n">'+items.length+' meeting</span></div><div class="mom-grid">';
+      items.forEach(m=>{
+        const ai = momAiList(m), open = ai.filter(a=>!a.done).length;
+        const snip = (m.decisions||"").trim() || (m.discussion||"").trim();
+        const meta = [];
+        if(m.place) meta.push(esc(m.place));
+        const na = momAttendees(m).length;
+        if(na) meta.push(na+" peserta");
+        html += '<div class="mom-card" data-mom-open="'+m.id+'">'+
+          '<div class="mom-date">'+esc(momTimeLabel(m))+'</div>'+
+          '<div class="mom-title">'+esc(m.title||"(tanpa judul)")+'</div>'+
+          (meta.length ? '<div class="mom-meta">'+meta.join(" · ")+'</div>' : '')+
+          (snip ? '<div class="mom-snip">'+esc(snip)+'</div>' : '')+
+          '<div class="mom-foot">'+
+            (ai.length ? '<span class="mom-ai'+(open?'':' ok')+'">'+(open ? open+' action item terbuka' : 'Action item selesai')+'</span>' : '<span></span>')+
+            '<div class="mom-acts">'+
+              '<button type="button" data-mom-copy="'+m.id+'" title="Salin teks MoM">📋 Salin</button>'+
+              '<button type="button" data-mom-pdf="'+m.id+'" title="Download PDF MoM">⬇ PDF</button>'+
+            '</div></div></div>';
+      });
+      html += '</div></div>';
+    });
+    wrap.innerHTML = html;
+  }
+
+  const momWrapEl = document.getElementById("momWrap");
+  momWrapEl.addEventListener("click", e=>{
+    const cp = e.target.closest("[data-mom-copy]");
+    if(cp){
+      e.stopPropagation();
+      const m = momItems.find(x=>x.id===cp.dataset.momCopy);
+      if(m) copyText(momText(m)).then(()=>toast("Teks MoM disalin.")).catch(()=>toast("Gagal menyalin teks."));
+      return;
+    }
+    const pf = e.target.closest("[data-mom-pdf]");
+    if(pf){
+      e.stopPropagation();
+      const m = momItems.find(x=>x.id===pf.dataset.momPdf);
+      if(m) buildMomPdf([m], momProjName(m.projectId), {});
+      return;
+    }
+    const c = e.target.closest("[data-mom-open]");
+    if(c) openMomModal(c.dataset.momOpen);
+  });
+  document.getElementById("momProject").addEventListener("change", renderMom);
+  document.getElementById("momSearch").addEventListener("input", renderMom);
+  document.getElementById("momAdd").addEventListener("click", ()=>openMomModal(null));
+  document.getElementById("momExport").addEventListener("click", openMomExportModal);
+
+  // ---- teks MoM (siap tempel ke WhatsApp / email) ----
+  function momText(m){
+    const L = [];
+    L.push("*Minutes of Meeting - "+(m.title||"-")+"*");
+    L.push("Project: "+momProjName(m.projectId));
+    L.push("Tanggal: "+momTimeLabel(m));
+    if(m.place) L.push("Lokasi: "+m.place);
+    if(m.notulis) L.push("Notulis: "+m.notulis);
+    const att = momAttendees(m);
+    if(att.length) L.push("Peserta: "+att.join(", "));
+    const sec = (h,t)=>{ if(t && t.trim()){ L.push(""); L.push("*"+h+"*"); L.push(t.trim()); } };
+    sec("Agenda", m.agenda);
+    sec("Pembahasan", m.discussion);
+    sec("Keputusan", m.decisions);
+    const ai = momAiList(m);
+    if(ai.length){
+      L.push(""); L.push("*Action Items*");
+      ai.forEach((a,i)=>L.push((i+1)+". "+a.task+(a.pic ? " - PIC: "+a.pic : "")+(a.due ? " - Due: "+fmtDate(a.due) : "")+(a.done ? " (selesai)" : "")));
+    }
+    sec("Meeting berikutnya", m.nextMeeting);
+    return L.join("\n");
+  }
+
+  // ---- tambah / edit ----
+  function openMomModal(id){
+    const cur = id ? momItems.find(x=>x.id===id) : null;
+    if(id && !cur) return;
+    if(!projects.length){ toast("Tambahkan project dulu."); return; }
+    const fp = document.getElementById("momProject").value;
+    const d = cur || { title:"", projectId: fp || selectedProjectId || projects[0].id, date: todayStr(), time:"", place:"", notulis:"",
+      attendees:"", agenda:"", discussion:"", decisions:"", nextMeeting:"", actionItems:[] };
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.innerHTML =
+      '<div class="modal-box" style="max-width:680px;">'+
+        '<h3 style="margin:0 0 4px; font-size:15px;">'+(cur?'Edit catatan meeting':'Catatan meeting baru')+'</h3>'+
+        '<label>Judul / topik meeting</label><input type="text" id="mmTitle" placeholder="mis. Review UAT modul pembayaran">'+
+        '<div class="mom-form-row">'+
+          '<div><label>Project</label><select id="mmProj">'+projects.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join("")+'</select></div>'+
+          '<div><label>Tanggal</label><input type="date" id="mmDate"></div>'+
+          '<div><label>Jam</label><input type="text" id="mmTime" placeholder="mis. 10:00 - 11:00"></div>'+
+        '</div>'+
+        '<div class="mom-form-row">'+
+          '<div><label>Lokasi / media</label><input type="text" id="mmPlace" placeholder="mis. Google Meet / Ruang Rapat 2"></div>'+
+          '<div><label>Notulis</label><input type="text" id="mmNotulis" placeholder="Nama pencatat"></div>'+
+        '</div>'+
+        '<label>Peserta (pisahkan dengan koma atau baris baru)</label><textarea id="mmAtt" rows="2" placeholder="mis. Budi (PM), Sari (Dev), Andi (QA)"></textarea>'+
+        '<label>Agenda</label><textarea id="mmAgenda" rows="2" placeholder="Poin yang dibahas"></textarea>'+
+        '<label>Pembahasan</label><textarea id="mmDisc" rows="5" placeholder="Ringkasan diskusi"></textarea>'+
+        '<label>Keputusan</label><textarea id="mmDec" rows="3" placeholder="Hal yang disepakati"></textarea>'+
+        '<label>Action items</label><div id="mmAis"></div>'+
+        '<div class="row-flex" style="margin-top:2px;"><button type="button" id="mmAiAdd">+ Action item</button></div>'+
+        '<label>Meeting berikutnya / catatan lain</label><input type="text" id="mmNext" placeholder="mis. Senin 12 Okt, 10:00 - review hasil perbaikan">'+
+        '<div class="modal-actions">'+(cur?'<button class="danger-outline" id="mmDel" style="margin-right:auto;">Hapus</button>':'')+
+          '<button id="mmCancel">Batal</button><button class="primary" id="mmSave">Simpan</button></div>'+
+      '</div>';
+    document.body.appendChild(overlay);
+    const $f = q=>overlay.querySelector(q);
+    $f("#mmTitle").value = d.title || "";
+    $f("#mmProj").value = d.projectId;
+    $f("#mmDate").value = d.date || todayStr();
+    $f("#mmTime").value = d.time || "";
+    $f("#mmPlace").value = d.place || "";
+    $f("#mmNotulis").value = d.notulis || "";
+    $f("#mmAtt").value = d.attendees || "";
+    $f("#mmAgenda").value = d.agenda || "";
+    $f("#mmDisc").value = d.discussion || "";
+    $f("#mmDec").value = d.decisions || "";
+    $f("#mmNext").value = d.nextMeeting || "";
+
+    const ais = (d.actionItems || []).map(a=>({ task:a.task||"", pic:a.pic||"", due:a.due||"", done:!!a.done }));
+    function renderAis(){
+      const box = $f("#mmAis");
+      box.innerHTML = ais.length ? ais.map((a,i)=>
+        '<div class="mom-airow" data-i="'+i+'">'+
+          '<input type="checkbox" class="mm-done" title="Sudah selesai" style="width:auto;"'+(a.done?' checked':'')+'>'+
+          '<input type="text" class="mm-task" placeholder="Tindak lanjut" style="flex:1 1 200px; width:auto;" value="'+esc(a.task)+'">'+
+          '<input type="text" class="mm-pic" placeholder="PIC" style="flex:0 1 120px; width:auto;" value="'+esc(a.pic)+'">'+
+          '<input type="date" class="mm-due" style="flex:0 0 140px; width:auto;" value="'+esc(a.due)+'">'+
+          '<button type="button" class="danger-outline mm-rm" title="Hapus action item">✕</button>'+
+        '</div>').join("") : '<div class="hint" style="margin:0 0 6px;">Belum ada action item.</div>';
+      box.querySelectorAll(".mom-airow").forEach(row=>{
+        const i = parseInt(row.dataset.i, 10);
+        row.querySelector(".mm-done").onchange = ev=>{ ais[i].done = ev.target.checked; };
+        row.querySelector(".mm-task").oninput = ev=>{ ais[i].task = ev.target.value; };
+        row.querySelector(".mm-pic").oninput = ev=>{ ais[i].pic = ev.target.value; };
+        row.querySelector(".mm-due").onchange = ev=>{ ais[i].due = ev.target.value; };
+        row.querySelector(".mm-rm").onclick = ()=>{ ais.splice(i,1); renderAis(); };
+      });
+    }
+    renderAis();
+    $f("#mmAiAdd").onclick = ()=>{
+      ais.push({ task:"", pic:"", due:"", done:false }); renderAis();
+      const rows = overlay.querySelectorAll(".mm-task"); if(rows.length) rows[rows.length-1].focus();
+    };
+
+    overlay.onclick = ev=>{ if(ev.target===overlay) overlay.remove(); };
+    $f("#mmCancel").onclick = ()=>overlay.remove();
+    $f("#mmTitle").focus();
+    if(cur) $f("#mmDel").onclick = async ()=>{
+      const ok = await confirmDialog("Hapus catatan meeting ini?");
+      if(!ok) return;
+      try{ await db.collection("meetings").doc(cur.id).delete(); overlay.remove(); toast("Catatan meeting dihapus."); }
+      catch(err){ toast("Gagal menghapus."); }
+    };
+    $f("#mmSave").onclick = async ()=>{
+      const title = $f("#mmTitle").value.trim();
+      if(!title){ toast("Judul meeting wajib diisi."); return; }
+      const date = $f("#mmDate").value;
+      if(!date){ toast("Tanggal wajib diisi."); return; }
+      const data = {
+        title, projectId: $f("#mmProj").value, date, time: $f("#mmTime").value.trim(),
+        place: $f("#mmPlace").value.trim(), notulis: $f("#mmNotulis").value.trim(),
+        attendees: $f("#mmAtt").value.trim(), agenda: $f("#mmAgenda").value.trim(),
+        discussion: $f("#mmDisc").value.trim(), decisions: $f("#mmDec").value.trim(),
+        nextMeeting: $f("#mmNext").value.trim(),
+        actionItems: ais.filter(a=>a.task.trim()).map(a=>({ task:a.task.trim(), pic:a.pic.trim(), due:a.due||"", done:!!a.done }))
+      };
+      const btn = $f("#mmSave"); btn.disabled = true;
+      try{
+        if(cur) await db.collection("meetings").doc(cur.id).update(data);
+        else await db.collection("meetings").add({ ...data, createdAt: Date.now() });
+        overlay.remove();
+        toast(cur ? "Catatan meeting diperbarui." : "Catatan meeting disimpan.");
+      }catch(err){ btn.disabled = false; toast("Gagal menyimpan: "+err.message); }
+    };
+  }
+
+  // ---- export PDF (rekap banyak meeting) ----
+  function openMomExportModal(){
+    const pid0 = document.getElementById("momProject").value;
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.innerHTML =
+      '<div class="modal-box">'+
+        '<h3 style="margin:0 0 4px; font-size:15px;">Export PDF Catatan Meeting</h3>'+
+        '<label>Project</label><select id="mxProj"><option value="">Semua Project</option>'+projects.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join("")+'</select>'+
+        '<div class="mom-form-row">'+
+          '<div><label>Dari tanggal (opsional)</label><input type="date" id="mxFrom"></div>'+
+          '<div><label>Sampai tanggal (opsional)</label><input type="date" id="mxTo"></div>'+
+        '</div>'+
+        '<label class="opt-check"><input type="checkbox" id="mxAi" checked style="width:auto;"> Sertakan action items</label>'+
+        '<div class="hint">Hasilnya satu PDF: halaman rekap di depan, lalu tiap meeting di halaman sendiri (diurutkan per project, lalu tanggal).</div>'+
+        '<div class="modal-actions"><button id="mxCancel">Batal</button><button class="primary" id="mxOk">Export PDF</button></div>'+
+      '</div>';
+    document.body.appendChild(overlay);
+    const $f = q=>overlay.querySelector(q);
+    $f("#mxProj").value = pid0;
+    overlay.onclick = ev=>{ if(ev.target===overlay) overlay.remove(); };
+    $f("#mxCancel").onclick = ()=>overlay.remove();
+    $f("#mxOk").onclick = ()=>{
+      const pid = $f("#mxProj").value, from = $f("#mxFrom").value, to = $f("#mxTo").value;
+      const withAi = $f("#mxAi").checked;
+      const order = projects.map(p=>p.id);
+      const list = momItems
+        .filter(m=>(!pid || m.projectId===pid) && (!from || (m.date||"") >= from) && (!to || (m.date||"") <= to))
+        .sort((a,b)=>{
+          const ia = order.indexOf(a.projectId), ib = order.indexOf(b.projectId);
+          return (ia<0?999:ia)-(ib<0?999:ib) || (a.date||"").localeCompare(b.date||"") || (a.createdAt||0)-(b.createdAt||0);
+        });
+      if(!list.length){ toast("Tidak ada catatan meeting untuk diekspor."); return; }
+      overlay.remove();
+      let periode = "";
+      if(from || to) periode = (from ? fmtDate(from) : "awal") + " s/d " + (to ? fmtDate(to) : "sekarang");
+      buildMomPdf(list, pid ? momProjName(pid) : "Semua Project", { ai: withAi, periode });
+    };
+  }
+
+  async function buildMomPdf(list, label, opts){
+    opts = opts || {};
+    const withAi = opts.ai !== false;
+    if(!window.jspdf){ toast("Library PDF gagal dimuat."); return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:"mm", format:"a4", orientation:"portrait" });
+    const pageW = doc.internal.pageSize.getWidth(), pageH = doc.internal.pageSize.getHeight();
+    const mx = 16, availW = pageW - mx*2, top = 18, bottom = pageH - 16;
+    let y = top;
+    const ensure = h=>{ if(y + h > bottom){ doc.addPage(); y = top; } };
+    function lines(text, size, style, color){
+      const lh = size*0.5;
+      doc.splitTextToSize(pdfText(text), availW).forEach(l=>{
+        ensure(lh);
+        doc.setFont("helvetica", style||"normal"); doc.setFontSize(size); doc.setTextColor.apply(doc, color || [0,0,0]);
+        doc.text(l, mx, y); y += lh;
+      });
+    }
+    function heading(t, extra){
+      ensure(16 + (extra||0));
+      y += 3;
+      doc.setFont("helvetica","bold"); doc.setFontSize(11.5); doc.setTextColor(109,94,245);
+      doc.text(pdfText(t).toUpperCase(), mx, y);
+      y += 1.8; doc.setDrawColor(220,220,235); doc.setLineWidth(0.3); doc.line(mx, y, mx+availW, y);
+      y += 5.5; doc.setTextColor(0,0,0);
+    }
+    function kv(k, v){
+      if(!v) return;
+      const ls = doc.splitTextToSize(pdfText(v), availW-34);
+      ensure(ls.length*5.4);
+      doc.setFont("helvetica","bold"); doc.setFontSize(10.5); doc.setTextColor(0,0,0);
+      doc.text(pdfText(k), mx, y);
+      doc.setFont("helvetica","normal");
+      ls.forEach(l=>{ doc.text(l, mx+34, y); y += 5.4; });
+    }
+    const tableStyle = {
+      theme:"grid",
+      styles:{ font:"helvetica", fontSize:10, textColor:[0,0,0], cellPadding:2.8, overflow:"linebreak", valign:"middle", lineColor:[170,172,185], lineWidth:0.25 },
+      headStyles:{ fillColor:[225,222,250], textColor:[0,0,0], fontStyle:"bold" },
+      alternateRowStyles:{ fillColor:[246,247,250] }
+    };
+
+    function drawMeeting(m){
+      ensure(30);
+      doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(109,94,245);
+      doc.text("MINUTES OF MEETING", mx, y); y += 7;
+      lines(m.title || "(tanpa judul)", 17, "bold");
+      y += 1; doc.setDrawColor(109,94,245); doc.setLineWidth(0.9); doc.line(mx, y, mx+24, y); y += 6.5;
+      kv("Project", momProjName(m.projectId));
+      kv("Tanggal", momTimeLabel(m));
+      kv("Lokasi / Media", m.place);
+      kv("Notulis", m.notulis);
+      kv("Peserta", momAttendees(m).join(", "));
+      if((m.agenda||"").trim()){ heading("Agenda"); lines(m.agenda.trim(), 10.5); }
+      if((m.discussion||"").trim()){ heading("Pembahasan"); lines(m.discussion.trim(), 10.5); }
+      if((m.decisions||"").trim()){ heading("Keputusan"); lines(m.decisions.trim(), 10.5); }
+      const ai = withAi ? momAiList(m) : [];
+      if(ai.length){
+        heading("Action Items", 22);
+        doc.autoTable({
+          ...tableStyle,
+          startY: y,
+          margin:{ left:mx, right:mx, bottom:16 },
+          tableWidth: availW,
+          head:[["No","Tindak Lanjut","PIC","Due Date","Status"]],
+          body: ai.map((a,i)=>[String(i+1), pdfText(a.task), pdfText(a.pic) || "-", a.due ? fmtDate(a.due) : "-", a.done ? "Selesai" : "Belum"]),
+          columnStyles:{ 0:{ cellWidth:11, halign:"center" }, 2:{ cellWidth:30 }, 3:{ cellWidth:28 }, 4:{ cellWidth:22 } }
+        });
+        y = doc.lastAutoTable.finalY + 4;
+      }
+      if((m.nextMeeting||"").trim()){ heading("Meeting Berikutnya / Catatan"); lines(m.nextMeeting.trim(), 10.5); }
+    }
+
+    if(list.length > 1){
+      doc.setFont("helvetica","bold"); doc.setFontSize(20); doc.setTextColor(0,0,0);
+      const tl = doc.splitTextToSize(pdfText("Rekap Catatan Meeting - "+label), availW);
+      doc.text(tl, mx, y); y += (tl.length-1)*8 + 4;
+      doc.setDrawColor(109,94,245); doc.setLineWidth(0.9); doc.line(mx, y, mx+24, y); y += 7;
+      doc.setFont("helvetica","normal"); doc.setFontSize(11);
+      if(opts.periode){ doc.text(pdfText("Periode: "+opts.periode), mx, y); y += 6; }
+      doc.text(pdfText("Dibuat: "+new Date().toLocaleString("id-ID")), mx, y); y += 6;
+      doc.setFont("helvetica","bold");
+      doc.text(pdfText("Total: "+list.length+" meeting"), mx, y); y += 4;
+      const showProj = new Set(list.map(m=>m.projectId)).size > 1;
+      const head = ["No","Tanggal"].concat(showProj ? ["Project"] : [], ["Judul"], withAi ? ["Action Item Terbuka"] : []);
+      doc.autoTable({
+        ...tableStyle,
+        startY: y + 2,
+        margin:{ left:mx, right:mx, bottom:16 },
+        tableWidth: availW,
+        head:[head],
+        body: list.map((m,i)=>{
+          const ai = momAiList(m), open = ai.filter(a=>!a.done).length;
+          return [String(i+1), fmtDate(m.date)].concat(showProj ? [pdfText(momProjName(m.projectId))] : [], [pdfText(m.title) || "-"],
+            withAi ? [ai.length ? open+" dari "+ai.length : "-"] : []);
+        }),
+        columnStyles:{ 0:{ cellWidth:11, halign:"center" }, 1:{ cellWidth:28 } }
+      });
+      list.forEach(m=>{ doc.addPage(); y = top; drawMeeting(m); });
+    } else {
+      drawMeeting(list[0]);
+    }
+
+    const n = doc.getNumberOfPages();
+    for(let i=1; i<=n; i++){
+      doc.setPage(i);
+      doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(120,120,135);
+      doc.text("Halaman "+i+" / "+n, pageW - mx, pageH - 8, { align:"right" });
+      doc.text(pdfText("Catatan Meeting - "+label), mx, pageH - 8);
+    }
+
+    try{
+      const blob = doc.output("blob");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const base = list.length === 1 ? "MoM_"+label+"_"+(list[0].title||"meeting")+"_"+(list[0].date||todayStr()) : "MoM_"+label+"_"+todayStr();
+      a.href = url; a.download = base.replace(/[^\w\-]+/g,"_").replace(/_+/g,"_").slice(0,90) + ".pdf";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 4000);
+      toast("PDF MoM berhasil dibuat.");
+    }catch(e){ toast("Gagal membuat PDF."); }
+  }
+  renderMom();
 
   // ================= dashboard =================
   function weekStartStr(d){ const x = new Date(d+"T00:00:00"); return addDays(d, -((x.getDay()+6)%7)); } // Senin
