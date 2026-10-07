@@ -16,6 +16,7 @@
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
@@ -512,6 +513,25 @@
   .mom-form-row { display:flex; gap:10px; flex-wrap:wrap; }
   .mom-form-row > div { flex:1 1 150px; min-width:0; }
   .mom-airow { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:6px; }
+
+  /* ===== Gerbang login ===== */
+  .login-gate { position:fixed; inset:0; z-index:1500; display:flex; align-items:center; justify-content:center; padding:20px; overflow:auto;
+    background: radial-gradient(900px 380px at 15% -10%, rgba(109,94,245,0.14), transparent 60%), var(--bg); }
+  .login-card { width:min(400px,100%); background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px 26px 22px; box-shadow:var(--shadow-lift); display:flex; flex-direction:column; gap:6px; }
+  .login-brand { display:flex; align-items:center; gap:14px; margin-bottom:12px; }
+  .login-brand strong { font-size:16px; letter-spacing:-.01em; }
+  .login-brand strong span { color:var(--text-dim); font-weight:600; }
+  .login-card h1 { margin:0; font-size:23px; font-weight:800; letter-spacing:-.015em; }
+  .login-sub { margin:2px 0 10px; color:var(--text-dim); font-size:13px; line-height:1.45; }
+  .login-card label { font-size:12px; font-weight:700; color:var(--text-dim); margin-top:6px; }
+  .login-card input { width:100%; min-height:42px; padding:9px 12px; border-radius:9px; border:1px solid var(--border); background:var(--surface-2); color:var(--text); font-size:16px; }
+  .login-card input:disabled { opacity:.6; }
+  .login-pass { display:flex; gap:6px; }
+  .login-pass button { flex:none; min-width:84px; }
+  .login-err { min-height:20px; margin-top:4px; font-size:12.5px; font-weight:600; color:var(--danger); }
+  .login-err.ok { color:var(--ok); }
+  .login-card button.primary { min-height:42px; font-size:14px; font-weight:700; margin-top:2px; }
+  .login-link { background:none !important; border:none !important; box-shadow:none !important; color:var(--accent); font-size:12.5px; padding:8px 6px; align-self:center; }
 </style>
 <style id="qa-workspace-design">
   :root {
@@ -798,6 +818,24 @@
 </script>
 <!-- ============================================================================ -->
 
+<div id="loginGate" class="login-gate" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+  <form class="login-card" id="loginForm" novalidate>
+    <div class="login-brand"><div class="brand-symbol"><span></span><span></span><span></span><span></span></div><strong>seleris<span> / qa</span></strong></div>
+    <h1 id="loginTitle">Masuk</h1>
+    <p class="login-sub" id="loginSub">Memeriksa sesi…</p>
+    <label for="loginEmail">Email</label>
+    <input type="email" id="loginEmail" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false">
+    <label for="loginPass">Password</label>
+    <div class="login-pass">
+      <input type="password" id="loginPass" autocomplete="current-password">
+      <button type="button" id="loginShow" aria-label="Tampilkan password">Lihat</button>
+    </div>
+    <div class="login-err" id="loginErr" role="alert"></div>
+    <button class="primary" type="submit" id="loginBtn">Masuk</button>
+    <button type="button" class="login-link" id="loginReset">Lupa password?</button>
+  </form>
+</div>
+
 <div id="setupOverlay" class="setup-overlay" style="display:none;">
   <div class="setup-box">
     <h2>⚙️ Setup Firebase dulu (± 3 menit)</h2>
@@ -825,6 +863,7 @@
     <div class="top-actions">
       <button class="quick-jump" id="quickJump" type="button" aria-label="Buka navigasi cepat"><span class="quick-search-icon">⌕</span><span>Jelajah cepat</span><kbd>⌘ K</kbd></button>
       <button class="theme-toggle" id="themeToggle" type="button" aria-label="Ganti tema"><span id="themeIcon">☾</span><span id="themeLabel">Mode gelap</span></button>
+      <button id="logoutBtn" type="button" aria-label="Keluar dari akun">Keluar</button>
       <span class="status-pill" id="connPill">Menghubungkan…</span>
     </div>
   </header>
@@ -1073,7 +1112,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
 </script>
 
 <script>
-(function(){
+(async function(){
   "use strict";
 
   // ================= setup check =================
@@ -1082,7 +1121,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     document.getElementById("setupOverlay").style.display = "block";
     return; // stop here until config is filled in
   }
-  document.getElementById("appRoot").style.display = "grid";
+  document.getElementById("loginGate").style.display = "flex";
 
   // Theme preference is local to each QA's browser.
   const themeToggle = document.getElementById("themeToggle");
@@ -1108,6 +1147,62 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
 
   firebase.initializeApp(cfg);
   const db = firebase.firestore();
+
+  // ================= login (Firebase Authentication: email + password) =================
+  // Isi aplikasi baru dijalankan setelah login. Akun dibuat manual di Firebase Console (tidak ada pendaftaran dari halaman ini).
+  const auth = firebase.auth();
+  const L = {
+    gate: document.getElementById("loginGate"), form: document.getElementById("loginForm"), sub: document.getElementById("loginSub"),
+    email: document.getElementById("loginEmail"), pass: document.getElementById("loginPass"), btn: document.getElementById("loginBtn"),
+    err: document.getElementById("loginErr"), show: document.getElementById("loginShow"), reset: document.getElementById("loginReset")
+  };
+  const AUTH_MSG = {
+    "auth/invalid-credential":"Email atau password salah.", "auth/wrong-password":"Email atau password salah.", "auth/user-not-found":"Email atau password salah.",
+    "auth/invalid-email":"Format email tidak valid.", "auth/user-disabled":"Akun ini dinonaktifkan.",
+    "auth/too-many-requests":"Terlalu banyak percobaan. Tunggu beberapa menit, lalu coba lagi.",
+    "auth/network-request-failed":"Tidak ada koneksi internet.",
+    "auth/operation-not-allowed":"Login email/password belum diaktifkan di Firebase Console."
+  };
+  const authMsg = e=>AUTH_MSG[e && e.code] || ("Gagal masuk: " + ((e && (e.message || e.code)) || "tidak diketahui"));
+  const setLoginMsg = (text, ok)=>{ L.err.textContent = text || ""; L.err.classList.toggle("ok", !!ok); };
+  const setLoginBusy = busy=>{ L.email.disabled = busy; L.pass.disabled = busy; L.btn.disabled = busy; };
+  setLoginBusy(true);
+
+  L.show.addEventListener("click", ()=>{
+    const hidden = L.pass.type === "password";
+    L.pass.type = hidden ? "text" : "password";
+    L.show.textContent = hidden ? "Sembunyi" : "Lihat";
+    L.show.setAttribute("aria-label", hidden ? "Sembunyikan password" : "Tampilkan password");
+  });
+  L.form.addEventListener("submit", async ev=>{
+    ev.preventDefault();
+    const em = L.email.value.trim(), pw = L.pass.value;
+    if(!em || !pw){ setLoginMsg("Isi email dan password."); return; }
+    setLoginMsg(""); setLoginBusy(true); L.btn.textContent = "Masuk…";
+    try{ await auth.signInWithEmailAndPassword(em, pw); }
+    catch(e){ setLoginMsg(authMsg(e)); setLoginBusy(false); L.btn.textContent = "Masuk"; L.pass.focus(); L.pass.select(); }
+  });
+  L.reset.addEventListener("click", async ()=>{
+    const em = L.email.value.trim();
+    if(!em){ setLoginMsg("Isi email dulu, lalu klik Lupa password."); L.email.focus(); return; }
+    try{ await auth.sendPasswordResetEmail(em); setLoginMsg("Tautan reset password dikirim ke " + em + " (cek juga folder spam).", true); }
+    catch(e){ setLoginMsg(authMsg(e)); }
+  });
+
+  const authUser = await new Promise(resolve=>{
+    auth.onAuthStateChanged(u=>{
+      if(u){ resolve(u); return; }
+      L.sub.textContent = "Khusus tim QA. Masuk dengan akun yang sudah dibuat.";
+      L.btn.textContent = "Masuk"; setLoginBusy(false); L.email.focus();
+    });
+  });
+  L.pass.value = "";
+  L.gate.style.display = "none";
+  document.getElementById("appRoot").style.display = "grid";
+  const logoutBtn = document.getElementById("logoutBtn");
+  logoutBtn.title = "Masuk sebagai " + (authUser.email || "");
+  logoutBtn.addEventListener("click", ()=>{ auth.signOut(); });
+  auth.onAuthStateChanged(u=>{ if(!u) location.reload(); });  // keluar / sesi dicabut -> kembali ke halaman login
 
   // ================= utilities =================
   function todayStr(){
@@ -3499,8 +3594,9 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         '<div class="row-flex" style="margin-top:2px;"><button type="button" id="mmAiAdd">+ Action item</button></div>'+
         '<div class="hint" style="margin:6px 0 0;">Saat disimpan, tiap action item otomatis masuk ke tab <b>Enhancement</b> (status Usulan, prioritas Medium). Centang selesai → status Selesai. Menghapus action item di sini tidak menghapus enhancement-nya.</div>'+
         '<label>Meeting berikutnya / catatan lain</label><input type="text" id="mmNext" placeholder="mis. Senin 12 Okt, 10:00 - review hasil perbaikan">'+
+        '<div class="hint" id="mmAuto" style="margin:8px 0 0;">Tersimpan otomatis saat kamu mengetik. Isi judul dulu supaya mulai tersimpan.</div>'+
         '<div class="modal-actions">'+(cur?'<button class="danger-outline" id="mmDel" style="margin-right:auto;">Hapus</button>':'')+
-          '<button id="mmCancel">Batal</button><button class="primary" id="mmSave">Simpan</button></div>'+
+          '<button id="mmCancel">Tutup</button><button class="primary" id="mmSave">Simpan</button></div>'+
       '</div>';
     document.body.appendChild(overlay);
     const $f = q=>overlay.querySelector(q);
@@ -3534,7 +3630,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         row.querySelector(".mm-task").oninput = ev=>{ ais[i].task = ev.target.value; };
         row.querySelector(".mm-pic").oninput = ev=>{ ais[i].pic = ev.target.value; };
         row.querySelector(".mm-due").onchange = ev=>{ ais[i].due = ev.target.value; };
-        row.querySelector(".mm-rm").onclick = ()=>{ ais.splice(i,1); renderAis(); };
+        row.querySelector(".mm-rm").onclick = ()=>{ ais.splice(i,1); renderAis(); overlay.dispatchEvent(new Event("change")); };
       });
     }
     renderAis();
@@ -3543,8 +3639,44 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       const rows = overlay.querySelectorAll(".mm-task"); if(rows.length) rows[rows.length-1].focus();
     };
 
-    overlay.onclick = ev=>{ if(ev.target===overlay) overlay.remove(); };
-    $f("#mmCancel").onclick = ()=>overlay.remove();
+    // ---- simpan otomatis: draf ikut tersimpan ke Firestore tiap kali ada perubahan ----
+    let docId = cur ? cur.id : null, autoTimer = null, dirty = false, closed = false, chain = Promise.resolve();
+    const autoEl = $f("#mmAuto");
+    const collect = ()=>({
+      title: $f("#mmTitle").value.trim(), projectId: $f("#mmProj").value, date: $f("#mmDate").value, time: $f("#mmTime").value.trim(),
+      place: $f("#mmPlace").value.trim(), notulis: $f("#mmNotulis").value.trim(),
+      attendees: $f("#mmAtt").value.trim(), agenda: $f("#mmAgenda").value.trim(),
+      discussion: $f("#mmDisc").value.trim(), decisions: $f("#mmDec").value.trim(),
+      nextMeeting: $f("#mmNext").value.trim(),
+      actionItems: ais.filter(a=>a.task.trim()).map(a=>({ task:a.task.trim(), pic:a.pic.trim(), due:a.due||"", done:!!a.done, enhId:a.enhId||"" }))
+    });
+    function autoSaveNow(){
+      clearTimeout(autoTimer);
+      chain = chain.then(async ()=>{
+        if(!dirty) return;
+        const data = collect();
+        if(!data.title || !data.date){ autoEl.textContent = "Isi judul dan tanggal supaya tersimpan otomatis."; return; }
+        dirty = false;
+        autoEl.textContent = "Menyimpan…";
+        try{
+          if(docId){ await db.collection("meetings").doc(docId).update(data); }
+          else { const ref = db.collection("meetings").doc(); await ref.set({ ...data, createdAt: Date.now() }); docId = ref.id; }
+          autoEl.textContent = "Tersimpan otomatis · "+new Date().toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit",second:"2-digit"})+". Action item masuk ke Enhancement setelah klik Simpan.";
+        }catch(err){ dirty = true; autoEl.textContent = "Gagal simpan otomatis: "+err.message; }
+      });
+      return chain;
+    }
+    const markDirty = ()=>{ if(closed) return; dirty = true; clearTimeout(autoTimer); autoTimer = setTimeout(autoSaveNow, 1200); };
+    overlay.addEventListener("input", markDirty);
+    overlay.addEventListener("change", markDirty);
+    const closeModal = ()=>{
+      closed = true;
+      const had = dirty, p = autoSaveNow();
+      overlay.remove();
+      p.then(()=>{ if(had && !dirty && docId) toast("Catatan meeting tersimpan otomatis."); });
+    };
+    overlay.onclick = ev=>{ if(ev.target===overlay) closeModal(); };
+    $f("#mmCancel").onclick = closeModal;
     $f("#mmTitle").focus();
     if(cur) $f("#mmDel").onclick = async ()=>{
       const ok = await confirmDialog("Hapus catatan meeting ini?");
@@ -3566,9 +3698,11 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         actionItems: ais.filter(a=>a.task.trim()).map(a=>({ task:a.task.trim(), pic:a.pic.trim(), due:a.due||"", done:!!a.done, enhId:a.enhId||"" }))
       };
       const btn = $f("#mmSave"); btn.disabled = true;
+      closed = true; clearTimeout(autoTimer); dirty = false; await chain;
+      const existed = !!docId;
       try{
         const batch = db.batch();
-        const meetRef = cur ? db.collection("meetings").doc(cur.id) : db.collection("meetings").doc();
+        const meetRef = docId ? db.collection("meetings").doc(docId) : db.collection("meetings").doc();
         const prevByEnh = {};
         (cur && cur.actionItems || []).forEach(a=>{ if(a.enhId) prevByEnh[a.enhId] = a; });
         let nNew = 0;
@@ -3587,11 +3721,11 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
             batch.update(db.collection("enhancements").doc(a.enhId), patch);
           }
         });
-        if(cur) batch.update(meetRef, data); else batch.set(meetRef, { ...data, createdAt: Date.now() });
+        if(docId) batch.update(meetRef, data); else batch.set(meetRef, { ...data, createdAt: Date.now() });
         await batch.commit();
         overlay.remove();
-        toast((cur ? "Catatan meeting diperbarui." : "Catatan meeting disimpan.")+(nNew ? " "+nNew+" item masuk ke Enhancement." : ""));
-      }catch(err){ btn.disabled = false; toast("Gagal menyimpan: "+err.message); }
+        toast((existed ? "Catatan meeting diperbarui." : "Catatan meeting disimpan.")+(nNew ? " "+nNew+" item masuk ke Enhancement." : ""));
+      }catch(err){ btn.disabled = false; closed = false; toast("Gagal menyimpan: "+err.message); }
     };
   }
 
@@ -3674,17 +3808,30 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     cards.forEach((c,i)=>pdfStat(doc, x + i*(w+gap), y, w, c[0], c[1], c[2]));
     return y + 20;
   }
-  function pdfFooter(doc, leftText, mx){
+  function pdfFooter(doc, leftText, mx, extraLines){
     const C = PDF_C, n = doc.getNumberOfPages();
     const pageW = doc.internal.pageSize.getWidth(), pageH = doc.internal.pageSize.getHeight();
     for(let i=1; i<=n; i++){
       doc.setPage(i);
+      if(extraLines && extraLines.length){
+        doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...C.dim);
+        extraLines.forEach((t,k)=>doc.text(pdfText(t), mx, pageH-19 + k*4));
+      }
       doc.setDrawColor(...C.line); doc.setLineWidth(0.3); doc.line(mx, pageH-12, pageW-mx, pageH-12);
       doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...C.dim);
       doc.text(pdfText(leftText), mx, pageH-7);
       doc.text("Halaman "+i+" / "+n, pageW-mx, pageH-7, { align:"right" });
     }
     doc.setTextColor(0,0,0);
+  }
+  function pdfCreatedLine(){
+    const u = (typeof auth !== "undefined" && auth.currentUser) ? auth.currentUser : null;
+    const who = u ? (u.email || u.displayName || u.uid) : "-";
+    let at;
+    try{
+      at = new Intl.DateTimeFormat("id-ID", { timeZone:"Asia/Jakarta", day:"numeric", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit", hour12:false }).format(new Date()).replace(/\./g,":") + " WIB";
+    }catch(e){ at = new Date().toISOString(); }
+    return "Created by: " + who + "   |   Created at: " + at;
   }
   function pdfDownload(doc, filename){
     try{
@@ -3747,7 +3894,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     const C = PDF_C;
     const doc = new jsPDF({ unit:"mm", format:"a4", orientation:"portrait" });
     const pageW = doc.internal.pageSize.getWidth(), pageH = doc.internal.pageSize.getHeight();
-    const mx = 16, availW = pageW - mx*2, top = 18, bottom = pageH - 17;
+    const mx = 16, availW = pageW - mx*2, top = 18, bottom = pageH - 24;
     let y = top;
     const ensure = h=>{ if(y + h > bottom){ doc.addPage(); y = top; } };
 
@@ -3842,7 +3989,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         doc.autoTable({
           ...tableStyle,
           startY: y,
-          margin:{ left:mx, right:mx, top:top, bottom:17 },
+          margin:{ left:mx, right:mx, top:top, bottom:24 },
           tableWidth: availW,
           head:[["No","Tindak Lanjut","PIC","Due Date","Status"]],
           body: ai.map((a,i)=>[String(i+1), pdfText(a.task), pdfText(a.pic) || "-", a.due ? fmtDate(a.due) : "-", a.done ? "Selesai" : "Belum"]),
@@ -3875,7 +4022,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       doc.autoTable({
         ...tableStyle,
         startY: y,
-        margin:{ left:mx, right:mx, top:top, bottom:17 },
+        margin:{ left:mx, right:mx, top:top, bottom:24 },
         tableWidth: availW,
         head:[head],
         body: list.map((m,i)=>{
@@ -3890,7 +4037,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       drawMeeting(list[0]);
     }
 
-    pdfFooter(doc, "Catatan Meeting - "+label, mx);
+    pdfFooter(doc, "Catatan Meeting - "+label, mx, [pdfCreatedLine(), "Dokumen ini bersifat rahasia dan tidak boleh disebarkan tanpa izin."]);
     const base = list.length === 1 ? "MoM_"+label+"_"+(list[0].title||"meeting")+"_"+(list[0].date||todayStr()) : "MoM_"+label+"_"+todayStr();
     toast(pdfDownload(doc, base.replace(/[^\w\-]+/g,"_").replace(/_+/g,"_").slice(0,90) + ".pdf") ? "PDF MoM berhasil dibuat." : "Gagal membuat PDF.");
   }
