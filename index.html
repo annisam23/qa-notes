@@ -700,6 +700,7 @@
           <button id="scanPick">⚙ Pilih Project AI</button>
           <button id="scanCheckAll">✔ Semua berhasil</button>
           <button class="danger-outline" id="scanUncheckAll">Reset hari ini</button>
+          <button id="scanExport">⬇ Export PDF</button>
         </div>
       </div>
       <div class="status-summary" id="scanSummary"></div>
@@ -721,6 +722,7 @@
         <button id="akRestore" style="display:none;" title="Kembalikan project awal yang hilang (tidak menimpa yang sudah ada)"></button>
         <button id="akExpand" title="Buka semua kartu">Buka semua</button>
         <button id="akCollapse" title="Ringkas semua kartu">Ringkas semua</button>
+        <button id="akExport">⬇ Export PDF</button>
         <button class="primary" id="akAdd">+ Project</button>
       </div>
       <div class="ak-chips" id="akChips"></div>
@@ -737,6 +739,7 @@
         <input type="text" id="knSearch" class="ak-search" placeholder="Cari produk, fitur, atau peran…">
         <span class="ak-spacer"></span>
         <button id="knRestore" style="display:none;" title="Kembalikan produk awal yang hilang (tidak menimpa yang sudah ada)"></button>
+        <button id="knExport">⬇ Export PDF</button>
         <button class="primary" id="knAdd">+ Produk</button>
       </div>
       <div class="ak-chips" id="knChips"></div>
@@ -1770,6 +1773,121 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       });
     });
   }
+  // ---- export PDF hasil ceklis scan AI ----
+  function openScanExportModal(){
+    const date = document.getElementById("scanDate").value || todayStr();
+    const aiProjs = projects.filter(p=>p.scanAi);
+    if(!aiProjs.length){ toast("Belum ada project yang dipilih memakai AI."); return; }
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.innerHTML =
+      '<div class="modal-box">'+
+        '<h3 style="margin:0 0 4px; font-size:15px;">Export PDF Ceklis Scan AI</h3>'+
+        '<div class="mom-form-row">'+
+          '<div><label>Dari tanggal</label><input type="date" id="sxFrom"></div>'+
+          '<div><label>Sampai tanggal</label><input type="date" id="sxTo"></div>'+
+        '</div>'+
+        '<label>Project</label><select id="sxProj"><option value="">Semua Project AI</option>'+aiProjs.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join("")+'</select>'+
+        '<label>Hasil yang di-export</label>'+
+        '<div class="col-picker-list">'+["success","fail","none"].map(k=>'<label><input type="checkbox" data-sx="'+k+'" checked> '+SCAN_META[k].label+'</label>').join("")+'</div>'+
+        '<label class="opt-check"><input type="checkbox" id="sxNote" checked style="width:auto;"> Sertakan catatan scan</label>'+
+        '<div class="hint">Satu baris per project per tanggal. Yang belum dicek tampil sebagai "Belum". Maksimal 92 hari.</div>'+
+        '<div class="modal-actions"><button id="sxCancel">Batal</button><button class="primary" id="sxOk">Export PDF</button></div>'+
+      '</div>';
+    document.body.appendChild(overlay);
+    const $f = q=>overlay.querySelector(q);
+    $f("#sxFrom").value = addDays(date,-6); $f("#sxTo").value = date;
+    overlay.onclick = ev=>{ if(ev.target===overlay) overlay.remove(); };
+    $f("#sxCancel").onclick = ()=>overlay.remove();
+    $f("#sxOk").onclick = ()=>{
+      const from = $f("#sxFrom").value, to = $f("#sxTo").value, pid = $f("#sxProj").value;
+      if(!from || !to || from > to){ toast("Rentang tanggal tidak valid."); return; }
+      const sts = Array.from(overlay.querySelectorAll("[data-sx]")).filter(c=>c.checked).map(c=>c.dataset.sx);
+      if(!sts.length){ toast("Pilih minimal satu hasil."); return; }
+      const days = dateList(from, to);
+      if(days.length > 92){ toast("Rentang maksimal 92 hari."); return; }
+      const targets = aiProjs.filter(x=>!pid || x.id===pid);
+      const rows = [];
+      days.forEach(d=>targets.forEach(x=>{
+        const c = scanChecks[scanKey(d,x.id)] || {};
+        const st = scanState(c);
+        if(!sts.includes(st)) return;
+        rows.push({ date:d, name:x.name, st, note:c.note||"",
+          time: st!=="none" && c.checkedAt ? new Date(c.checkedAt).toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"}) : "" });
+      }));
+      if(!rows.length){ toast("Tidak ada data untuk diekspor."); return; }
+      const withNote = $f("#sxNote").checked;
+      overlay.remove();
+      buildScanPdf(rows, from, to, pid ? targets[0].name : "Semua Project AI", withNote);
+    };
+  }
+  function buildScanPdf(rows, from, to, projLabel, withNote){
+    if(!window.jspdf){ toast("Library PDF gagal dimuat."); return; }
+    const { jsPDF } = window.jspdf;
+    const C = PDF_C;
+    const doc = new jsPDF({ unit:"mm", format:"a4", orientation: withNote ? "landscape" : "portrait" });
+    const pageW = doc.internal.pageSize.getWidth();
+    const mx = 14, availW = pageW - mx*2;
+    const periode = from===to ? fmtDate(from) : fmtDate(from)+" s/d "+fmtDate(to);
+    const bh = pdfBanner(doc, "LAPORAN CEKLIS SCAN AI", projLabel, "Periode: "+periode+"   |   Dibuat: "+new Date().toLocaleString("id-ID"), pageW);
+    let y = bh + 8;
+    const cnt = { success:0, fail:0, none:0 }; rows.forEach(r=>cnt[r.st]++);
+    const checked = cnt.success + cnt.fail;
+    const rate = checked ? Math.round(cnt.success/checked*100) : null;
+    y = pdfStatRow(doc, mx, y, availW, [
+      ["Total ceklis", rows.length, C.accent],
+      ["Berhasil", cnt.success, C.ok],
+      ["Gagal", cnt.fail, C.bad],
+      ["Belum dicek", cnt.none, C.gray],
+      ["Keberhasilan", rate === null ? "-" : rate+"%", C.accent2]
+    ]) + 6;
+    // bar proporsi
+    const tot = rows.length || 1;
+    doc.setFillColor(...C.graySoft); doc.roundedRect(mx, y, availW, 3.6, 1.8, 1.8, "F");
+    let bx = mx;
+    [["success", C.ok], ["fail", C.bad]].forEach(([k,col])=>{
+      const w = availW * cnt[k] / tot; if(!w) return;
+      doc.setFillColor(...col); doc.rect(bx, y, w, 3.6, "F"); bx += w;
+    });
+    y += 9;
+
+    const cols = [{k:"date",l:"Tanggal",w:30},{k:"name",l:"Project",w:(withNote ? 60 : undefined)},{k:"st",l:"Hasil",w:28},{k:"time",l:"Jam",w:18}];
+    if(withNote) cols.push({k:"note",l:"Catatan"});
+    const fixed = cols.reduce((a,c)=>a+(c.w||0),0);
+    const columnStyles = {}; cols.forEach((c,i)=>{ columnStyles[i] = { cellWidth: c.w || Math.max(40, availW-fixed) }; });
+    const stCol = cols.findIndex(c=>c.k==="st");
+    const pill = { success:[C.okSoft, C.ok], fail:[C.badSoft, C.bad], none:[C.graySoft, C.gray] };
+    doc.autoTable({
+      startY: y, margin:{ left:mx, right:mx, top:16, bottom:17 }, tableWidth: availW,
+      head:[cols.map(c=>c.l)],
+      body: rows.map(r=>cols.map(c=>{
+        if(c.k==="date") return fmtDate(r.date);
+        if(c.k==="name") return pdfText(r.name);
+        if(c.k==="st") return "";
+        if(c.k==="time") return r.time || "-";
+        return pdfText(r.note) || "-";
+      })),
+      theme:"grid",
+      styles:{ font:"helvetica", fontSize:10, textColor:C.body, cellPadding:3, overflow:"linebreak", valign:"middle", lineColor:C.line, lineWidth:0.25 },
+      headStyles:{ fillColor:C.accent, textColor:[255,255,255], fontStyle:"bold", fontSize:9.5 },
+      alternateRowStyles:{ fillColor:[248,248,252] },
+      columnStyles,
+      didDrawCell: data=>{
+        if(data.section!=="body" || data.column.index!==stCol) return;
+        const r = rows[data.row.index]; if(!r) return;
+        const [bg, fg] = pill[r.st];
+        const w = data.cell.width - 6, h = 6.4;
+        doc.setFillColor(...bg); doc.roundedRect(data.cell.x+3, data.cell.y + data.cell.height/2 - h/2, w, h, 3.2, 3.2, "F");
+        doc.setFont("helvetica","bold"); doc.setFontSize(8.5); doc.setTextColor(...fg);
+        doc.text(SCAN_META[r.st].label, data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2, { align:"center", baseline:"middle" });
+        doc.setTextColor(0,0,0);
+      }
+    });
+    pdfFooter(doc, "Ceklis Scan AI - "+projLabel, mx);
+    const fn = ("ceklis_scan_ai_"+projLabel+"_"+from+(from===to?"":"_sd_"+to)).replace(/[^\w\-]+/g,"_").replace(/_+/g,"_")+".pdf";
+    toast(pdfDownload(doc, fn) ? "PDF ceklis scan AI berhasil dibuat." : "Gagal membuat PDF.");
+  }
+  document.getElementById("scanExport").addEventListener("click", openScanExportModal);
   async function scanBulk(res){
     const date = document.getElementById("scanDate").value || todayStr();
     const ai = projects.filter(p=>p.scanAi);
@@ -1961,6 +2079,218 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       return h + '</div>';
     }).join("") + '</div>';
   }
+
+  // ---- alat alur dokumen PDF (dipakai export All Akses & Knowledge) ----
+  function pdfHsl(h, sat, l){
+    sat /= 100; l /= 100;
+    const k = n=>(n + h/30) % 12, a = sat * Math.min(l, 1-l);
+    const f = n=>l - a*Math.max(-1, Math.min(k(n)-3, Math.min(9-k(n), 1)));
+    return [f(0), f(8), f(4)].map(x=>Math.round(x*255));
+  }
+  function akRgb(c){ let h = 7; for(const ch of String(c||"")) h = (h*31 + ch.charCodeAt(0)) % 360; return pdfHsl(h, 58, 50); }
+  function pdfFlowKit(doc, mx, availW, top, bottom){
+    const C = PDF_C, k = { y: top };
+    k.ensure = h=>{ if(k.y + h > bottom){ doc.addPage(); k.y = top; } };
+    k.lines = (text, size, style, color)=>{
+      const lh = size*0.5;
+      doc.splitTextToSize(pdfText(text), availW).forEach(l=>{
+        k.ensure(lh);
+        doc.setFont("helvetica", style||"normal"); doc.setFontSize(size); doc.setTextColor(...(color || C.body));
+        doc.text(l, mx, k.y); k.y += lh;
+      });
+      k.y += 1;
+    };
+    k.label = (t)=>{
+      k.ensure(12); k.y += 2;
+      doc.setFont("helvetica","bold"); doc.setFontSize(7.5); doc.setTextColor(...C.dim);
+      doc.text(pdfText(t).toUpperCase(), mx, k.y); k.y += 5;
+    };
+    k.chips = (names, bg, fg)=>{
+      doc.setFont("helvetica","normal"); doc.setFontSize(9);
+      let cx = mx; k.ensure(9);
+      names.forEach(n=>{
+        const t = pdfText(n), w = doc.getTextWidth(t) + 7;
+        if(cx + w > mx + availW){ cx = mx; k.y += 8; k.ensure(9); }
+        doc.setFillColor(...bg); doc.roundedRect(cx, k.y-4.4, w, 6.4, 3.2, 3.2, "F");
+        doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...fg);
+        doc.text(t, cx+3.5, k.y);
+        cx += w + 2.5;
+      });
+      k.y += 8;
+    };
+    k.callout = (text, tint, bar)=>{
+      doc.setFont("helvetica","normal"); doc.setFontSize(10);
+      const ls = doc.splitTextToSize(pdfText(text), availW-12), lh = 5, h = ls.length*lh + 7;
+      if(h > bottom - top - 12){ k.lines(text, 10, "normal"); return; }
+      k.ensure(h + 2);
+      doc.setFillColor(...tint); doc.roundedRect(mx, k.y, availW, h, 2.5, 2.5, "F");
+      doc.setFillColor(...bar); doc.roundedRect(mx, k.y, 1.8, h, 0.9, 0.9, "F");
+      doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.setTextColor(...C.body);
+      ls.forEach((l,i)=>doc.text(l, mx+7, k.y + 6 + i*lh));
+      k.y += h + 3;
+    };
+    // strip judul: avatar huruf + nama + perusahaan + teks kanan
+    k.strip = (name, company, rightText, rgb)=>{
+      k.ensure(30);
+      doc.setFillColor(...C.soft); doc.setDrawColor(...C.line); doc.setLineWidth(0.3);
+      doc.roundedRect(mx, k.y, availW, 12, 2.5, 2.5, "FD");
+      doc.setFillColor(...rgb); doc.circle(mx+7, k.y+6, 3.9, "F");
+      doc.setFont("helvetica","bold"); doc.setFontSize(9.5); doc.setTextColor(255,255,255);
+      doc.text(pdfText((name||"?").trim().charAt(0).toUpperCase()) || "?", mx+7, k.y+6, { align:"center", baseline:"middle" });
+      doc.setFont("helvetica","bold"); doc.setFontSize(11.5); doc.setTextColor(...C.ink);
+      doc.text(doc.splitTextToSize(pdfText(name), availW-70)[0] || "", mx+14, k.y+5.2);
+      doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...C.dim);
+      doc.text(pdfText(company), mx+14, k.y+9.4);
+      if(rightText) doc.text(pdfText(rightText), mx+availW-4, k.y+6.8, { align:"right" });
+      doc.setTextColor(0,0,0);
+      k.y += 16;
+    };
+    k.section = (text, rgb)=>{
+      k.ensure(26); k.y += 3;
+      doc.setFillColor(...rgb); doc.circle(mx+2, k.y-1.6, 1.8, "F");
+      doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.setTextColor(...C.ink);
+      doc.text(pdfText(text), mx+7, k.y);
+      doc.setTextColor(0,0,0); k.y += 7;
+    };
+    return k;
+  }
+
+  // ---- export PDF: All Akses ----
+  function akFilterList(o){
+    return akData.map(p=>{
+      if(!o.onlyProd) return p;
+      return { ...p, acc: (p.acc||[]).filter(a=>a.prod) };
+    }).filter(p=>{
+      if(o.company && (p.company||"Lainnya") !== o.company) return false;
+      if(o.onlyProd && !(p.acc||[]).length) return false;
+      return akMatch(p, o.q);
+    });
+  }
+  function openAkExportModal(){
+    if(!akData.length){ toast("Belum ada data All Akses."); return; }
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.innerHTML =
+      '<div class="modal-box">'+
+        '<h3 style="margin:0 0 4px; font-size:15px;">Export PDF All Akses</h3>'+
+        '<label>Perusahaan</label><select id="axCo"><option value="">Semua perusahaan</option>'+akCosList.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join("")+'</select>'+
+        '<label>Cari project / email / link</label><input type="text" id="axQ" placeholder="Kosongkan untuk semua">'+
+        '<label>Isi dokumen</label>'+
+        '<label class="opt-check"><input type="checkbox" id="axOnlyProd" style="width:auto;"> Hanya akun PROD</label>'+
+        '<label class="opt-check"><input type="checkbox" id="axLinks" checked style="width:auto;"> Sertakan link</label>'+
+        '<label class="opt-check"><input type="checkbox" id="axNote" checked style="width:auto;"> Sertakan catatan</label>'+
+        '<label class="opt-check"><input type="checkbox" id="axPass" style="width:auto;"> Sertakan password</label>'+
+        '<div class="hint" id="axPassHint" style="display:none; color:var(--danger);">PDF akan berisi password asli. Simpan dan kirim dengan hati-hati, hanya ke orang yang memang berhak.</div>'+
+        '<div class="hint" id="axCount" style="font-weight:700;"></div>'+
+        '<div class="modal-actions"><button id="axCancel">Batal</button><button class="primary" id="axOk">Export PDF</button></div>'+
+      '</div>';
+    document.body.appendChild(overlay);
+    const $f = q=>overlay.querySelector(q);
+    if(akCo !== null) $f("#axCo").value = akCo;
+    $f("#axQ").value = akQuery;
+    const opts = ()=>({ company:$f("#axCo").value, q:$f("#axQ").value.trim().toLowerCase(), onlyProd:$f("#axOnlyProd").checked,
+      links:$f("#axLinks").checked, note:$f("#axNote").checked, pass:$f("#axPass").checked });
+    const upd = ()=>{
+      const o = opts(), list = akFilterList(o);
+      $f("#axCount").textContent = list.length+" project · "+list.reduce((a,x)=>a+(x.acc||[]).length,0)+" akun akan diexport";
+      $f("#axPassHint").style.display = o.pass ? "" : "none";
+    };
+    overlay.addEventListener("input", upd); overlay.addEventListener("change", upd); upd();
+    overlay.onclick = ev=>{ if(ev.target===overlay) overlay.remove(); };
+    $f("#axCancel").onclick = ()=>overlay.remove();
+    $f("#axOk").onclick = ()=>{
+      const o = opts(), list = akFilterList(o);
+      if(!list.length){ toast("Tidak ada project untuk diekspor."); return; }
+      overlay.remove();
+      buildAkPdf(list, o);
+    };
+  }
+  function buildAkPdf(list, o){
+    if(!window.jspdf){ toast("Library PDF gagal dimuat."); return; }
+    const { jsPDF } = window.jspdf, C = PDF_C;
+    const doc = new jsPDF({ unit:"mm", format:"a4", orientation:"portrait" });
+    const pageW = doc.internal.pageSize.getWidth(), pageH = doc.internal.pageSize.getHeight();
+    const mx = 16, availW = pageW - mx*2, top = 18, bottom = pageH - 17;
+    const k = pdfFlowKit(doc, mx, availW, top, bottom);
+    const nAcc = list.reduce((a,x)=>a+(x.acc||[]).length, 0);
+    const nProd = list.reduce((a,x)=>a+(x.acc||[]).filter(y=>y.prod).length, 0);
+    const nLink = list.reduce((a,x)=>a+(x.links||[]).length, 0);
+    const cos = []; list.forEach(x=>{ const c = x.company || "Lainnya"; if(!cos.includes(c)) cos.push(c); });
+    const filt = [];
+    filt.push("Perusahaan: " + (o.company || "Semua"));
+    if(o.q) filt.push('Pencarian: "' + o.q + '"');
+    if(o.onlyProd) filt.push("Hanya akun PROD");
+    filt.push("Dibuat: " + new Date().toLocaleString("id-ID"));
+    const bh = pdfBanner(doc, o.pass ? "DAFTAR AKSES PROJECT  -  RAHASIA" : "DAFTAR AKSES PROJECT", o.company || "Semua Perusahaan", filt.join("   |   "), pageW);
+    k.y = bh + 9;
+    k.y = pdfStatRow(doc, mx, k.y, availW, [["Project", list.length, C.accent], ["Akun", nAcc, C.accent2], ["Akun PROD", nProd, C.bad], ["Link", nLink, C.ok]]) + 6;
+    if(o.pass) k.callout("Dokumen ini berisi password asli. Jangan dibagikan ke pihak yang tidak berwenang.", C.warnSoft, C.warn);
+    else if(true) k.callout("Password tidak disertakan dalam dokumen ini.", C.soft, C.accent);
+
+    cos.forEach(co=>{
+      const items = list.filter(x=>(x.company || "Lainnya") === co);
+      const rgb = akRgb(co);
+      k.section(co + "  ("+items.length+" project)", rgb);
+      items.forEach(pj=>{
+        const accs = pj.acc || [], links = pj.links || [];
+        k.strip(pj.name, akShortCo(co), accs.length+" akun  ·  "+links.length+" link", rgb);
+        if(o.links && links.length){
+          doc.setFont("helvetica","normal"); doc.setFontSize(9.5);
+          links.forEach(u=>{
+            k.ensure(6);
+            doc.setFont("helvetica","bold"); doc.setFontSize(7.5); doc.setTextColor(...C.dim); doc.text("LINK", mx, k.y);
+            doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.setTextColor(...C.chipText);
+            const shown = pdfText(akHost(u));
+            try{ doc.textWithLink(shown, mx+12, k.y, { url: akHref(u) }); }catch(e){ doc.text(shown, mx+12, k.y); }
+            if(/staging/i.test(u)){
+              const tw = doc.getTextWidth(shown);
+              doc.setFillColor(...C.warnSoft); doc.roundedRect(mx+12+tw+3, k.y-3.6, 14, 5, 2.5, 2.5, "F");
+              doc.setFont("helvetica","bold"); doc.setFontSize(7); doc.setTextColor(...C.warn); doc.text("staging", mx+12+tw+10, k.y-0.4, { align:"center" });
+            }
+            k.y += 5.6;
+          });
+          doc.setTextColor(0,0,0); k.y += 1.5;
+        }
+        if(accs.length){
+          const head = ["Peran", "User / Nomor"].concat(o.pass ? ["Password"] : [], ["Env"]);
+          const columnStyles = { 0:{ cellWidth:44 } };
+          const last = head.length - 1;
+          columnStyles[last] = { cellWidth:20, halign:"center" };
+          if(o.pass) columnStyles[2] = { cellWidth:46, font:"courier" };
+          doc.autoTable({
+            ...PDF_TABLE,
+            styles:{ ...PDF_TABLE.styles, fontSize:9.5, cellPadding:2.4 },
+            startY: k.y,
+            margin:{ left:mx, right:mx, top:top, bottom:17 },
+            tableWidth: availW,
+            head:[head],
+            body: accs.map(a=>[pdfText(a.r || "Akun"), pdfText(a.u || "-")].concat(o.pass ? [pdfText(a.p || "-")] : [], [""])),
+            columnStyles,
+            didDrawCell: data=>{
+              if(data.section!=="body" || data.column.index!==last) return;
+              const a = accs[data.row.index];
+              if(a && a.prod){
+                const cell = data.cell, w = cell.width - 4, h = 5.6;
+                doc.setFillColor(...C.badSoft); doc.roundedRect(cell.x+2, cell.y+cell.height/2-h/2, w, h, 2.8, 2.8, "F");
+                doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...C.bad);
+                doc.text("PROD", cell.x+cell.width/2, cell.y+cell.height/2, { align:"center", baseline:"middle" });
+                doc.setTextColor(0,0,0);
+              }
+            }
+          });
+          k.y = doc.lastAutoTable.finalY + 4;
+        } else {
+          k.lines("Belum ada akun tercatat.", 9.5, "italic", C.dim);
+        }
+        if(o.note && (pj.note||"").trim()) k.callout(pj.note.trim(), C.soft, C.accent);
+        k.y += 4;
+      });
+    });
+    pdfFooter(doc, "All Akses - " + (o.company || "Semua Perusahaan") + (o.pass ? "  (RAHASIA)" : ""), mx);
+    const fn = ("all_akses_" + (o.company || "semua") + (o.pass ? "_dengan_password" : "") + "_" + todayStr()).replace(/[^\w\-]+/g,"_").replace(/_+/g,"_") + ".pdf";
+    toast(pdfDownload(doc, fn) ? "PDF All Akses berhasil dibuat." : "Gagal membuat PDF.");
+  }
+  document.getElementById("akExport").addEventListener("click", openAkExportModal);
 
   // ---- tambah / edit project ----
   function akRowHtml(a){
@@ -2196,6 +2526,91 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         '<div class="ak-ttl"><div class="ak-name" title="'+esc(p.name)+'">'+esc(p.name)+'</div><div class="ak-co">'+esc(akShortCo(co))+'</div></div>'+knFlag(knLang(p))+'</div>';
     }).join("") + '</div>';
   }
+
+  // ---- export PDF: Knowledge ----
+  function knFilterList(o){
+    return knData.filter(p=>
+      (!o.company || (p.company||"Lainnya") === o.company) &&
+      (!o.lang || knLang(p) === o.lang) &&
+      knMatch(p, o.q));
+  }
+  function openKnExportModal(){
+    if(!knData.length){ toast("Belum ada data Knowledge."); return; }
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.innerHTML =
+      '<div class="modal-box">'+
+        '<h3 style="margin:0 0 4px; font-size:15px;">Export PDF Knowledge</h3>'+
+        '<label>Perusahaan</label><select id="kxCo"><option value="">Semua perusahaan</option>'+knCosList.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join("")+'</select>'+
+        '<label>Bahasa default</label><select id="kxLang"><option value="">Semua bahasa</option>'+Object.keys(KN_LANGS).map(k=>'<option value="'+k+'">'+esc(KN_LANGS[k])+'</option>').join("")+'</select>'+
+        '<label>Cari produk / fitur / peran</label><input type="text" id="kxQ" placeholder="Kosongkan untuk semua">'+
+        '<label>Isi dokumen</label>'+
+        '<div class="col-picker-list">'+
+          '<label><input type="checkbox" id="kxDesc" checked> Deskripsi</label>'+
+          '<label><input type="checkbox" id="kxFeat" checked> Fitur / modul</label>'+
+          '<label><input type="checkbox" id="kxRole" checked> Peran pengguna</label>'+
+          '<label><input type="checkbox" id="kxNote" checked> Catatan</label>'+
+        '</div>'+
+        '<div class="hint" id="kxCount" style="font-weight:700;"></div>'+
+        '<div class="modal-actions"><button id="kxCancel">Batal</button><button class="primary" id="kxOk">Export PDF</button></div>'+
+      '</div>';
+    document.body.appendChild(overlay);
+    const $f = q=>overlay.querySelector(q);
+    if(knCo !== null) $f("#kxCo").value = knCo;
+    $f("#kxQ").value = knQuery;
+    const opts = ()=>({ company:$f("#kxCo").value, lang:$f("#kxLang").value, q:$f("#kxQ").value.trim().toLowerCase(),
+      desc:$f("#kxDesc").checked, feat:$f("#kxFeat").checked, role:$f("#kxRole").checked, note:$f("#kxNote").checked });
+    const upd = ()=>{ $f("#kxCount").textContent = knFilterList(opts()).length + " produk akan diexport"; };
+    overlay.addEventListener("input", upd); overlay.addEventListener("change", upd); upd();
+    overlay.onclick = ev=>{ if(ev.target===overlay) overlay.remove(); };
+    $f("#kxCancel").onclick = ()=>overlay.remove();
+    $f("#kxOk").onclick = ()=>{
+      const o = opts(), list = knFilterList(o);
+      if(!list.length){ toast("Tidak ada produk untuk diekspor."); return; }
+      overlay.remove();
+      buildKnPdf(list, o);
+    };
+  }
+  function buildKnPdf(list, o){
+    if(!window.jspdf){ toast("Library PDF gagal dimuat."); return; }
+    const { jsPDF } = window.jspdf, C = PDF_C;
+    const doc = new jsPDF({ unit:"mm", format:"a4", orientation:"portrait" });
+    const pageW = doc.internal.pageSize.getWidth(), pageH = doc.internal.pageSize.getHeight();
+    const mx = 16, availW = pageW - mx*2, top = 18, bottom = pageH - 17;
+    const k = pdfFlowKit(doc, mx, availW, top, bottom);
+    const cos = []; list.forEach(x=>{ const c = x.company || "Lainnya"; if(!cos.includes(c)) cos.push(c); });
+    const nFeat = list.reduce((a,x)=>a+(x.features||[]).length, 0);
+    const nRole = list.reduce((a,x)=>a+(x.roles||[]).length, 0);
+    const filt = [];
+    filt.push("Perusahaan: " + (o.company || "Semua"));
+    if(o.lang) filt.push("Bahasa: " + KN_LANGS[o.lang]);
+    if(o.q) filt.push('Pencarian: "' + o.q + '"');
+    filt.push("Dibuat: " + new Date().toLocaleString("id-ID"));
+    const bh = pdfBanner(doc, "KNOWLEDGE PRODUK", o.company || "Semua Perusahaan", filt.join("   |   "), pageW);
+    k.y = bh + 9;
+    k.y = pdfStatRow(doc, mx, k.y, availW, [["Produk", list.length, C.accent], ["Perusahaan", cos.length, C.accent2], ["Fitur / modul", nFeat, C.ok], ["Peran", nRole, C.warn]]) + 4;
+
+    cos.forEach(co=>{
+      const items = list.filter(x=>(x.company || "Lainnya") === co);
+      const rgb = akRgb(co);
+      k.section(co + "  ("+items.length+" produk)", rgb);
+      items.forEach(pr=>{
+        const lg = knLang(pr);
+        k.strip(pr.name, akShortCo(co), lg ? "Bahasa default: " + KN_LANGS[lg] : "", rgb);
+        if((pr.tagline||"").trim()) k.lines(pr.tagline.trim(), 10.5, "bold", C.accent);
+        if(o.desc && (pr.desc||"").trim()) k.lines(pr.desc.trim(), 10);
+        const feats = pr.features || [], roles = pr.roles || [];
+        if(o.feat && feats.length){ k.label("Fitur / modul ("+feats.length+")"); k.chips(feats, C.chip, C.chipText); }
+        if(o.role && roles.length){ k.label("Peran pengguna ("+roles.length+")"); k.chips(roles, C.okSoft, [14,120,84]); }
+        if(o.note && (pr.note||"").trim()) k.callout(pr.note.trim(), C.warnSoft, C.warn);
+        k.y += 6;
+      });
+    });
+    pdfFooter(doc, "Knowledge - " + (o.company || "Semua Perusahaan"), mx);
+    const fn = ("knowledge_" + (o.company || "semua") + "_" + todayStr()).replace(/[^\w\-]+/g,"_").replace(/_+/g,"_") + ".pdf";
+    toast(pdfDownload(doc, fn) ? "PDF Knowledge berhasil dibuat." : "Gagal membuat PDF.");
+  }
+  document.getElementById("knExport").addEventListener("click", openKnExportModal);
 
   // ---- detail produk (popup) ----
   function openKnDetail(id){
@@ -2507,6 +2922,13 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         '<div class="hint" style="margin:0 0 6px;">Project: <b>'+esc(pid ? enhProjName(pid) : "Semua Project")+'</b> (ikut filter di halaman)</div>'+
         '<label>Status yang di-export</label>'+
         '<div class="col-picker-list">'+ENH_STATUS.map(s=>'<label><input type="checkbox" data-st="'+s+'" checked> '+s+'</label>').join('')+'</div>'+
+        '<label>Tanggal dibuat (opsional)</label>'+
+        '<div class="row-flex" style="flex-wrap:nowrap;">'+
+          '<input type="date" id="exFrom" style="flex:1; min-width:0;">'+
+          '<span style="font-size:12px; color:var(--text-dim);">s/d</span>'+
+          '<input type="date" id="exTo" style="flex:1; min-width:0;">'+
+        '</div>'+
+        '<div class="hint" style="margin:4px 0 0;">Kosongkan untuk semua tanggal. Isi salah satu untuk batas awal atau akhir saja.</div>'+
         '<label class="opt-check"><input type="checkbox" id="exImg" checked> Sertakan gambar</label>'+
         '<div class="modal-actions"><button id="exCancel">Batal</button><button class="primary" id="exOk">Export PDF</button></div>'+
       '</div>';
@@ -2517,17 +2939,21 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       const statuses = Array.from(overlay.querySelectorAll("[data-st]")).filter(c=>c.checked).map(c=>c.dataset.st);
       if(!statuses.length){ toast("Pilih minimal satu status."); return; }
       const withImg = overlay.querySelector("#exImg").checked;
+      let dFrom = overlay.querySelector("#exFrom").value, dTo = overlay.querySelector("#exTo").value;
+      if(dFrom && dTo && dFrom > dTo){ const tmp = dFrom; dFrom = dTo; dTo = tmp; }
       overlay.remove();
-      const rows = enhFiltered().filter(e=>statuses.includes(e.status))
+      const rows = enhFiltered().filter(e=>statuses.includes(e.status) && (!dFrom || (e.date||"") >= dFrom) && (!dTo || (e.date||"") <= dTo))
         .map(e=>({ ...e, projectName: enhProjName(e.projectId) }))
         .sort((a,b)=>(a.projectName||"").localeCompare(b.projectName||"") || (a.createdAt||0)-(b.createdAt||0));
       if(!rows.length){ toast("Tidak ada enhancement untuk diekspor."); return; }
-      buildEnhPdf(rows, !pid, withImg, pid ? enhProjName(pid) : "Semua Project", statuses);
+      const periode = (dFrom || dTo) ? (dFrom ? fmtDate(dFrom) : "awal")+" s/d "+(dTo ? fmtDate(dTo) : "sekarang") : "";
+      buildEnhPdf(rows, !pid, withImg, pid ? enhProjName(pid) : "Semua Project", statuses, periode);
     };
   }
-  async function buildEnhPdf(rows, includeProject, withImg, projLabel, statuses){
+  async function buildEnhPdf(rows, includeProject, withImg, projLabel, statuses, periode){
     if(!window.jspdf){ toast("Library PDF gagal dimuat."); return; }
     const { jsPDF } = window.jspdf;
+    const C = PDF_C;
     const doc = new jsPDF({ unit:"mm", format:"a4", orientation:"landscape" });
     const pageW = doc.internal.pageSize.getWidth();
     const mx = 12, availW = pageW - mx*2;
@@ -2538,87 +2964,63 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       return dims ? { dataUrl:r.imageData, w:dims.w, h:dims.h } : null;
     })) : [];
 
-    let y = 15;
-    doc.setFont("helvetica","bold"); doc.setFontSize(20); doc.setTextColor(0);
-    const titleLines = doc.splitTextToSize(pdfText("Laporan Enhancement - "+projLabel), availW);
-    doc.text(titleLines, mx, y);
-    y += (titleLines.length-1)*8 + 4;
-    doc.setDrawColor(109,94,245); doc.setLineWidth(0.9); doc.line(mx, y, mx+24, y);
-    y += 6;
-    doc.setFont("helvetica","normal"); doc.setFontSize(11.5); doc.setTextColor(0);
-    const meta = [
-      "Status: " + (statuses.length===ENH_STATUS.length ? "Semua status" : statuses.join(", ")),
-      "Dibuat: " + new Date().toLocaleString("id-ID")
-    ];
-    meta.forEach(t=>{ const ls = doc.splitTextToSize(t, availW); doc.text(ls, mx, y); y += ls.length*5.8; });
-    y += 1.5;
+    const subParts = [];
+    if(periode) subParts.push("Periode tanggal: " + periode);
+    subParts.push("Status: " + (statuses.length===ENH_STATUS.length ? "Semua status" : statuses.join(", ")));
+    subParts.push("Dibuat: " + new Date().toLocaleString("id-ID"));
+    const bh = pdfBanner(doc, "LAPORAN ENHANCEMENT", projLabel, subParts.join("   |   "), pageW);
+    let y = bh + 8;
     const counts = {}; ENH_STATUS.forEach(s=>counts[s]=0);
     rows.forEach(r=>{ if(counts[r.status]!==undefined) counts[r.status]++; });
-    doc.setFont("helvetica","bold");
-    const sum = doc.splitTextToSize("Total: "+rows.length+" enhancement   |   "+ENH_STATUS.map(s=>s+": "+counts[s]).join("   |   "), availW);
-    doc.text(sum, mx, y); y += sum.length*5.8;
-    doc.setFont("helvetica","normal");
+    y = pdfStatRow(doc, mx, y, availW, [["Total enhancement", rows.length, C.accent]].concat(ENH_STATUS.map(s=>[s, counts[s], pdfHex(ENH_COLOR[s])]))) + 6;
+    pdfStackBar(doc, mx, y, availW, ENH_STATUS.map(s=>({ n:counts[s], color:pdfHex(ENH_COLOR[s]) })), rows.length);
+    y += 9;
 
     const cols = [{ k:"no", label:"No", w:12 }];
     if(includeProject) cols.push({ k:"project", label:"Project", w:32 });
     cols.push({ k:"title", label:"Judul", w:55 });
     cols.push({ k:"desc", label:"Deskripsi" });
     if(withImg) cols.push({ k:"img", label:"Gambar", w:36 });
-    cols.push({ k:"priority", label:"Prioritas", w:27 });
-    cols.push({ k:"status", label:"Status", w:28 });
+    cols.push({ k:"priority", label:"Prioritas", w:28 });
+    cols.push({ k:"status", label:"Status", w:30 });
     cols.push({ k:"date", label:"Tanggal", w:30 });
     const fixed = cols.reduce((a,c)=>a+(c.w||0),0);
     const columnStyles = {};
-    cols.forEach((c,i)=>{ columnStyles[i] = { cellWidth: c.w || Math.max(40, availW-fixed) }; if(c.k==="no") columnStyles[i].halign = "center"; });
-    const imgIdx = cols.findIndex(c=>c.k==="img");
+    cols.forEach((c,i)=>{ columnStyles[i] = { cellWidth: c.w || Math.max(40, availW-fixed) }; if(c.k==="no") columnStyles[i].halign = "center"; if(c.k==="title") columnStyles[i].fontStyle = "bold"; });
+    const ci = k=>cols.findIndex(c=>c.k===k);
+    const imgIdx = ci("img"), priIdx = ci("priority"), stIdx = ci("status");
 
     doc.autoTable({
-      startY: y + 3,
-      margin: { left:mx, right:mx },
+      ...PDF_TABLE,
+      startY: y,
+      margin: { left:mx, right:mx, top:16, bottom:17 },
       tableWidth: availW,
       head: [cols.map(c=>c.label)],
       body: rows.map((r,ri)=>cols.map(c=>{
         switch(c.k){
           case "no": return String(ri+1);
-        case "project": return pdfText(r.projectName) || "-";
+          case "project": return pdfText(r.projectName) || "-";
           case "title": return pdfText(r.title) || "-";
           case "desc": return pdfText(r.desc) || "-";
           case "img": return { content:"", styles:{ minCellHeight:32 } };
-          case "priority": return r.priority || "Medium";
-          case "status": return r.status || "-";
+          case "priority": case "status": return "";
           case "date": return fmtDate(r.date);
           default: return "-";
         }
       })),
-      theme: "grid",
-      styles: { font:"helvetica", fontSize:11, textColor:[0,0,0], cellPadding:3.5, overflow:"linebreak", valign:"middle", lineColor:[170,172,185], lineWidth:0.25 },
-      headStyles: { fillColor:[225,222,250], textColor:[0,0,0], fontStyle:"bold", fontSize:11.5 },
-      alternateRowStyles: { fillColor:[246,247,250] },
       columnStyles,
       didDrawCell: data=>{
-        if(data.section!=="body" || data.column.index!==imgIdx) return;
-        const info = imgs[data.row.index];
-        const pad = 1.5, maxW = data.cell.width-pad*2, maxH = data.cell.height-pad*2;
-        if(info){
-          const sc = Math.min(maxW/info.w, maxH/info.h), dw = info.w*sc, dh = info.h*sc;
-          try{ doc.addImage(info.dataUrl, "JPEG", data.cell.x+(data.cell.width-dw)/2, data.cell.y+(data.cell.height-dh)/2, dw, dh); }catch(e){}
-        } else {
-          doc.setFontSize(9); doc.setTextColor(0);
-          doc.text("(tanpa gambar)", data.cell.x+data.cell.width/2, data.cell.y+data.cell.height/2, { align:"center", baseline:"middle" });
-          doc.setFontSize(11);
-        }
+        if(data.section!=="body") return;
+        const r = rows[data.row.index], c = data.column.index;
+        if(!r) return;
+        if(c===imgIdx) pdfDrawAttachment(doc, data, imgs[data.row.index]);
+        else if(c===priIdx) pdfPill(doc, data.cell, r.priority || "Medium", pdfHex(PRIORITY_COLOR[r.priority || "Medium"] || "#6c6f85"));
+        else if(c===stIdx) pdfPill(doc, data.cell, r.status || "-", pdfHex(ENH_COLOR[r.status] || "#6c6f85"));
       }
     });
 
-    try{
-      const blob = doc.output("blob");
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = "enhancement_" + projLabel.replace(/\W+/g,"_") + "_" + todayStr() + ".pdf";
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(()=>URL.revokeObjectURL(url), 4000);
-      toast("PDF berhasil dibuat.");
-    }catch(e){ toast("Gagal membuat PDF."); }
+    pdfFooter(doc, "Enhancement - " + projLabel, mx);
+    toast(pdfDownload(doc, "enhancement_" + projLabel.replace(/\W+/g,"_") + "_" + todayStr() + ".pdf") ? "PDF berhasil dibuat." : "Gagal membuat PDF.");
   }
   document.getElementById("enhExport").addEventListener("click", openEnhExportModal);
   renderEnh();
@@ -2767,6 +3169,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         '<label>Keputusan</label><textarea id="mmDec" rows="3" placeholder="Hal yang disepakati"></textarea>'+
         '<label>Action items</label><div id="mmAis"></div>'+
         '<div class="row-flex" style="margin-top:2px;"><button type="button" id="mmAiAdd">+ Action item</button></div>'+
+        '<div class="hint" style="margin:6px 0 0;">Saat disimpan, tiap action item otomatis masuk ke tab <b>Enhancement</b> (status Usulan, prioritas Medium). Centang selesai → status Selesai. Menghapus action item di sini tidak menghapus enhancement-nya.</div>'+
         '<label>Meeting berikutnya / catatan lain</label><input type="text" id="mmNext" placeholder="mis. Senin 12 Okt, 10:00 - review hasil perbaikan">'+
         '<div class="modal-actions">'+(cur?'<button class="danger-outline" id="mmDel" style="margin-right:auto;">Hapus</button>':'')+
           '<button id="mmCancel">Batal</button><button class="primary" id="mmSave">Simpan</button></div>'+
@@ -2785,7 +3188,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     $f("#mmDec").value = d.decisions || "";
     $f("#mmNext").value = d.nextMeeting || "";
 
-    const ais = (d.actionItems || []).map(a=>({ task:a.task||"", pic:a.pic||"", due:a.due||"", done:!!a.done }));
+    const ais = (d.actionItems || []).map(a=>({ task:a.task||"", pic:a.pic||"", due:a.due||"", done:!!a.done, enhId:a.enhId||"" }));
     function renderAis(){
       const box = $f("#mmAis");
       box.innerHTML = ais.length ? ais.map((a,i)=>
@@ -2794,6 +3197,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
           '<input type="text" class="mm-task" placeholder="Tindak lanjut" style="flex:1 1 200px; width:auto;" value="'+esc(a.task)+'">'+
           '<input type="text" class="mm-pic" placeholder="PIC" style="flex:0 1 120px; width:auto;" value="'+esc(a.pic)+'">'+
           '<input type="date" class="mm-due" style="flex:0 0 140px; width:auto;" value="'+esc(a.due)+'">'+
+          (a.enhId ? '<span class="mom-ai ok" title="Sudah masuk tab Enhancement">⇢ Enhancement</span>' : '')+
           '<button type="button" class="danger-outline mm-rm" title="Hapus action item">✕</button>'+
         '</div>').join("") : '<div class="hint" style="margin:0 0 6px;">Belum ada action item.</div>';
       box.querySelectorAll(".mom-airow").forEach(row=>{
@@ -2831,14 +3235,34 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         attendees: $f("#mmAtt").value.trim(), agenda: $f("#mmAgenda").value.trim(),
         discussion: $f("#mmDisc").value.trim(), decisions: $f("#mmDec").value.trim(),
         nextMeeting: $f("#mmNext").value.trim(),
-        actionItems: ais.filter(a=>a.task.trim()).map(a=>({ task:a.task.trim(), pic:a.pic.trim(), due:a.due||"", done:!!a.done }))
+        actionItems: ais.filter(a=>a.task.trim()).map(a=>({ task:a.task.trim(), pic:a.pic.trim(), due:a.due||"", done:!!a.done, enhId:a.enhId||"" }))
       };
       const btn = $f("#mmSave"); btn.disabled = true;
       try{
-        if(cur) await db.collection("meetings").doc(cur.id).update(data);
-        else await db.collection("meetings").add({ ...data, createdAt: Date.now() });
+        const batch = db.batch();
+        const meetRef = cur ? db.collection("meetings").doc(cur.id) : db.collection("meetings").doc();
+        const prevByEnh = {};
+        (cur && cur.actionItems || []).forEach(a=>{ if(a.enhId) prevByEnh[a.enhId] = a; });
+        let nNew = 0;
+        data.actionItems.forEach(a=>{
+          const meta = "Dari meeting: "+title+" ("+fmtDate(date)+")"+(a.pic ? "\nPIC: "+a.pic : "")+(a.due ? "\nDue: "+fmtDate(a.due) : "");
+          if(!a.enhId){
+            const eref = db.collection("enhancements").doc();
+            batch.set(eref, { title:a.task, desc:meta, projectId:data.projectId, priority:"Medium",
+              status: a.done ? "Selesai" : "Usulan", imageData:null, date:todayStr(), createdAt:Date.now(),
+              source:"meeting", meetingId:meetRef.id });
+            a.enhId = eref.id; nNew++;
+          } else if(enhItems.find(x=>x.id===a.enhId)){
+            const patch = { title:a.task, projectId:data.projectId };
+            const prev = prevByEnh[a.enhId];
+            if(prev && !!prev.done !== a.done){ patch.status = a.done ? "Selesai" : "Usulan"; patch.statusChangedDate = todayStr(); }
+            batch.update(db.collection("enhancements").doc(a.enhId), patch);
+          }
+        });
+        if(cur) batch.update(meetRef, data); else batch.set(meetRef, { ...data, createdAt: Date.now() });
+        await batch.commit();
         overlay.remove();
-        toast(cur ? "Catatan meeting diperbarui." : "Catatan meeting disimpan.");
+        toast((cur ? "Catatan meeting diperbarui." : "Catatan meeting disimpan.")+(nNew ? " "+nNew+" item masuk ke Enhancement." : ""));
       }catch(err){ btn.disabled = false; toast("Gagal menyimpan: "+err.message); }
     };
   }
@@ -2883,95 +3307,247 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     };
   }
 
+  // ---- gaya PDF bersama (MoM & ceklis scan AI) ----
+  const PDF_C = { accent:[109,94,245], accent2:[139,119,247], ink:[26,27,38], body:[48,50,64], dim:[108,111,133],
+    soft:[243,244,250], line:[227,229,240], chip:[233,230,253], chipText:[70,57,200],
+    ok:[23,166,115], okSoft:[225,246,237], bad:[224,54,60], badSoft:[252,226,227], warn:[224,138,28], warnSoft:[253,240,222], gray:[108,111,133], graySoft:[236,237,242] };
+  function pdfBanner(doc, label, title, sub, pageW){
+    const C = PDF_C, pad = 16;
+    doc.setFont("helvetica","bold"); doc.setFontSize(19);
+    const tl = doc.splitTextToSize(pdfText(title), pageW - pad*2 - 24).slice(0,3);
+    doc.setFont("helvetica","normal"); doc.setFontSize(9.5);
+    const sl = sub ? doc.splitTextToSize(pdfText(sub), pageW - pad*2 - 10).slice(0,3) : [];
+    const h = 22 + tl.length*8.5 + (sl.length ? sl.length*4.8 + 2 : 0);
+    doc.setFillColor(...C.accent); doc.rect(0, 0, pageW, h, "F");
+    doc.setFillColor(...C.accent2); doc.triangle(pageW-90, 0, pageW, 0, pageW, Math.min(h, 40), "F");
+    doc.setFillColor(...C.accent2); doc.rect(0, h, pageW, 1.4, "F");
+    doc.setTextColor(224,219,255); doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
+    doc.text(pdfText(label), pad, 12);
+    doc.setTextColor(255,255,255); doc.setFont("helvetica","bold"); doc.setFontSize(19);
+    tl.forEach((l,i)=>doc.text(l, pad, 21 + i*8.5));
+    doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.setTextColor(232,228,255);
+    sl.forEach((l,i)=>doc.text(l, pad, 21 + tl.length*8.5 - 1.5 + i*4.8));
+    doc.setTextColor(0,0,0);
+    return h + 1.4;
+  }
+  function pdfStat(doc, x, y, w, label, value, color){
+    const C = PDF_C;
+    doc.setFillColor(255,255,255); doc.setDrawColor(...C.line); doc.setLineWidth(0.3);
+    doc.roundedRect(x, y, w, 20, 2.5, 2.5, "FD");
+    doc.setFillColor(...color); doc.roundedRect(x, y, 2.2, 20, 1.1, 1.1, "F");
+    doc.setFont("helvetica","bold"); doc.setFontSize(17); doc.setTextColor(...color);
+    doc.text(String(value), x+7, y+11);
+    doc.setFont("helvetica","bold"); doc.setFontSize(7); doc.setTextColor(...C.dim);
+    doc.text(pdfText(label).toUpperCase(), x+7, y+16.5);
+    doc.setTextColor(0,0,0);
+  }
+  function pdfStatRow(doc, x, y, totalW, cards){
+    const gap = 4, w = (totalW - gap*(cards.length-1)) / cards.length;
+    cards.forEach((c,i)=>pdfStat(doc, x + i*(w+gap), y, w, c[0], c[1], c[2]));
+    return y + 20;
+  }
+  function pdfFooter(doc, leftText, mx){
+    const C = PDF_C, n = doc.getNumberOfPages();
+    const pageW = doc.internal.pageSize.getWidth(), pageH = doc.internal.pageSize.getHeight();
+    for(let i=1; i<=n; i++){
+      doc.setPage(i);
+      doc.setDrawColor(...C.line); doc.setLineWidth(0.3); doc.line(mx, pageH-12, pageW-mx, pageH-12);
+      doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...C.dim);
+      doc.text(pdfText(leftText), mx, pageH-7);
+      doc.text("Halaman "+i+" / "+n, pageW-mx, pageH-7, { align:"right" });
+    }
+    doc.setTextColor(0,0,0);
+  }
+  function pdfDownload(doc, filename){
+    try{
+      const blob = doc.output("blob"), url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 4000);
+      return true;
+    }catch(e){ return false; }
+  }
+
+  function pdfHex(h){ h = String(h).replace("#",""); return [0,2,4].map(i=>parseInt(h.substr(i,2),16)); }
+  function pdfTint(rgb, a){ a = a == null ? 0.86 : a; return rgb.map(c=>Math.round(c + (255-c)*a)); }
+  function pdfPill(doc, cell, label, fg){
+    const w = cell.width - 6, h = 6.4;
+    doc.setFillColor(...pdfTint(fg)); doc.roundedRect(cell.x+3, cell.y + cell.height/2 - h/2, w, h, 3.2, 3.2, "F");
+    doc.setFont("helvetica","bold"); doc.setFontSize(8.5); doc.setTextColor(...fg);
+    doc.text(pdfText(label), cell.x + cell.width/2, cell.y + cell.height/2, { align:"center", baseline:"middle" });
+    doc.setTextColor(0,0,0);
+  }
+  function pdfStackBar(doc, x, y, w, segs, total){
+    doc.setFillColor(...PDF_C.graySoft); doc.roundedRect(x, y, w, 3.6, 1.8, 1.8, "F");
+    if(!total) return;
+    let bx = x;
+    segs.forEach(sg=>{ const sw = w*sg.n/total; if(!sw) return; doc.setFillColor(...sg.color); doc.rect(bx, y, sw, 3.6, "F"); bx += sw; });
+  }
+  function pdfSectionTitle(doc, text, x, y){
+    doc.setFillColor(...PDF_C.accent); doc.roundedRect(x, y-5, 2, 7, 1, 1, "F");
+    doc.setFont("helvetica","bold"); doc.setFontSize(14); doc.setTextColor(...PDF_C.ink);
+    doc.text(pdfText(text), x+5, y);
+    doc.setTextColor(0,0,0);
+  }
+  function pdfDrawAttachment(doc, data, info){
+    const pad = 1.5, maxW = data.cell.width - pad*2, maxH = data.cell.height - pad*2;
+    if(info){
+      const sc = Math.min(maxW/info.w, maxH/info.h), dw = info.w*sc, dh = info.h*sc;
+      const dx = data.cell.x + (data.cell.width-dw)/2, dy = data.cell.y + (data.cell.height-dh)/2;
+      try{ doc.addImage(info.dataUrl, "JPEG", dx, dy, dw, dh); }catch(e){}
+      doc.setDrawColor(...PDF_C.line); doc.setLineWidth(0.3); doc.roundedRect(dx, dy, dw, dh, 1, 1, "S");
+    } else {
+      doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...PDF_C.dim);
+      doc.text("(tanpa gambar)", data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2, { align:"center", baseline:"middle" });
+      doc.setTextColor(0,0,0);
+    }
+  }
+  const PDF_TABLE = {
+    theme:"grid",
+    rowPageBreak:"avoid",
+    styles:{ font:"helvetica", fontSize:10, textColor:[48,50,64], cellPadding:3, overflow:"linebreak", valign:"middle", lineColor:[227,229,240], lineWidth:0.25 },
+    headStyles:{ fillColor:[109,94,245], textColor:[255,255,255], fontStyle:"bold", fontSize:9.5 },
+    alternateRowStyles:{ fillColor:[248,248,252] }
+  };
+
   async function buildMomPdf(list, label, opts){
     opts = opts || {};
     const withAi = opts.ai !== false;
     if(!window.jspdf){ toast("Library PDF gagal dimuat."); return; }
     const { jsPDF } = window.jspdf;
+    const C = PDF_C;
     const doc = new jsPDF({ unit:"mm", format:"a4", orientation:"portrait" });
     const pageW = doc.internal.pageSize.getWidth(), pageH = doc.internal.pageSize.getHeight();
-    const mx = 16, availW = pageW - mx*2, top = 18, bottom = pageH - 16;
+    const mx = 16, availW = pageW - mx*2, top = 18, bottom = pageH - 17;
     let y = top;
     const ensure = h=>{ if(y + h > bottom){ doc.addPage(); y = top; } };
+
     function lines(text, size, style, color){
       const lh = size*0.5;
       doc.splitTextToSize(pdfText(text), availW).forEach(l=>{
         ensure(lh);
-        doc.setFont("helvetica", style||"normal"); doc.setFontSize(size); doc.setTextColor.apply(doc, color || [0,0,0]);
+        doc.setFont("helvetica", style||"normal"); doc.setFontSize(size); doc.setTextColor(...(color || C.body));
         doc.text(l, mx, y); y += lh;
       });
+      y += 1;
     }
     function heading(t, extra){
       ensure(16 + (extra||0));
-      y += 3;
-      doc.setFont("helvetica","bold"); doc.setFontSize(11.5); doc.setTextColor(109,94,245);
-      doc.text(pdfText(t).toUpperCase(), mx, y);
-      y += 1.8; doc.setDrawColor(220,220,235); doc.setLineWidth(0.3); doc.line(mx, y, mx+availW, y);
-      y += 5.5; doc.setTextColor(0,0,0);
+      y += 4;
+      doc.setFillColor(...C.accent); doc.roundedRect(mx, y-4.2, 1.8, 5.6, 0.9, 0.9, "F");
+      doc.setFont("helvetica","bold"); doc.setFontSize(11.5); doc.setTextColor(...C.ink);
+      doc.text(pdfText(t), mx+4.5, y);
+      y += 6;
     }
-    function kv(k, v){
-      if(!v) return;
-      const ls = doc.splitTextToSize(pdfText(v), availW-34);
-      ensure(ls.length*5.4);
-      doc.setFont("helvetica","bold"); doc.setFontSize(10.5); doc.setTextColor(0,0,0);
-      doc.text(pdfText(k), mx, y);
-      doc.setFont("helvetica","normal");
-      ls.forEach(l=>{ doc.text(l, mx+34, y); y += 5.4; });
+    function callout(text, tint, bar){
+      doc.setFont("helvetica","normal"); doc.setFontSize(10.5);
+      const ls = doc.splitTextToSize(pdfText(text), availW-12), lh = 5.3, h = ls.length*lh + 7;
+      if(h > bottom - top - 12){ lines(text, 10.5, "normal"); return; }
+      ensure(h + 2);
+      doc.setFillColor(...tint); doc.roundedRect(mx, y, availW, h, 2.5, 2.5, "F");
+      doc.setFillColor(...bar); doc.roundedRect(mx, y, 1.8, h, 0.9, 0.9, "F");
+      doc.setFont("helvetica","normal"); doc.setFontSize(10.5); doc.setTextColor(...C.body);
+      ls.forEach((l,i)=>doc.text(l, mx+7, y + 6.2 + i*lh));
+      y += h + 3;
+    }
+    function infoCard(rows){
+      const colW = (availW - 12) / 2;
+      const prepared = rows.map(r=>r.map(c=>{
+        doc.setFont("helvetica","bold"); doc.setFontSize(10.5);
+        return { k:c[0], ls: doc.splitTextToSize(pdfText(c[1]) || "-", colW) };
+      }));
+      const rowH = prepared.map(r=>7 + Math.max(...r.map(c=>c.ls.length))*5.2 + 2);
+      const h = rowH.reduce((a,b)=>a+b, 0) + 4;
+      ensure(h + 2);
+      doc.setFillColor(...C.soft); doc.setDrawColor(...C.line); doc.setLineWidth(0.3);
+      doc.roundedRect(mx, y, availW, h, 3, 3, "FD");
+      let ry = y + 3;
+      prepared.forEach((r,ri)=>{
+        r.forEach((c,ci)=>{
+          const cx = mx + 6 + ci*(colW + 0);
+          doc.setFont("helvetica","bold"); doc.setFontSize(7); doc.setTextColor(...C.dim);
+          doc.text(pdfText(c.k).toUpperCase(), cx, ry + 4.2);
+          doc.setFont("helvetica","bold"); doc.setFontSize(10.5); doc.setTextColor(...C.ink);
+          c.ls.forEach((l,li)=>doc.text(l, cx, ry + 9.2 + li*5.2));
+        });
+        ry += rowH[ri];
+      });
+      y += h + 5;
+    }
+    function chips(names){
+      doc.setFont("helvetica","normal"); doc.setFontSize(9);
+      let cx = mx;
+      ensure(9);
+      names.forEach(n=>{
+        const t = pdfText(n), w = doc.getTextWidth(t) + 7;
+        if(cx + w > mx + availW){ cx = mx; y += 8; ensure(9); }
+        doc.setFillColor(...C.chip); doc.roundedRect(cx, y-4.4, w, 6.4, 3.2, 3.2, "F");
+        doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...C.chipText);
+        doc.text(t, cx+3.5, y);
+        cx += w + 2.5;
+      });
+      y += 8;
     }
     const tableStyle = {
       theme:"grid",
-      styles:{ font:"helvetica", fontSize:10, textColor:[0,0,0], cellPadding:2.8, overflow:"linebreak", valign:"middle", lineColor:[170,172,185], lineWidth:0.25 },
-      headStyles:{ fillColor:[225,222,250], textColor:[0,0,0], fontStyle:"bold" },
-      alternateRowStyles:{ fillColor:[246,247,250] }
+      styles:{ font:"helvetica", fontSize:10, textColor:C.body, cellPadding:3, overflow:"linebreak", valign:"middle", lineColor:C.line, lineWidth:0.25 },
+      headStyles:{ fillColor:C.accent, textColor:[255,255,255], fontStyle:"bold", fontSize:9.5 },
+      alternateRowStyles:{ fillColor:[248,248,252] }
     };
 
     function drawMeeting(m){
-      ensure(30);
-      doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(109,94,245);
-      doc.text("MINUTES OF MEETING", mx, y); y += 7;
-      lines(m.title || "(tanpa judul)", 17, "bold");
-      y += 1; doc.setDrawColor(109,94,245); doc.setLineWidth(0.9); doc.line(mx, y, mx+24, y); y += 6.5;
-      kv("Project", momProjName(m.projectId));
-      kv("Tanggal", momTimeLabel(m));
-      kv("Lokasi / Media", m.place);
-      kv("Notulis", m.notulis);
-      kv("Peserta", momAttendees(m).join(", "));
+      const bh = pdfBanner(doc, "MINUTES OF MEETING", m.title || "(tanpa judul)", null, pageW);
+      y = bh + 9;
+      const row1 = [["Project", momProjName(m.projectId)], ["Tanggal", momTimeLabel(m)]];
+      const row2 = [["Lokasi / Media", m.place || ""], ["Notulis", m.notulis || ""]];
+      infoCard((m.place || m.notulis) ? [row1, row2] : [row1]);
+      const att = momAttendees(m);
+      if(att.length){ heading("Peserta ("+att.length+")"); chips(att); }
       if((m.agenda||"").trim()){ heading("Agenda"); lines(m.agenda.trim(), 10.5); }
       if((m.discussion||"").trim()){ heading("Pembahasan"); lines(m.discussion.trim(), 10.5); }
-      if((m.decisions||"").trim()){ heading("Keputusan"); lines(m.decisions.trim(), 10.5); }
+      if((m.decisions||"").trim()){ heading("Keputusan"); callout(m.decisions.trim(), C.okSoft, C.ok); }
       const ai = withAi ? momAiList(m) : [];
       if(ai.length){
-        heading("Action Items", 22);
+        const open = ai.filter(a=>!a.done).length;
+        heading("Action Items  -  "+open+" terbuka dari "+ai.length, 22);
         doc.autoTable({
           ...tableStyle,
           startY: y,
-          margin:{ left:mx, right:mx, bottom:16 },
+          margin:{ left:mx, right:mx, top:top, bottom:17 },
           tableWidth: availW,
           head:[["No","Tindak Lanjut","PIC","Due Date","Status"]],
           body: ai.map((a,i)=>[String(i+1), pdfText(a.task), pdfText(a.pic) || "-", a.due ? fmtDate(a.due) : "-", a.done ? "Selesai" : "Belum"]),
-          columnStyles:{ 0:{ cellWidth:11, halign:"center" }, 2:{ cellWidth:30 }, 3:{ cellWidth:28 }, 4:{ cellWidth:22 } }
+          columnStyles:{ 0:{ cellWidth:11, halign:"center" }, 2:{ cellWidth:30 }, 3:{ cellWidth:28 }, 4:{ cellWidth:22, halign:"center" } },
+          didParseCell: data=>{
+            if(data.section !== "body") return;
+            const a = ai[data.row.index];
+            if(data.column.index === 4){ data.cell.styles.fontStyle = "bold"; data.cell.styles.textColor = a.done ? C.ok : C.warn; data.cell.styles.fillColor = a.done ? C.okSoft : C.warnSoft; }
+            if(data.column.index === 3 && a.due && !a.done && a.due < todayStr()){ data.cell.styles.textColor = C.bad; data.cell.styles.fontStyle = "bold"; }
+          }
         });
-        y = doc.lastAutoTable.finalY + 4;
+        y = doc.lastAutoTable.finalY + 5;
       }
-      if((m.nextMeeting||"").trim()){ heading("Meeting Berikutnya / Catatan"); lines(m.nextMeeting.trim(), 10.5); }
+      if((m.nextMeeting||"").trim()){ heading("Meeting Berikutnya / Catatan"); callout(m.nextMeeting.trim(), C.soft, C.accent); }
     }
 
     if(list.length > 1){
-      doc.setFont("helvetica","bold"); doc.setFontSize(20); doc.setTextColor(0,0,0);
-      const tl = doc.splitTextToSize(pdfText("Rekap Catatan Meeting - "+label), availW);
-      doc.text(tl, mx, y); y += (tl.length-1)*8 + 4;
-      doc.setDrawColor(109,94,245); doc.setLineWidth(0.9); doc.line(mx, y, mx+24, y); y += 7;
-      doc.setFont("helvetica","normal"); doc.setFontSize(11);
-      if(opts.periode){ doc.text(pdfText("Periode: "+opts.periode), mx, y); y += 6; }
-      doc.text(pdfText("Dibuat: "+new Date().toLocaleString("id-ID")), mx, y); y += 6;
-      doc.setFont("helvetica","bold");
-      doc.text(pdfText("Total: "+list.length+" meeting"), mx, y); y += 4;
+      const subParts = [];
+      if(opts.periode) subParts.push("Periode: "+opts.periode);
+      subParts.push("Dibuat: "+new Date().toLocaleString("id-ID"));
+      const bh = pdfBanner(doc, "REKAP CATATAN MEETING", label, subParts.join("   |   "), pageW);
+      y = bh + 9;
       const showProj = new Set(list.map(m=>m.projectId)).size > 1;
+      const allAi = list.reduce((a,m)=>a.concat(momAiList(m)), []);
+      const openAi = allAi.filter(a=>!a.done).length;
+      const cards = [["Total meeting", list.length, C.accent], ["Project", new Set(list.map(m=>m.projectId)).size, C.accent2]];
+      if(withAi){ cards.push(["Action item terbuka", openAi, C.warn]); cards.push(["Action item selesai", allAi.length - openAi, C.ok]); }
+      y = pdfStatRow(doc, mx, y, availW, cards) + 8;
       const head = ["No","Tanggal"].concat(showProj ? ["Project"] : [], ["Judul"], withAi ? ["Action Item Terbuka"] : []);
       doc.autoTable({
         ...tableStyle,
-        startY: y + 2,
-        margin:{ left:mx, right:mx, bottom:16 },
+        startY: y,
+        margin:{ left:mx, right:mx, top:top, bottom:17 },
         tableWidth: availW,
         head:[head],
         body: list.map((m,i)=>{
@@ -2986,24 +3562,9 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       drawMeeting(list[0]);
     }
 
-    const n = doc.getNumberOfPages();
-    for(let i=1; i<=n; i++){
-      doc.setPage(i);
-      doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(120,120,135);
-      doc.text("Halaman "+i+" / "+n, pageW - mx, pageH - 8, { align:"right" });
-      doc.text(pdfText("Catatan Meeting - "+label), mx, pageH - 8);
-    }
-
-    try{
-      const blob = doc.output("blob");
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      const base = list.length === 1 ? "MoM_"+label+"_"+(list[0].title||"meeting")+"_"+(list[0].date||todayStr()) : "MoM_"+label+"_"+todayStr();
-      a.href = url; a.download = base.replace(/[^\w\-]+/g,"_").replace(/_+/g,"_").slice(0,90) + ".pdf";
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(()=>URL.revokeObjectURL(url), 4000);
-      toast("PDF MoM berhasil dibuat.");
-    }catch(e){ toast("Gagal membuat PDF."); }
+    pdfFooter(doc, "Catatan Meeting - "+label, mx);
+    const base = list.length === 1 ? "MoM_"+label+"_"+(list[0].title||"meeting")+"_"+(list[0].date||todayStr()) : "MoM_"+label+"_"+todayStr();
+    toast(pdfDownload(doc, base.replace(/[^\w\-]+/g,"_").replace(/_+/g,"_").slice(0,90) + ".pdf") ? "PDF MoM berhasil dibuat." : "Gagal membuat PDF.");
   }
   renderMom();
 
@@ -3028,6 +3589,67 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         '<span class="dn"><b>'+(i+1)+'.</b> '+esc(x.p.name)+'</span>'+
         '<span class="dbar"><span style="width:'+(x[key]/max*100)+'%; background:'+color+';"></span></span>'+
         '<span class="dv">'+x[key]+'</span></div>').join("");
+  }
+
+  // ---- kata kunci yang sering muncul di bug report ----
+  const KW_STOP = new Set(("yang dan di ke dari untuk pada dengan tidak ada itu ini atau saat jika kalau akan bisa dapat sudah belum masih harus seharusnya "+
+    "karena agar supaya sebagai oleh juga lebih sangat setelah sebelum ketika tetapi namun adalah merupakan yaitu para bahwa hanya setiap semua lagi "+
+    "kok sih dong ya yg dg dgn tdk utk dr krn sdh blm jg aja saja pas lalu terus kemudian mau ingin perlu butuh bukan tapi kita kami saya anda mereka dia ia "+
+    "hal cara jadi menjadi sesuai seperti antara dalam bagi tentang hingga sampai mohon tolong kondisi diharapkan sekarang existing expected current "+
+    "bug issue ga gk ok to of in on at is it be as by an or if so no we he me my up do go the and for not with when should can are this that but from was were "+
+    "ketika sedang telah pernah dulu nanti bila apabila maka lalu pun lah kah nya").split(" "));
+  let kwScope = "all", kwActive = "";
+  function kwTokens(e){
+    return pdfText((e.existing||"")+" "+(e.expected||"")).toLowerCase()
+      .replace(/https?:\/\/\S+/g, " ")
+      .replace(/[^a-z0-9\u00C0-\u00FF]+/g, " ")
+      .split(" ").filter(w=>w.length>=2 && !/^\d+$/.test(w));
+  }
+  function kwCount(list){
+    const uni = {}, bi = {};
+    list.forEach(e=>{
+      const t = kwTokens(e), su = new Set(), sb = new Set();
+      t.forEach((w,i)=>{
+        if(KW_STOP.has(w)) return;
+        su.add(w);
+        const n = t[i+1];
+        if(n && !KW_STOP.has(n)) sb.add(w+" "+n);
+      });
+      su.forEach(w=>{ uni[w] = (uni[w]||0)+1; });
+      sb.forEach(w=>{ bi[w] = (bi[w]||0)+1; });
+    });
+    const top = (o,n)=>Object.keys(o).filter(k=>o[k]>=2).map(k=>({ w:k, n:o[k] })).sort((a,b)=>b.n-a.n || a.w.localeCompare(b.w)).slice(0,n);
+    return { uni: top(uni,12), bi: top(bi,8) };
+  }
+  function kwBars(items, total, color){
+    if(!items.length) return '<div class="hint" style="margin:0;">Belum ada kata yang muncul di minimal 2 bug.</div>';
+    const max = items[0].n;
+    return items.map((x,i)=>
+      '<div class="dbar-row" data-kw="'+esc(x.w)+'" title="'+x.n+' bug ('+Math.round(x.n/total*100)+'%) — klik untuk melihat bug-nya"'+(kwActive===x.w ? ' style="background:var(--surface-2);"' : '')+'>'+
+        '<span class="dn"><b>'+(i+1)+'.</b> '+esc(x.w)+'</span>'+
+        '<span class="dbar"><span style="width:'+(x.n/max*100)+'%; background:'+color+';"></span></span>'+
+        '<span class="dv">'+x.n+'</span></div>').join("");
+  }
+  function kwCardHtml(r){
+    const list = kwScope==="all" ? entries : entries.filter(e=>dashIn(e.date, r));
+    const total = list.length;
+    const scopeBtn = (k,l)=>'<button type="button" data-kw-scope="'+k+'" class="'+(kwScope===k?'primary':'')+'" style="padding:3px 10px; font-size:11px;">'+l+'</button>';
+    let h = '<div class="dcard span2"><h3>Kata kunci yang sering muncul<span class="sub" style="display:flex; gap:6px; align-items:center;">'+total+' bug dianalisis '+scopeBtn("all","Semua waktu")+scopeBtn("range","Periode ini")+'</span></h3>';
+    if(total < 2){
+      return h + '<div class="hint" style="margin:0;">Belum cukup data bug untuk dianalisis.</div></div>';
+    }
+    const k = kwCount(list);
+    h += '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:6px 24px;">'+
+      '<div><div class="hint" style="margin:0 0 6px; font-weight:700;">Kata</div>'+kwBars(k.uni, total, "#6d5ef5")+'</div>'+
+      '<div><div class="hint" style="margin:0 0 6px; font-weight:700;">Frasa 2 kata</div>'+kwBars(k.bi, total, "#9b7cf6")+'</div></div>'+
+      '<div class="hint">Angka = jumlah bug yang menyebut kata/frasa itu di kolom Existing dan Expected (satu bug dihitung sekali). Kata umum seperti "yang", "tidak", "bug" disaring. Klik kata untuk melihat bug-nya.</div>';
+    if(kwActive){
+      const matches = list.filter(e=>(" "+kwTokens(e).join(" ")+" ").includes(" "+kwActive+" "))
+        .sort((a,b)=>(b.date||"").localeCompare(a.date||"")).slice(0,10);
+      h += '<div style="margin-top:12px;"><div class="hint" style="margin:0 0 6px; font-weight:700;">Bug yang menyebut "'+esc(kwActive)+'" ('+matches.length+(matches.length===10?'+':'')+')</div>'+
+        matches.map(e=>'<div class="dold" data-dash-entry="'+e.id+'"><div class="t"><b>'+esc(enhProjName(e.projectId))+' · '+esc(e.status)+' · '+esc(e.priority||"Medium")+'</b><span>'+esc(pdfText(e.existing) || "(belum diisi)")+'</span></div><span class="age">'+fmtDate(e.date)+'</span></div>').join("")+'</div>';
+    }
+    return h + '</div>';
   }
 
   function renderDash(){
@@ -3135,6 +3757,9 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       '<div class="status-summary" style="margin:0 0 8px;">'+ENH_STATUS.map(s=>'<span class="chip" style="color:'+ENH_COLOR[s]+';">'+s+': '+ec[s]+'</span>').join("")+'</div>'+
       '<div class="hint" style="margin:0;">'+(ec["Usulan"]+ec["Dikerjakan"])+' enhancement masih menunggu (Usulan + Dikerjakan).</div></div>';
 
+    // kata kunci bug report
+    html += kwCardHtml(r);
+
     // tabel per project
     const rows = byProj.filter(x=>x.un||x.rep||x.res).sort((a,b)=>b.un-a.un || b.rep-a.rep);
     html += '<div class="dcard span2"><h3>Ringkasan per project<span class="sub">klik baris untuk membuka di Kelola Bug</span></h3>'+
@@ -3146,6 +3771,10 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   }
   document.getElementById("dashRange").addEventListener("change", renderDash);
   document.getElementById("dashWrap").addEventListener("click", e=>{
+    const sc = e.target.closest("[data-kw-scope]");
+    if(sc){ kwScope = sc.dataset.kwScope; kwActive = ""; renderDash(); return; }
+    const kw = e.target.closest("[data-kw]");
+    if(kw){ kwActive = kwActive===kw.dataset.kw ? "" : kw.dataset.kw; renderDash(); return; }
     const en = e.target.closest("[data-dash-entry]");
     if(en){ openEntryModal(en.dataset.dashEntry); return; }
     const pj = e.target.closest("[data-dash-proj]");
@@ -3369,58 +3998,37 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   async function buildAndSavePdf(title, rows, includeProjectCol, filenameBase, selectedCols, aiRows){
     if(!window.jspdf){ toast("Library PDF gagal dimuat."); return; }
     const { jsPDF } = window.jspdf;
+    const C = PDF_C;
     const cols = selectedCols || { project:true, existingImg:true, existing:true, expected:true, expectedImg:true, priority:true, dueDate:true, status:true, date:true };
     const activeColCount = Object.keys(cols).filter(k=>cols[k] && (k!=="project" || includeProjectCol)).length;
     // Sedikit isian & kolom -> potrait cukup. Banyak isian atau banyak kolom -> landscape biar tidak sempit.
     const orientation = (rows.length <= 8 && activeColCount <= 5) ? "portrait" : "landscape";
     const doc = new jsPDF({ unit:"mm", format:"a4", orientation });
 
-    const needExistingImgs = includeProjectCol!==null && cols.existingImg;
-    const needExpectedImgs = cols.expectedImg;
-    const existingImgs = needExistingImgs ? await Promise.all(rows.map(async r=>{
-      if(!r.imageData) return null;
-      const dims = await loadImageDims(r.imageData);
-      return dims ? { dataUrl: r.imageData, w: dims.w, h: dims.h } : null;
+    const loadImgs = (need, field)=> need ? Promise.all(rows.map(async r=>{
+      if(!r[field]) return null;
+      const dims = await loadImageDims(r[field]);
+      return dims ? { dataUrl: r[field], w: dims.w, h: dims.h } : null;
     })) : [];
-    const expectedImgs = needExpectedImgs ? await Promise.all(rows.map(async r=>{
-      if(!r.expectedImageData) return null;
-      const dims = await loadImageDims(r.expectedImageData);
-      return dims ? { dataUrl: r.expectedImageData, w: dims.w, h: dims.h } : null;
-    })) : [];
+    const existingImgs = await loadImgs(includeProjectCol!==null && cols.existingImg, "imageData");
+    const expectedImgs = await loadImgs(cols.expectedImg, "expectedImageData");
 
-    // ---- Header rapi: judul singkat + baris info (auto wrap, tidak akan terpotong) ----
     const T = (typeof title === "string") ? { main:title, meta:[] } : title;
-    const pageW = doc.internal.pageSize.getWidth();
-    const mx = 12, maxTextW = pageW - mx*2;
-    let y = 15;
-    doc.setFont("helvetica","bold"); doc.setFontSize(20); doc.setTextColor(0);
-    const mainLines = doc.splitTextToSize(pdfText(T.main), maxTextW);
-    doc.text(mainLines, mx, y);
-    y += (mainLines.length-1)*8 + 4;
-    doc.setDrawColor(109,94,245); doc.setLineWidth(0.9);
-    doc.line(mx, y, mx+24, y);
-    y += 6;
-    doc.setFont("helvetica","normal"); doc.setFontSize(11.5); doc.setTextColor(0);
-    T.meta.concat(["Dibuat: " + new Date().toLocaleString("id-ID")]).forEach(t=>{
-      const ls = doc.splitTextToSize(pdfText(t), maxTextW);
-      doc.text(ls, mx, y);
-      y += ls.length*5.8;
-    });
-    y += 1.5;
+    const pageW = doc.internal.pageSize.getWidth(), pageH = doc.internal.pageSize.getHeight();
+    const mx = 12, availW = pageW - mx*2;
+    const parts = T.main.split(" \u2014 ");
+    const label = parts.length > 1 ? parts[0].toUpperCase() : "LAPORAN BUG";
+    const bannerTitle = parts.length > 1 ? parts.slice(1).join(" - ") : T.main;
+    const bh = pdfBanner(doc, label, bannerTitle, T.meta.concat(["Dibuat: " + new Date().toLocaleString("id-ID")]).join("   |   "), pageW);
+    let y = bh + 8;
 
-    // total bug per status summary line
     const counts = {}; STATUS_OPTS.forEach(s=>counts[s]=0);
     rows.forEach(r=>{ if(counts[r.status]===undefined) counts[r.status]=0; counts[r.status]++; });
-    const summaryLine = "Total: " + rows.length + " bug   |   " + STATUS_OPTS.map(s=>s+": "+counts[s]).join("   |   ");
-    doc.setFont("helvetica","bold"); doc.setFontSize(11.5); doc.setTextColor(0);
-    const sumLines = doc.splitTextToSize(summaryLine, maxTextW);
-    doc.text(sumLines, mx, y);
-    y += sumLines.length*5.8;
-    doc.setFont("helvetica","normal");
+    y = pdfStatRow(doc, mx, y, availW, [["Total bug", rows.length, C.accent]].concat(STATUS_OPTS.map(s=>[s, counts[s], pdfHex(STATUS_COLOR[s])]))) + 6;
+    pdfStackBar(doc, mx, y, availW, STATUS_OPTS.map(s=>({ n:counts[s], color:pdfHex(STATUS_COLOR[s]) })), rows.length);
+    y += 9;
     const headerBottom = y;
-    doc.setTextColor(0);
 
-    // build column definitions based on user selection
     const colDefs = [];
     if(includeProjectCol && cols.project) colDefs.push({ key:"project", label:"Project", width:30 });
     if(cols.existingImg) colDefs.push({ key:"existingImg", label:"Existing (Gbr)", width:34 });
@@ -3434,132 +4042,96 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     if(rows.length && !colDefs.length){ toast("Pilih minimal satu kolom."); return; }
     colDefs.unshift({ key:"no", label:"No", width:12 });
 
-    const head = [colDefs.map(c=>c.label)];
-    const existImgColIdx = colDefs.findIndex(c=>c.key==="existingImg");
-    const expImgColIdx = colDefs.findIndex(c=>c.key==="expectedImg");
-
+    const idx = k=>colDefs.findIndex(c=>c.key===k);
+    const existImgColIdx = idx("existingImg"), expImgColIdx = idx("expectedImg"), priIdx = idx("priority"), stIdx = idx("status"), dueIdx = idx("dueDate");
     const body = rows.map((r,ri)=>colDefs.map(c=>{
       switch(c.key){
         case "no": return String(ri+1);
         case "project": return pdfText(r.projectName) || "-";
-        case "existingImg": return { content:"", styles:{ minCellHeight: 32 } };
+        case "existingImg": case "expectedImg": return { content:"", styles:{ minCellHeight: 32 } };
         case "existing": return pdfText(r.existing) || "-";
         case "expected": return pdfText(r.expected) || "-";
-        case "expectedImg": return { content:"", styles:{ minCellHeight: 32 } };
-        case "priority": return r.priority || "Medium";
+        case "priority": case "status": return "";
         case "dueDate": return r.dueDate ? fmtDate(r.dueDate) : "-";
-        case "status": return r.status || "-";
         case "date": return fmtDate(r.date) + (r.isCarryOver ? "\n(carry-over)" : "");
         default: return "-";
       }
     }));
 
-    // Lebar SEMUA kolom dipatok eksplisit. Kolom teks (Existing/Expected) berbagi sisa lebar halaman
-    // secara merata, jadi teks panjang tanpa spasi (mis. string QRIS) tidak bisa lagi
-    // "menelan" lebar kolom lain dan tabel tidak terpecah ke samping antar halaman.
-    const availW = pageW - mx*2;
+    // Lebar SEMUA kolom dipatok eksplisit supaya teks panjang tanpa spasi tidak memecah tabel ke samping.
     const fixedSum = colDefs.reduce((a,c)=>a+(c.width||0),0);
     const textCols = colDefs.filter(c=>!c.width);
     const textW = textCols.length ? Math.max(25, (availW - fixedSum)/textCols.length) : 0;
     const columnStyles = {};
     colDefs.forEach((c,i)=>{ columnStyles[i] = { cellWidth: c.width || textW }; if(c.key==="no") columnStyles[i].halign = "center"; });
 
-    function drawAttachment(data, info){
-      const pad = 1.5;
-      const maxW = data.cell.width - pad*2;
-      const maxH = data.cell.height - pad*2;
-      if(info){
-        const scale = Math.min(maxW/info.w, maxH/info.h);
-        const dw = info.w*scale, dh = info.h*scale;
-        const dx = data.cell.x + (data.cell.width-dw)/2;
-        const dy = data.cell.y + (data.cell.height-dh)/2;
-        try{ doc.addImage(info.dataUrl, "JPEG", dx, dy, dw, dh); }catch(e){}
-      } else {
-        doc.setFontSize(9); doc.setTextColor(0);
-        doc.text("(tanpa gambar)", data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2, { align:"center", baseline:"middle" });
-        doc.setFontSize(11); doc.setTextColor(0);
-      }
-    }
-
     if(rows.length) doc.autoTable({
-      startY: headerBottom + 3,
-      margin: { left: mx, right: mx },
+      ...PDF_TABLE,
+      startY: headerBottom,
+      margin: { left: mx, right: mx, top: 16, bottom: 17 },
       tableWidth: textCols.length ? availW : "auto",
-      head, body,
-      theme: "grid",
-      styles: { font:"helvetica", fontSize:11, textColor:[0,0,0], cellPadding:3.5, overflow:"linebreak", valign:"middle", lineColor:[170,172,185], lineWidth:0.25 },
-      headStyles: { fillColor:[225,222,250], textColor:[0,0,0], fontStyle:"bold", fontSize:11.5 },
-      alternateRowStyles: { fillColor:[246,247,250] },
+      head: [colDefs.map(c=>c.label)], body,
       columnStyles,
+      didParseCell: data=>{
+        if(data.section!=="body" || data.column.index!==dueIdx) return;
+        const r = rows[data.row.index];
+        if(r && r.dueDate && r.dueDate < todayStr() && UNRESOLVED_STATUSES.includes(r.status)){ data.cell.styles.textColor = C.bad; data.cell.styles.fontStyle = "bold"; }
+      },
       didDrawCell: data=>{
         if(data.section!=="body") return;
-        if(data.column.index===existImgColIdx) drawAttachment(data, existingImgs[data.row.index]);
-        else if(data.column.index===expImgColIdx) drawAttachment(data, expectedImgs[data.row.index]);
+        const r = rows[data.row.index], ci = data.column.index;
+        if(!r) return;
+        if(ci===existImgColIdx) pdfDrawAttachment(doc, data, existingImgs[data.row.index]);
+        else if(ci===expImgColIdx) pdfDrawAttachment(doc, data, expectedImgs[data.row.index]);
+        else if(ci===priIdx) pdfPill(doc, data.cell, r.priority || "Medium", pdfHex(PRIORITY_COLOR[r.priority || "Medium"] || "#6c6f85"));
+        else if(ci===stIdx) pdfPill(doc, data.cell, r.status || "-", pdfHex(STATUS_COLOR[r.status] || "#6c6f85"));
       }
     });
 
-    // ---- Section khusus: Hasil Test AI ----
+    // ---- Section: Hasil Test AI ----
     if(aiRows && aiRows.length){
-      const pageH = doc.internal.pageSize.getHeight();
-      let y2 = (rows.length && doc.lastAutoTable) ? doc.lastAutoTable.finalY + 12 : headerBottom + 8;
-      if(y2 > pageH - 45){ doc.addPage(); y2 = 16; }
-      doc.setFont("helvetica","bold"); doc.setFontSize(16); doc.setTextColor(0);
-      doc.text("Hasil Test AI", mx, y2);
-      doc.setDrawColor(109,94,245); doc.setLineWidth(0.9);
-      doc.line(mx, y2+2.5, mx+24, y2+2.5);
+      let y2 = (rows.length && doc.lastAutoTable) ? doc.lastAutoTable.finalY + 14 : headerBottom + 4;
+      if(y2 > pageH - 75){ doc.addPage(); y2 = 22; }
+      pdfSectionTitle(doc, "Hasil Test AI", mx, y2);
       const ac = { success:0, fail:0, none:0 };
       aiRows.forEach(r=>{ ac[r.state]++; });
-      doc.setFont("helvetica","bold"); doc.setFontSize(11.5); doc.setTextColor(0);
-      doc.text("Total: "+aiRows.length+"   |   Berhasil: "+ac.success+"   |   Gagal: "+ac.fail+"   |   Belum: "+ac.none, mx, y2+10);
-      doc.setFont("helvetica","normal");
+      y2 = pdfStatRow(doc, mx, y2 + 6, availW, [["Total", aiRows.length, C.accent], ["Berhasil", ac.success, C.ok], ["Gagal", ac.fail, C.bad], ["Belum", ac.none, C.gray]]) + 6;
 
       const aiCols = [{ label:"No", width:12 }, { label:"Tanggal", width:34 }];
       if(includeProjectCol) aiCols.push({ label:"Project", width:46 });
-      aiCols.push({ label:"Hasil", width:28 });
+      aiCols.push({ label:"Hasil", width:30 });
       aiCols.push({ label:"Catatan" });
       const hasilIdx = aiCols.findIndex(c=>c.label==="Hasil");
       const aiFixed = aiCols.reduce((a,c)=>a+(c.width||0),0);
       const aiStyles = {};
       aiCols.forEach((c,i)=>{ aiStyles[i] = { cellWidth: c.width || Math.max(30, availW - aiFixed) }; if(c.label==="No") aiStyles[i].halign = "center"; });
       const AI_LABEL = { success:"Berhasil", fail:"Gagal", none:"Belum" };
-      const AI_RGB = { success:[0,0,0], fail:[0,0,0], none:[0,0,0] };
+      const AI_RGB = { success:C.ok, fail:C.bad, none:C.gray };
       doc.autoTable({
-        startY: y2 + 14,
-        margin: { left: mx, right: mx },
+        ...PDF_TABLE,
+        startY: y2,
+        margin: { left: mx, right: mx, top: 16, bottom: 17 },
         tableWidth: availW,
         head: [aiCols.map(c=>c.label)],
         body: aiRows.map((r,ri)=>{
           const row = [String(ri+1), fmtDate(r.date)];
           if(includeProjectCol) row.push(pdfText(r.projectName));
-          row.push(AI_LABEL[r.state]);
+          row.push("");
           row.push(pdfText(r.note) || "-");
           return row;
         }),
-        theme: "grid",
-        styles: { font:"helvetica", fontSize:11, textColor:[0,0,0], cellPadding:3.5, overflow:"linebreak", valign:"middle", lineColor:[170,172,185], lineWidth:0.25 },
-        headStyles: { fillColor:[225,222,250], textColor:[0,0,0], fontStyle:"bold", fontSize:11.5 },
-        alternateRowStyles: { fillColor:[246,247,250] },
         columnStyles: aiStyles,
-        didParseCell: data=>{
+        didDrawCell: data=>{
           if(data.section==="body" && data.column.index===hasilIdx){
-            const st = aiRows[data.row.index].state;
-            data.cell.styles.textColor = AI_RGB[st];
-            data.cell.styles.fontStyle = "bold";
+            const ar = aiRows[data.row.index];
+            if(ar) pdfPill(doc, data.cell, AI_LABEL[ar.state], AI_RGB[ar.state]);
           }
         }
       });
     }
 
-    const blob = doc.output("blob");
-    const filename = filenameBase + ".pdf";
-    try{
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = filename;
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(()=>URL.revokeObjectURL(url), 4000);
-      toast("PDF berhasil dibuat.");
-    }catch(e){ toast("Gagal membuat PDF."); }
+    pdfFooter(doc, T.main.replace(" \u2014 ", " - "), mx);
+    toast(pdfDownload(doc, filenameBase + ".pdf") ? "PDF berhasil dibuat." : "Gagal membuat PDF.");
   }
 
   document.getElementById("btnExportProj").addEventListener("click", ()=>{
