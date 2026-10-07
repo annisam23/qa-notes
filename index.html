@@ -3,7 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Daily Report QA Seleris </title>
+<meta name="theme-color" content="#f6f8fc">
+<title>QA Workspace — Seleris</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+  try {
+    const savedTheme = localStorage.getItem("qa_theme");
+    if (savedTheme === "light" || savedTheme === "dark") document.documentElement.dataset.theme = savedTheme;
+  } catch (_) {}
+</script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -483,7 +493,6 @@
   .dlegend i { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
   .dtrend { width:100%; height:auto; display:block; color:var(--text-dim); }
   .dscan-bar { display:flex; height:10px; border-radius:6px; overflow:hidden; background:var(--surface-2); margin:10px 0 8px; }
-  /* ===== Catatan Meeting (MoM) ===== */
   .mom-group { margin-top:18px; }
   .mom-group:first-child { margin-top:4px; }
   .mom-ghead { display:flex; align-items:center; gap:8px; margin:0 0 10px; font-size:13.5px; font-weight:800; }
@@ -503,6 +512,275 @@
   .mom-form-row { display:flex; gap:10px; flex-wrap:wrap; }
   .mom-form-row > div { flex:1 1 150px; min-width:0; }
   .mom-airow { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:6px; }
+</style>
+<style id="qa-workspace-design">
+  :root {
+    --bg:#f6f8fc; --surface:#ffffff; --surface-2:#f7f9fc; --border:#e5eaf2;
+    --text:#18243b; --text-dim:#738097; --accent:#6153db; --accent-2:#9185f6;
+    --accent-text:#ffffff; --accent-grad:linear-gradient(135deg,#6758dc,#8274eb);
+    --danger:#e05262; --ok:#139978; --warn:#d68a35; --gray:#7b8798;
+    --shadow:0 5px 24px rgba(30,48,83,.045),0 1px 3px rgba(30,48,83,.035);
+    --shadow-lift:0 20px 45px rgba(26,40,75,.12),0 3px 12px rgba(26,40,75,.06);
+    color-scheme:light;
+  }
+  :root[data-theme="dark"] {
+    --bg:#0d1422; --surface:#172132; --surface-2:#1d2a3e; --border:#2a3a52;
+    --text:#f1f5fc; --text-dim:#a6b3c8; --accent:#a99cff; --accent-2:#c5bdff;
+    --accent-text:#101527; --accent-grad:linear-gradient(135deg,#a99cff,#c8b8ff);
+    --danger:#ff8691; --ok:#57d7b1; --warn:#f2b462; --gray:#a6b3c8;
+    --shadow:0 7px 26px rgba(0,0,0,.16); --shadow-lift:0 22px 50px rgba(0,0,0,.35);
+    color-scheme:dark;
+  }
+  @media (prefers-color-scheme:dark) {
+    :root:not([data-theme="light"]):not([data-theme="dark"]) {
+      --bg:#0d1422; --surface:#172132; --surface-2:#1d2a3e; --border:#2a3a52;
+      --text:#f1f5fc; --text-dim:#a6b3c8; --accent:#a99cff; --accent-2:#c5bdff;
+      --accent-text:#101527; --accent-grad:linear-gradient(135deg,#a99cff,#c8b8ff);
+      --danger:#ff8691; --ok:#57d7b1; --warn:#f2b462; --gray:#a6b3c8;
+      --shadow:0 7px 26px rgba(0,0,0,.16); --shadow-lift:0 22px 50px rgba(0,0,0,.35);
+      color-scheme:dark;
+    }
+  }
+  html { scroll-behavior:smooth; }
+  body { background:var(--bg); font-family:"DM Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; line-height:1.5; }
+  button,input,textarea,select { font-family:inherit; }
+  button { transition:background .2s,border-color .2s,color .2s,box-shadow .2s,transform .2s,filter .2s; }
+  button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline:3px solid color-mix(in srgb,var(--accent) 42%,transparent); outline-offset:2px; }
+  .app-shell { max-width:none; min-height:100vh; margin:0; padding:0; display:grid; grid-template-columns:250px minmax(0,1fr); grid-template-rows:auto 1fr; gap:0; }
+  .tabs { grid-column:1; grid-row:1 / span 2; position:sticky; top:0; z-index:25; height:100vh; margin:0; padding:26px 14px 20px; display:flex; flex-direction:column; gap:4px; overflow-y:auto; overflow-x:hidden; border:0; background:#111c31; box-shadow:8px 0 36px rgba(16,27,47,.045); }
+  .sidebar-brand { display:flex; align-items:center; gap:11px; margin:0 9px 44px; color:#fff; }
+  .brand-symbol { position:relative; display:grid; grid-template-columns:repeat(2,12px); grid-template-rows:repeat(2,12px); gap:3px; transform:rotate(-16deg); }
+  .brand-symbol span { border-radius:4px; background:#aa9aff; }
+  .brand-symbol span:nth-child(2) { background:#57dbba; border-radius:7px 3px 7px 3px; }
+  .brand-symbol span:nth-child(3) { background:#6572e9; }
+  .brand-symbol span:nth-child(4) { background:#d3caff; }
+  .sidebar-brand strong { display:block; font-family:Manrope,sans-serif; font-size:18px; letter-spacing:-.06em; line-height:1.12; }
+  .sidebar-brand strong span { font-weight:500; color:#93a1ba; }
+  .sidebar-brand small { display:block; margin-top:4px; color:#93a1ba; font-size:10px; letter-spacing:.06em; }
+  .nav-section-label { color:#677992; font-size:10px; font-weight:800; letter-spacing:.16em; padding:0 16px; margin-bottom:10px; }
+  .nav-section-secondary { margin-top:28px; }
+  .tab-btn { width:100%; min-height:43px; display:flex; align-items:center; gap:13px; flex:none; text-align:left; color:#b1bdd0; border:1px solid transparent; border-radius:11px; margin:0; padding:10px 13px; font-size:12.5px; font-weight:700; letter-spacing:.005em; }
+  .tab-btn:hover { background:rgba(255,255,255,.065); color:#fff; }
+  .tab-btn.active { color:#fff; background:linear-gradient(115deg,rgba(126,113,236,.32),rgba(126,113,236,.10)); border-color:rgba(194,188,255,.16); box-shadow:inset 3px 0 #a99cff; }
+  .nav-icon { width:23px; text-align:center; color:#93a1ba; font-family:Manrope,sans-serif; font-size:20px; font-weight:600; line-height:1; flex:none; }
+  .tab-btn.active .nav-icon { color:#c5bcff; }
+  .sidebar-footer { margin:auto 6px 0; padding:18px 16px 15px; border:1px solid rgba(198,209,231,.11); border-radius:15px; background:radial-gradient(circle at 100% 0%,rgba(150,129,255,.18),transparent 50%),rgba(255,255,255,.035); color:#e7ecf8; }
+  .sidebar-footer-icon { color:#b5a9ff; font-size:25px; line-height:1; margin-bottom:10px; }
+  .sidebar-footer strong { display:block; font-size:12px; }
+  .sidebar-footer p { color:#93a1ba; font-size:11px; line-height:1.5; margin:5px 0 0; }
+  header.top { grid-column:2; grid-row:1; padding:32px clamp(22px,3.2vw,56px) 20px; margin:0; align-items:center; background:var(--bg); border-bottom:1px solid var(--border); }
+  .page-eyebrow,.section-eyebrow { color:var(--accent); font-size:10px; font-weight:800; letter-spacing:.15em; }
+  .page-eyebrow { display:flex; align-items:center; gap:9px; }
+  .eyebrow-dot { width:7px; height:7px; border-radius:50%; background:#52cda9; box-shadow:0 0 0 4px rgba(82,205,169,.14); }
+  .eyebrow-sep { color:var(--text-dim); opacity:.5; }
+  header.top h1 { font-family:Manrope,sans-serif; font-size:clamp(23px,2.1vw,32px); line-height:1.2; letter-spacing:-.06em; color:var(--text); background:none; margin:9px 0 0; font-weight:800; }
+  .heading-period { color:var(--accent); }
+  header.top .sub { color:var(--text-dim); margin-top:5px; font-size:12px; }
+  .top-actions { display:flex; align-items:center; gap:9px; }
+  .top-actions button { background:var(--surface); border:1px solid var(--border); color:var(--text-dim); box-shadow:var(--shadow); }
+  .quick-jump { display:flex; align-items:center; gap:8px; min-width:175px; justify-content:flex-start; font-size:11.5px; padding:9px 11px; }
+  .quick-search-icon { font-size:23px; font-weight:400; line-height:.7; color:var(--accent); }
+  .quick-jump kbd { margin-left:auto; font-size:10px; color:var(--text-dim); font-family:inherit; background:var(--surface-2); padding:2px 5px; border-radius:4px; border:1px solid var(--border); }
+  .theme-toggle { display:flex; align-items:center; gap:7px; min-height:36px; white-space:nowrap; font-size:11px; }
+  #themeIcon { color:var(--accent); font-size:17px; line-height:1; }
+  .top-actions button:hover { border-color:var(--accent); color:var(--text); transform:translateY(-1px); }
+  .status-pill { min-height:36px; color:var(--ok); font-size:10px; background:var(--surface); border-color:var(--border); box-shadow:var(--shadow); }
+  .tab-panel.active { grid-column:2; grid-row:2; display:block; min-width:0; padding:28px clamp(22px,3.2vw,56px) 72px; animation:panelEnter .38s cubic-bezier(.2,.8,.2,1); }
+  @keyframes panelEnter { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  .hero { min-height:255px; overflow:hidden; position:relative; display:grid; grid-template-columns:minmax(0,1.15fr) minmax(220px,.85fr); background:radial-gradient(ellipse at 90% -20%,#6f60c9 0%,transparent 42%),radial-gradient(ellipse at 25% 110%,#214e82 0%,transparent 40%),linear-gradient(115deg,#172a4b,#211d4c 62%,#3d327d); border-radius:22px; margin-bottom:29px; color:#fff; box-shadow:0 24px 48px rgba(26,34,94,.14); }
+  .hero::after { content:""; position:absolute; inset:0; pointer-events:none; background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px); background-size:36px 36px; mask-image:linear-gradient(90deg,transparent 25%,#000); }
+  .hero-copy { position:relative; z-index:2; padding:33px clamp(28px,3.3vw,53px); }
+  .hero-kicker { font-size:9px; color:#c5c4ff; letter-spacing:.18em; font-weight:800; display:flex; align-items:center; gap:9px; }
+  .hero-kicker span { width:17px; height:1px; background:#9e95ff; }
+  .hero h2 { font-family:Manrope,sans-serif; color:#fff; font-size:clamp(24px,2.3vw,35px); line-height:1.22; letter-spacing:-.065em; margin:18px 0 8px; font-weight:800; }
+  .hero h2 em { font-style:normal; color:#b6e9df; }
+  .hero p { color:#c3cbe1; font-size:12px; max-width:410px; line-height:1.65; margin:0 0 19px; }
+  .hero-actions { display:flex; flex-wrap:wrap; gap:8px; }
+  .hero-actions button { border-radius:10px; font-size:11px; min-height:37px; padding:8px 13px; }
+  .hero-actions span { margin-left:7px; }
+  .hero-primary { background:#fff; border-color:#fff; color:#26306b; }
+  .hero-primary:hover { background:#e8e4ff; transform:translateY(-2px); }
+  .hero-secondary { background:rgba(255,255,255,.10); border-color:rgba(255,255,255,.18); color:#fff; }
+  .hero-secondary:hover { background:rgba(255,255,255,.18); transform:translateY(-2px); }
+  .hero-visual { position:relative; min-height:255px; display:grid; place-items:center; }
+  .hero-orbit { position:absolute; border:1px solid rgba(216,211,255,.19); border-radius:50%; box-shadow:inset 0 0 60px rgba(193,174,255,.035); }
+  .orbit-one { width:200px; height:200px; animation:orbitFloat 11s linear infinite; }
+  .orbit-one::after { content:""; position:absolute; width:9px; height:9px; border-radius:50%; top:30px; left:22px; background:#8be0c4; box-shadow:0 0 19px #8be0c4; }
+  .orbit-two { width:302px; height:302px; border-style:dashed; opacity:.6; animation:orbitFloat 22s linear infinite reverse; }
+  .hero-core { position:relative; z-index:1; width:128px; height:128px; border-radius:37px; display:grid; place-items:center; transform:rotate(-13deg); background:linear-gradient(145deg,rgba(205,197,255,.32),rgba(93,83,197,.18)); border:1px solid rgba(224,221,255,.45); box-shadow:0 18px 70px rgba(147,137,255,.28),inset 0 2px 12px rgba(255,255,255,.18); backdrop-filter:blur(10px); animation:coreFloat 5s ease-in-out infinite; }
+  .hero-core span { transform:rotate(13deg); font-size:63px; line-height:1; color:#e0dcff; text-shadow:0 0 35px rgba(209,200,255,.65); }
+  .hero-float { position:absolute; z-index:2; background:rgba(255,255,255,.12); border:1px solid rgba(232,229,255,.22); border-radius:13px; backdrop-filter:blur(15px); color:#e9eaff; box-shadow:0 10px 28px rgba(0,0,0,.1); }
+  .float-top { right:8%; top:17%; padding:9px 12px; font-size:10px; }
+  .float-top i { display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:5px; background:#f2b87d; }
+  .float-top strong { display:block; font-size:15px; color:#fff; margin:1px 0 0 12px; }
+  .float-bottom { bottom:16%; left:5%; padding:10px 13px 10px 41px; min-width:116px; }
+  .float-check { position:absolute; left:12px; top:13px; width:19px; height:19px; display:grid; place-items:center; border-radius:50%; color:#115b4c; background:#83e8c9; font-size:12px; }
+  .float-bottom strong { display:block; color:#fff; font-size:13px; line-height:1.1; }
+  .float-bottom small { display:block; color:#b8c4dc; font-size:9px; margin-top:3px; }
+  @keyframes orbitFloat { to { transform:rotate(360deg); } }
+  @keyframes coreFloat { 50% { transform:translateY(-8px) rotate(-9deg); } }
+  .section-intro h2 { font-family:Manrope,sans-serif; font-size:19px; letter-spacing:-.045em; color:var(--text); }
+  .section-eyebrow { margin-bottom:4px; }
+  .section-intro select { width:auto; min-width:165px; background:var(--surface); }
+  .card,.proj-picker,.dcard,.dkpi,.ak-card,.kn-tile { border-color:var(--border); box-shadow:var(--shadow); }
+  .card,.proj-picker,.dcard { border-radius:17px; }
+  .card { padding:20px; }
+  .card + .card { margin-top:17px; }
+  .card h3,.dcard h3 { color:var(--text); font-size:12px; letter-spacing:-.005em; text-transform:none; }
+  .proj-picker { padding:20px; margin-bottom:18px; }
+  .proj-picker-head { margin-bottom:16px; }
+  .proj-picker-head .plabel { font-size:10px; color:var(--accent); letter-spacing:.14em; }
+  .picker-sub { color:var(--text-dim); margin:5px 0 0; font-size:12px; }
+  .proj-picker-head input[type=text] { width:min(240px,100%); background:var(--surface-2); }
+  .proj-grid { gap:9px; }
+  .proj-tab { min-height:104px; padding:14px; border-radius:13px; background:var(--surface-2); }
+  .proj-tab:hover { transform:translateY(-3px); box-shadow:var(--shadow-lift); }
+  .proj-tab.active { background:color-mix(in srgb,var(--accent) 9%,var(--surface)); border-color:color-mix(in srgb,var(--accent) 65%,var(--border)); box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 24%,transparent) inset; }
+  .proj-tab .pt-name { font-size:13px; }
+  .proj-tab .cnt { font-size:10.5px; }
+  .proj-tab .pt-bar { height:5px; }
+  .proj-tab .pt-actions { opacity:1; }
+  .proj-tab .icon-btn { width:26px; height:26px; }
+  .add-proj-btn { color:var(--accent); border-color:color-mix(in srgb,var(--accent) 35%,var(--border)); background:color-mix(in srgb,var(--accent) 3%,var(--surface)); }
+  input[type=text],input[type=date],textarea,select { min-height:38px; padding:8px 11px; border-radius:9px; background:var(--surface-2); border-color:var(--border); font-size:12px; }
+  textarea { min-height:72px; line-height:1.5; }
+  button { border-radius:9px; }
+  button.primary { background:var(--accent-grad); border-color:transparent; color:var(--accent-text); box-shadow:0 5px 13px color-mix(in srgb,var(--accent) 20%,transparent); }
+  .drop-zone { position:relative; padding:26px 16px; background:linear-gradient(125deg,color-mix(in srgb,var(--accent) 5%,var(--surface)),var(--surface-2)); border-color:color-mix(in srgb,var(--accent) 35%,var(--border)); border-radius:14px; transition:background .2s,border-color .2s,transform .2s; }
+  .drop-zone:hover,.drop-zone.drag-over { border-color:var(--accent); background:color-mix(in srgb,var(--accent) 9%,var(--surface)); transform:translateY(-1px); }
+  .drop-icon { width:37px; height:37px; display:grid; place-items:center; margin:0 auto 9px; border-radius:11px; background:var(--surface); color:var(--accent); box-shadow:var(--shadow); font-size:25px; line-height:1; }
+  .drop-zone b { color:var(--accent); }
+  .drop-zone .hint { margin-top:3px; }
+  .bug-filters { display:flex; align-items:center; gap:9px; padding:11px 0 16px; flex-wrap:wrap; }
+  .filter-search { position:relative; min-width:min(100%,250px); flex:1; }
+  .filter-search span { position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--accent); font-size:23px; line-height:1; }
+  .filter-search input { padding-left:35px; }
+  #bugPriority { width:auto; min-width:150px; }
+  .filter-result { color:var(--text-dim); font-size:11px; font-weight:700; margin-left:auto; }
+  .view-toggle { border-radius:9px; }
+  .view-toggle button { font-size:11px; min-width:58px; }
+  #boardWrap,#tableWrap { overflow-x:auto; scrollbar-width:thin; }
+  .board { grid-template-columns:repeat(5,minmax(205px,1fr)); min-width:1060px; gap:10px; }
+  .board-col { background:var(--surface-2); border:1px solid var(--border); border-top:3px solid var(--border); border-radius:12px; padding:10px; min-height:170px; }
+  .board-col h4 { font-size:11px; padding:4px 1px 8px; }
+  .card-item { padding:11px; border-radius:10px; box-shadow:0 2px 7px rgba(26,40,75,.025); }
+  .card-item:hover { transform:translateY(-3px); }
+  .card-item .exc { font-size:12px; line-height:1.45; font-weight:600; }
+  .quick-status button { width:21px; height:21px; }
+  .quick-status { gap:7px; }
+  .mobile-status-control,.board-swipe-hint { display:none; }
+  #tableWrap table { min-width:1050px; }
+  thead th { font-size:10px; letter-spacing:.08em; background:var(--surface-2); }
+  tbody td { padding:10px 8px; }
+  .badge,.badge-priority,.chip { font-weight:800; }
+  .badge.Open,.badge-priority.Critical { color:var(--danger); background:color-mix(in srgb,var(--danger) 13%,transparent); }
+  .badge.In-Progress,.badge-priority.High { color:var(--warn); background:color-mix(in srgb,var(--warn) 13%,transparent); }
+  .badge.Fixed,.badge.Selesai { color:var(--ok); background:color-mix(in srgb,var(--ok) 13%,transparent); }
+  .badge-priority.Medium { color:var(--accent); background:color-mix(in srgb,var(--accent) 13%,transparent); }
+  .dash-kpis { grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-bottom:16px; }
+  .dkpi { position:relative; padding:17px 19px; border-top:0; border-radius:15px; overflow:hidden; min-height:118px; }
+  .dkpi::before { content:""; position:absolute; top:0; left:0; width:100%; height:3px; background:var(--c); opacity:.75; }
+  .dkpi::after { content:""; position:absolute; right:-20px; top:-32px; width:104px; height:104px; border-radius:50%; background:var(--c); opacity:.055; }
+  .dk-l { font-size:10px; color:var(--text-dim); letter-spacing:.095em; }
+  .dk-v { font-family:Manrope,sans-serif; color:var(--text); font-size:31px; letter-spacing:-.06em; margin-top:6px; }
+  .dk-s { font-size:10.5px; }
+  .dash-grid { gap:16px; }
+  .dcard { padding:19px 21px; }
+  .dcard h3 { font-size:12px; padding-bottom:11px; border-bottom:1px solid var(--border); margin-bottom:13px; }
+  .dbar { height:8px; }
+  .dbar > span { transition:width .55s cubic-bezier(.2,.8,.2,1); }
+  .dbar-row { min-height:31px; }
+  .dscan-bar { height:8px; }
+  .modal-overlay { backdrop-filter:blur(7px); background:rgba(8,15,31,.55); }
+  .modal-box { border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-lift); }
+  .modal-box:has(#mSave) { max-width:600px; }
+  .modal-box label { color:var(--text-dim); font-size:10px; letter-spacing:.08em; }
+  .scan-grid { gap:11px; }
+  .scan-row { padding:15px; background:var(--surface); box-shadow:var(--shadow); }
+  .scan-row:hover { transform:translateY(-2px); box-shadow:var(--shadow-lift); }
+  .scan-name { font-size:13px; }
+  .scan-seg button { min-height:32px; }
+  .ak-card,.kn-tile { border-radius:14px; }
+  .toast { border-radius:10px; }
+  .command-overlay { position:fixed; z-index:1100; inset:0; padding:10vh 16px 16px; background:rgba(8,15,31,.64); backdrop-filter:blur(8px); display:flex; align-items:flex-start; justify-content:center; }
+  .command-box { width:min(520px,100%); background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:17px; box-shadow:0 30px 90px rgba(0,0,0,.27); overflow:hidden; animation:panelEnter .22s ease-out; }
+  .command-search { display:flex; align-items:center; gap:10px; padding:14px 18px; border-bottom:1px solid var(--border); }
+  .command-search > span { font-size:25px; color:var(--accent); line-height:1; }
+  .command-search input { border:0; box-shadow:none!important; background:transparent; min-height:30px; padding:0; flex:1; font-size:13px; }
+  .command-search kbd { border:1px solid var(--border); border-radius:5px; font:10px inherit; color:var(--text-dim); padding:3px 5px; }
+  .command-results { padding:9px; max-height:390px; overflow:auto; }
+  .command-heading { color:var(--text-dim); font-size:10px; font-weight:800; letter-spacing:.12em; padding:8px 10px; }
+  .command-item { width:100%; display:flex; align-items:center; gap:12px; background:transparent; border:0; padding:10px; border-radius:9px; text-align:left; font-size:12px; color:var(--text); }
+  .command-item:hover,.command-item.is-selected { background:color-mix(in srgb,var(--accent) 10%,var(--surface)); }
+  .command-item .nav-icon { color:var(--accent); }
+  .command-item small { margin-left:auto; color:var(--text-dim); font-size:10px; }
+  .command-empty { color:var(--text-dim); font-size:12px; padding:18px; }
+  @media (max-width:1160px) {
+    .app-shell { grid-template-columns:218px minmax(0,1fr); }
+    .quick-jump { min-width:38px; }
+    .quick-jump > span:nth-child(2),.quick-jump kbd { display:none; }
+    .status-pill { max-width:150px; }
+    .dash-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  }
+  @media (max-width:800px) {
+    .app-shell { display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:auto auto 1fr; }
+    header.top { grid-column:1; grid-row:1; padding:22px 20px 18px; }
+    .tabs { grid-column:1; grid-row:2; height:auto; max-height:none; position:sticky; top:0; flex-direction:row; align-items:center; gap:5px; padding:9px 17px; background:#111c31; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; }
+    .tabs::-webkit-scrollbar { display:none; }
+    .sidebar-brand,.nav-section-label,.sidebar-footer { display:none; }
+    .tab-btn { width:auto; min-height:36px; padding:8px 11px; white-space:nowrap; font-size:11px; }
+    .nav-icon { font-size:17px; width:18px; }
+    .tab-btn.active { box-shadow:inset 0 -2px #a99cff; }
+    .tab-panel.active { grid-column:1; grid-row:3; padding:22px 20px 60px; }
+    .hero { grid-template-columns:1fr 220px; }
+    .hero-visual { overflow:hidden; }
+    .proj-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  }
+  @media (max-width:620px) {
+    header.top { align-items:flex-start; gap:15px; }
+    header.top h1 { font-size:25px; }
+    header.top .sub { max-width:330px; line-height:1.45; }
+    .top-actions { width:100%; }
+    .top-actions .quick-jump { min-width:38px; }
+    .theme-toggle { margin-left:auto; }
+    .status-pill { font-size:9px; }
+    .hero { display:block; min-height:0; }
+    .hero-copy { padding:27px 24px 30px; }
+    .hero-visual { display:none; }
+    .hero h2 { font-size:28px; }
+    .dash-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .dkpi { padding:13px; min-height:104px; }
+    .dk-v { font-size:25px; }
+    .section-intro { align-items:flex-start; }
+    .proj-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .card { padding:15px; }
+    .bug-filters { align-items:stretch; }
+    .filter-search { flex-basis:100%; }
+    #bugPriority { flex:1; }
+    .filter-result { align-self:center; }
+    .dash-grid { grid-template-columns:1fr; }
+    .board-swipe-hint { display:block; color:var(--text-dim); font-size:11px; font-weight:700; margin:0 0 9px; }
+    .mobile-status-control { display:flex; flex-direction:column; gap:4px; margin-top:9px; }
+    .mobile-status-control span { color:var(--text-dim); font-size:10px; font-weight:700; }
+    .mobile-status-control select { min-height:32px; width:100%; font-size:11px; }
+    .quick-status { display:none; }
+  }
+  @media (max-width:400px) {
+    .proj-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .proj-tab { min-height:110px; padding:10px; }
+    .proj-tab .pt-top { display:block; }
+    .proj-tab .pt-name { display:block; white-space:normal; overflow:visible; text-overflow:clip; }
+    .proj-tab .pt-actions { position:absolute; right:8px; top:45px; gap:0; }
+    .proj-tab .cnt { white-space:normal; padding-right:35px; line-height:1.2; }
+    .proj-tab .icon-btn { width:22px; height:22px; }
+    .dash-kpis { grid-template-columns:1fr 1fr; gap:8px; }
+    .dk-l { font-size:9px; }
+    .dk-s { font-size:9px; }
+  }
+  @media (max-width:340px) { .proj-grid { grid-template-columns:1fr; } }
+  @media (prefers-reduced-motion:reduce) {
+    *,*::before,*::after { animation-duration:.01ms!important; animation-iteration-count:1!important; scroll-behavior:auto!important; transition-duration:.01ms!important; }
+  }
 </style>
 </head>
 <body>
@@ -532,36 +810,50 @@
       <li>Buka file HTML ini di editor teks, cari komentar <code>GANTI_DENGAN_API_KEY</code> di paling atas, dan tempel nilai dari config yang kamu copy.</li>
       <li>Simpan file, lalu deploy/upload ulang ke hosting kamu. Selesai — semua orang yang buka halaman ini akan berbagi data yang sama.</li>
     </ol>
-    <p class="hint">Catatan: "test mode" bikin Firestore bisa dibaca/ditulis siapa saja yang tahu config-nya selama 30 hari (lalu terkunci otomatis). Cukup aman untuk tools internal tim jangka pendek — tapi kalau mau dipakai lebih lama, atur Firestore Rules jadi lebih ketat (bisa saya bantu kalau perlu).</p>
+    <p class="hint">Penting: jangan gunakan Firestore test mode untuk data akun atau password. Batasi akses dengan autentikasi dan Firestore Rules sebelum aplikasi dipakai oleh tim.</p>
   </div>
 </div>
 
-<div class="wrap" id="appRoot" style="display:none;">
+<div class="wrap app-shell" id="appRoot" style="display:none;">
 
   <header class="top">
-    <div>
-      <h1>📋 Daily Report</h1>
-      <div class="sub">Reporting harian multi project — drag & drop screenshot, papan status per project, export PDF</div>
+    <div class="page-heading">
+      <div class="page-eyebrow"><span class="eyebrow-dot"></span> QUALITY OPERATIONS <span class="eyebrow-sep">/</span> <span id="liveDate"></span></div>
+      <h1>Ruang kerja QA<span class="heading-period">.</span></h1>
+      <div class="sub">Semua temuan, progres, dan laporan dalam satu alur yang rapi.</div>
     </div>
-    <span class="status-pill" id="connPill">Menghubungkan…</span>
+    <div class="top-actions">
+      <button class="quick-jump" id="quickJump" type="button" aria-label="Buka navigasi cepat"><span class="quick-search-icon">⌕</span><span>Jelajah cepat</span><kbd>⌘ K</kbd></button>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Ganti tema"><span id="themeIcon">☾</span><span id="themeLabel">Mode gelap</span></button>
+      <span class="status-pill" id="connPill">Menghubungkan…</span>
+    </div>
   </header>
 
-  <div class="tabs">
-    <button class="tab-btn active" data-tab="dash">Dashboard</button>
-    <button class="tab-btn" data-tab="manage">Kelola Bug</button>
-    <button class="tab-btn" data-tab="enh">Enhancement</button>
-    <button class="tab-btn" data-tab="mom">Catatan Meeting</button>
-    <button class="tab-btn" data-tab="daily">Laporan Harian (Semua Project)</button>
-    <button class="tab-btn" data-tab="scan">Ceklis Scan AI</button>
-    <button class="tab-btn" data-tab="akses">All Akses</button>
-    <button class="tab-btn" data-tab="knowledge">Knowledge</button>
+  <div class="tabs" role="navigation" aria-label="Navigasi utama">
+    <div class="sidebar-brand"><div class="brand-symbol"><span></span><span></span><span></span><span></span></div><div><strong>seleris<span> / qa</span></strong><small>Quality workspace</small></div></div>
+    <div class="nav-section-label">WORKSPACE</div>
+    <button class="tab-btn active" data-tab="dash"><span class="nav-icon">◫</span><span>Dashboard</span></button>
+    <button class="tab-btn" data-tab="manage"><span class="nav-icon">▦</span><span>Kelola Bug</span></button>
+    <button class="tab-btn" data-tab="enh"><span class="nav-icon">✧</span><span>Enhancement</span></button>
+    <button class="tab-btn" data-tab="mom"><span class="nav-icon">✎</span><span>Catatan Meeting</span></button>
+    <button class="tab-btn" data-tab="daily"><span class="nav-icon">▤</span><span>Laporan Harian</span></button>
+    <div class="nav-section-label nav-section-secondary">TOOLS</div>
+    <button class="tab-btn" data-tab="scan"><span class="nav-icon">◎</span><span>Ceklis Scan AI</span></button>
+    <button class="tab-btn" data-tab="akses"><span class="nav-icon">⌘</span><span>All Akses</span></button>
+    <button class="tab-btn" data-tab="knowledge"><span class="nav-icon">◇</span><span>Knowledge</span></button>
+    <div class="sidebar-footer"><div class="sidebar-footer-icon">✦</div><strong>Bekerja lebih fokus.</strong><p>Setiap detail QA, tertata di satu tempat.</p></div>
   </div>
 
   <!-- ===== TAB: DASHBOARD ===== -->
   <div class="tab-panel active" id="tab-dash">
-    <div class="row-flex between" style="margin-bottom:12px;">
+    <section class="hero" aria-label="Ringkasan pekerjaan QA">
+      <div class="hero-copy"><div class="hero-kicker"><span></span> YOUR QUALITY COMMAND CENTER</div><h2>Jaga kualitas.<br><em>Buat progres terasa jelas.</em></h2><p>Mulai dari temuan baru, pantau yang mendesak, lalu tutup hari dengan laporan yang siap dibagikan.</p><div class="hero-actions"><button class="hero-primary" id="heroAddBug" type="button">+ Catat temuan <span>↗</span></button><button class="hero-secondary" id="heroDaily" type="button">Lihat laporan hari ini <span>→</span></button></div></div>
+      <div class="hero-visual" aria-hidden="true"><div class="hero-orbit orbit-one"></div><div class="hero-orbit orbit-two"></div><div class="hero-core"><span>✦</span></div><div class="hero-float float-top"><i></i> Fokus hari ini <strong id="heroOpenCount">0 temuan</strong></div><div class="hero-float float-bottom"><span class="float-check">✓</span><strong id="heroDoneCount">0 selesai</strong><small>periode ini</small></div></div>
+    </section>
+    <div class="section-intro row-flex between" style="margin-bottom:16px;">
       <div>
-        <h2 style="margin:0; font-size:17px;">Dashboard</h2>
+        <div class="section-eyebrow">AT A GLANCE</div>
+        <h2 style="margin:0;">Ringkasan kualitas</h2>
         <div class="hint" id="dashRangeLabel" style="margin:2px 0 0;"></div>
       </div>
       <select id="dashRange" style="width:auto; min-width:170px;">
@@ -580,8 +872,8 @@
 
     <div class="proj-picker">
       <div class="proj-picker-head">
-        <span class="plabel">Pilih Project</span>
-        <input type="text" id="projSearch" placeholder="Cari project…">
+        <div><span class="plabel">PILIH PROJECT</span><p class="picker-sub">Tentukan area kerja sebelum mencatat temuan.</p></div>
+        <input type="text" id="projSearch" placeholder="Cari project…" aria-label="Cari project">
       </div>
       <div class="proj-grid" id="projTabs"><div class="hint">Memuat…</div></div>
       <div style="position:relative;">
@@ -606,9 +898,10 @@
         </div>
       </div>
 
-      <div class="drop-zone" id="dropZone">
-        <div><b>Tarik & lepas screenshot</b> ke sini (boleh banyak sekaligus)</div>
-        <div class="hint">atau klik untuk pilih file — tiap gambar bisa diarahkan ke project berbeda</div>
+      <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-label="Unggah screenshot temuan">
+        <div class="drop-icon">↥</div>
+        <div><b>Tarik screenshot ke sini</b> atau klik untuk memilih</div>
+        <div class="hint">Bisa pilih banyak gambar sekaligus, lalu tentukan project untuk masing-masing.</div>
       </div>
       <input type="file" id="fileInput" accept="image/*" multiple style="display:none;">
 
@@ -625,7 +918,7 @@
 
     <div class="card">
       <div class="row-flex between" style="margin-bottom:10px;">
-        <h3 style="margin:0;">Bug di project ini</h3>
+        <div><h3 style="margin:0;">Temuan di project ini</h3><div class="hint" style="margin-top:5px;">Cari, prioritaskan, dan ubah status tanpa kehilangan konteks.</div></div>
         <div class="row-flex">
           <label class="row-flex" style="font-size:12.5px; color:var(--text-dim); font-weight:600;">
             <input type="checkbox" id="showAllDates" style="width:auto;"> semua tanggal
@@ -636,8 +929,10 @@
           </div>
         </div>
       </div>
+      <div class="bug-filters"><label class="filter-search"><span>⌕</span><input type="text" id="bugSearch" placeholder="Cari kondisi atau ekspektasi…" aria-label="Cari temuan"></label><select id="bugPriority" aria-label="Filter prioritas"><option value="">Semua prioritas</option><option value="Critical">Critical</option><option value="High">High</option><option value="Medium">Medium</option><option value="Low">Low</option></select><span class="filter-result" id="bugResultCount"></span></div>
       <div class="hint" id="carryHint" style="display:none; margin:0 0 10px;"></div>
       <div class="hint" id="tableHint" style="display:none; margin:0 0 8px;">💡 Klik area kosong pada baris untuk membuka detail & edit lengkap.</div>
+      <div class="board-swipe-hint">Geser papan ke samping untuk melihat status lain →</div>
       <div id="boardWrap"></div>
       <div id="tableWrap" style="display:none;"></div>
     </div>
@@ -749,8 +1044,6 @@
     </div>
   </div>
 
-
-  <!-- ===== TAB: CATATAN MEETING (MoM) ===== -->
   <div class="tab-panel" id="tab-mom">
     <div class="card">
       <div class="row-flex between" style="margin-bottom:10px;">
@@ -771,11 +1064,8 @@
 
 <div id="toast" class="toast"></div>
 
-<!-- DATA AWAL ALL AKSES (dari PDF). Setelah klik "Impor data awal" dan data muncul, HAPUS seluruh blok <script> ini
-     supaya password tidak lagi ada di source file. Data tetap tersimpan di Firestore. -->
-<script id="akSeed">
-window.AK_SEED = [{"name":"TSS (Takaful Smart Submit)","company":"PT Seleris Meditekno Internasional","links":[],"acc":[{"r":"Role asuransi","u":"nisa.takaful@tss.com"},{"r":"App staging","u":"nisa@takaful.com","p":"masuk123"},{"r":"App prod","u":"nisa.matahari@tss.com","p":"masuk123","prod":true},{"r":"Akun lain","u":"nisa.admin@takaful.com"}],"note":""},{"name":"elife (seleris-apps-elife)","company":"PT Seleris Meditekno Internasional","links":["https://elife.seleris.ai/sign-in"],"acc":[{"r":"Role checker","u":"grmchecker@elife.com","p":"masuk123"},{"r":"Role asuransi","u":"equity.elife@elife.com"}],"note":""},{"name":"EHD (seleris-apps-chubb)","company":"PT Seleris Meditekno Internasional","links":["https://ehd-backoffice.com"],"acc":[{"r":"Role asuransi","u":"uat.chubb@gmail.com","p":"masuk123"},{"r":"Akun app","u":"nisa.bjb@ehd.com","p":"nisaehd"}],"note":""},{"name":"Care","company":"PT Seleris Meditekno Internasional","links":["https://admin-care.seleris.ai/"],"acc":[{"r":"Admin","u":"yusuf@seleris.id","p":"masuk123"}],"note":""},{"name":"Admin","company":"PT Seleris Meditekno Internasional","links":["https://staging-admin.seleris.ai/","https://admin.seleris.ai/login"],"acc":[{"r":"Super admin","u":"raka@seleris.ai","p":"masuk123"},{"r":"Akun Chubb","u":"uat.nisa@seleris.com"}],"note":""},{"name":"Landing Page","company":"PT Seleris Meditekno Internasional","links":["https://cms-lp.seleris.ai/blogs","https://seleris.ai/","https://seleris.id/"],"acc":[{"r":"Admin CMS","u":"smi_media@seleris.id","p":"masuk123"}],"note":""},{"name":"Sentris New","company":"PT Seleris Meditekno Internasional","links":["https://renhoran.cloud/login","https://sentris.seleris.ai/employee/attendance"],"acc":[{"r":"Admin","u":"fendy@seleris.id","p":"masuk123"}],"note":""},{"name":"SCC (seleris-apps-scc)","company":"PT Seleris Meditekno Internasional","links":["https://scc.seleris.ai/"],"acc":[{"r":"Akun 1","u":"uat.chubb@gmail.com","p":"masuk123"},{"r":"Akun 2","u":"uat.nisa.xyz@seleris.com","p":"masuk123"}],"note":""},{"name":"SC","company":"PT Seleris Meditekno Internasional","links":[],"acc":[{"r":"Akun","u":"uat.daffa.sc@seleris.com","p":"masuk123"}],"note":""},{"name":"Seleris Care Aplikator (SCA)","company":"PT Seleris Meditekno Internasional","links":["https://staging-sca.seleris.ai/","https://sca.seleriscare.ai","https://selica-bo.seleriscare.ai/login"],"acc":[{"r":"Prod · Atasan","u":"anni21070ti@student.nurulfikri.ac.id","prod":true},{"r":"Prod · Anak buah","u":"28fph@dollicons.com","prod":true},{"r":"Prod · Akun lain","u":"5899t@dollicons.com","prod":true},{"r":"Staging · Atasan","u":"qrufh@dollicons.com"},{"r":"Staging · Bawahan","u":"trrwa@dollicons.com"},{"r":"Staging · Akun lain","u":"2be9e@dollicons.com"},{"r":"Akun lain","u":"7jcti3ymdk@ruutukf.com"},{"r":"Akun lain","u":"tqeh6@dollicons.com"}],"note":"Label “Akun lain” tidak tertulis jelas di PDF sumber."},{"name":"Klop","company":"PT Seleris Meditekno Internasional","links":["https://myklop.id"],"acc":[{"r":"Client","u":"081200000100"},{"r":"Driver Motor · Andi Wijaya","u":"+6281200000011"},{"r":"Driver Motor · Rian Saputra","u":"+6281200000014"},{"r":"Driver Mobil · Agus Salim","u":"+6281200000022"},{"r":"Driver Mobil · Rini Hartati","u":"+6281200000021"},{"r":"Merchant KlopEat · Warung Padang Bu Tini","u":"+6281200000040"},{"r":"Merchant Market · Batik & Tenun Rahayu","u":"+628111110001"}],"note":""},{"name":"Superapp (Seleris Superapps)","company":"PT Seleris Meditekno Internasional","links":[],"acc":[{"r":"Akun","u":"test1@seleris.id"}],"note":""},{"name":"Agentic AI","company":"PT Seleris Meditekno Internasional","links":["https://seleris-sentris-app.svasti.id/","https://seleris-agent-app.svasti.id/","https://seleris-lp.svasti.id/"],"acc":[{"r":"Sentris · prod","u":"owner","p":"SentrisProd#2026","prod":true},{"r":"Seleris-agentic-v2","u":"admin@seleris.ai","p":"zjzcGw2IvxQmiEqK"}],"note":""},{"name":"Autoclaim","company":"PT Seleris Meditekno Internasional","links":["https://autoclaim-v1.pages.dev/","https://admin-autoclaim.pages.dev"],"acc":[{"r":"Mitra asuransi","u":"chubb@gmail.com","p":"masuk123"},{"r":"Pengguna","u":"anceyowww@gmail.com","p":"masuk123"},{"r":"Admin","u":"nisa@autoclaim.com","p":"masuk1234"}],"note":""},{"name":"SILOGIN","company":"PT Seleris Meditekno Internasional","links":["https://silogin.id"],"acc":[{"r":"Admin","u":"admin@gmail.com","p":"masuk123"}],"note":""},{"name":"DRIVE (selerisauto.ai)","company":"PT Seleris Meditekno Internasional","links":["https://bo.selerisauto.ai/login"],"acc":[{"r":"Admin","u":"admin@autoclaim.com","p":"!Autoclaim_Admin2026_!"}],"note":""},{"name":"Proper","company":"PT Seleris Meditekno Internasional","links":["https://proper.seleris.ai"],"acc":[],"note":""},{"name":"Flexa","company":"PT Flexa Asia Solusi","links":["https://flexa-bo.flexa.asia/","https://staging-flexa-bo.flexa.asia/","https://flexa.asia/","https://staging.flexa.asia/"],"acc":[{"r":"Akun Bumida","u":"nisabumida@flexa.asia"},{"r":"Akun AJB","u":"nisabumiputera@flexa.asia"},{"r":"Akun CS","u":"cs1@flexa.asia"}],"note":"Di akhir daftar sumber tertulis “flexa” tanpa keterangan (mungkin password). Cek dulu sebelum dipakai."},{"name":"Aurora","company":"PT Aurora Medika","links":["https://auroracare.ai"],"acc":[],"note":""},{"name":"MyMedix","company":"Medi Risk Technologies Sdn. Bhd","links":["https://mymedix.ai/","https://backoffice.mymedix.ai/","https://medihub.mymedix.ai/"],"acc":[{"r":"Superadmin","u":"superadmin","p":"Admin@12345"},{"r":"Demo life","u":"demo_life@mymedix.ai","p":"mymedix123"},{"r":"CC agent","u":"cc.agent@mymedix.ai","p":"mymedix123"},{"r":"Demo 7","u":"demo7@mymedix.ai","p":"mymedix123"}],"note":""},{"name":"Trust","company":"Medi Risk Technologies Sdn. Bhd","links":["https://trust2scan.app","https://backoffice.trust2scan.ai/login","https://studio.trust2scan.ai","https://trust2scan.ai/"],"acc":[{"r":"Demo","u":"demo.jatra@trust.ai","p":"trust123"}],"note":""},{"name":"Salvion","company":"Salvion","links":["https://salvion.ai/","https://backoffice.salvion.ai/","https://studio.salvion.ai/","https://salvion.app"],"acc":[{"r":"Superadmin","u":"superadmin","p":"Admin@12345"}],"note":""},{"name":"Allegra","company":"Medi Risk Technologies Sdn. Bhd","links":["https://app-allegra.seleris.ai/","https://bo-allegra.seleris.ai/","https://studio-allegra.seleris.ai/"],"acc":[{"r":"Demo 1","u":"demo1@allegra.ai","p":"allegra123"}],"note":""},{"name":"Assure","company":"Medi Risk Technologies Sdn. Bhd","links":["https://assure.seleris.ai/","https://assure-bo.seleris.ai","https://assure-studio.seleris.ai"],"acc":[],"note":""}];
-</script>
+<!-- Data awal akses sengaja dikosongkan: kredensial tidak boleh tertanam di HTML. -->
+<script id="akSeed">window.AK_SEED = [];</script>
 
 <!-- DATA AWAL KNOWLEDGE (tanpa password). Aman dibiarkan; dipakai tombol "Isi dengan data awal" / "Pulihkan produk awal". -->
 <script id="knSeed">
@@ -792,7 +1082,29 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     document.getElementById("setupOverlay").style.display = "block";
     return; // stop here until config is filled in
   }
-  document.getElementById("appRoot").style.display = "block";
+  document.getElementById("appRoot").style.display = "grid";
+
+  // Theme preference is local to each QA's browser.
+  const themeToggle = document.getElementById("themeToggle");
+  function updateThemeButton(){
+    const isDark = document.documentElement.dataset.theme === "dark" ||
+      (!document.documentElement.dataset.theme && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    document.getElementById("themeIcon").textContent = isDark ? "☀" : "☾";
+    document.getElementById("themeLabel").textContent = isDark ? "Mode terang" : "Mode gelap";
+    themeToggle.setAttribute("aria-label", isDark ? "Aktifkan mode terang" : "Aktifkan mode gelap");
+    document.querySelector('meta[name="theme-color"]').content = isDark ? "#0d1422" : "#f6f8fc";
+  }
+  themeToggle.addEventListener("click", ()=>{
+    const isDark = document.documentElement.dataset.theme === "dark" ||
+      (!document.documentElement.dataset.theme && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    const next = isDark ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem("qa_theme", next); } catch (_) {}
+    updateThemeButton();
+  });
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", updateThemeButton);
+  updateThemeButton();
+  document.getElementById("liveDate").textContent = new Intl.DateTimeFormat("id-ID", { day:"numeric", month:"long", year:"numeric" }).format(new Date());
 
   firebase.initializeApp(cfg);
   const db = firebase.firestore();
@@ -1127,6 +1439,10 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         (e.date < dateFilter && !UNRESOLVED_STATUSES.includes(e.status) && e.statusChangedDate===dateFilter)
       );
     }
+    const search = document.getElementById("bugSearch").value.trim().toLowerCase();
+    const priority = document.getElementById("bugPriority").value;
+    if(search) list = list.filter(e=>[e.existing,e.expected].some(value=>String(value||"").toLowerCase().includes(search)));
+    if(priority) list = list.filter(e=>(e.priority||"Medium")===priority);
     return list.map(e=>({
       ...e,
       isCarryOver: !showAll && e.date !== dateFilter,
@@ -1139,11 +1455,13 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     document.getElementById("curProjTitle").textContent = proj ? proj.name : "Pilih project";
     document.getElementById("btnExportProj").disabled = !proj;
     if(!proj){
+      document.getElementById("bugResultCount").textContent = "0 temuan";
       document.getElementById("boardWrap").innerHTML = '<div class="empty-state">Pilih atau tambahkan project di atas.</div>';
       document.getElementById("tableWrap").innerHTML = "";
       return;
     }
     const list = filteredEntries();
+    document.getElementById("bugResultCount").textContent = list.length+" temuan";
     const hintEl = document.getElementById("carryHint");
     const carryCount = list.filter(e=>e.isCarryOver && !e.isResolvedToday).length;
     const resolvedTodayCount = list.filter(e=>e.isResolvedToday).length;
@@ -1181,7 +1499,8 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
           } else if(e.isCarryOver){
             html += '<div class="badge-priority" style="background:rgba(224,138,28,.15); color:#e08a1c; margin-top:5px;">Carry-over sejak '+fmtDate(e.date)+'</div>';
           }
-          html += '<div class="quick-status">'+STATUS_OPTS.map(s=>'<button type="button" data-quick-status="'+s+'" data-quick-id="'+e.id+'" class="'+(e.status===s?'active':'')+'" style="background:'+STATUS_COLOR[s]+'; color:'+STATUS_COLOR[s]+';" title="'+s+'"></button>').join('')+'</div>';
+          html += '<div class="quick-status">'+STATUS_OPTS.map(s=>'<button type="button" data-quick-status="'+s+'" data-quick-id="'+e.id+'" class="'+(e.status===s?'active':'')+'" style="background:'+STATUS_COLOR[s]+'; color:'+STATUS_COLOR[s]+';" title="'+s+'" aria-label="Ubah status ke '+s+'"></button>').join('')+'</div>';
+          html += '<label class="mobile-status-control"><span>Ubah status</span><select data-quick-select="'+e.id+'" aria-label="Ubah status temuan">'+STATUS_OPTS.map(s=>'<option value="'+s+'" '+(e.status===s?'selected':'')+'>'+s+'</option>').join('')+'</select></label>';
           html += '</div>';
         }
       }
@@ -1198,6 +1517,10 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         e.stopPropagation();
         updateEntry(btn.dataset.quickId, { status: btn.dataset.quickStatus });
       });
+    });
+    wrap.querySelectorAll("[data-quick-select]").forEach(select=>{
+      select.addEventListener("click", e=>e.stopPropagation());
+      select.addEventListener("change", e=>{ e.stopPropagation(); updateEntry(select.dataset.quickSelect, { status: select.value }); });
     });
     // Drag & drop kartu antar kolom untuk ganti status.
     wrap.querySelectorAll(".card-item").forEach(card=>{
@@ -1296,6 +1619,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   document.getElementById("btnViewBoard").addEventListener("click", ()=>{
     document.getElementById("btnViewBoard").classList.add("active");
     document.getElementById("btnViewTable").classList.remove("active");
+    document.querySelector(".board-swipe-hint").style.display = "";
     document.getElementById("boardWrap").style.display = "";
     document.getElementById("tableWrap").style.display = "none";
     document.getElementById("tableHint").style.display = "none";
@@ -1303,6 +1627,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   document.getElementById("btnViewTable").addEventListener("click", ()=>{
     document.getElementById("btnViewTable").classList.add("active");
     document.getElementById("btnViewBoard").classList.remove("active");
+    document.querySelector(".board-swipe-hint").style.display = "none";
     document.getElementById("tableWrap").style.display = "";
     document.getElementById("boardWrap").style.display = "none";
     renderTable();
@@ -1338,6 +1663,8 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   document.getElementById("btnManualRow").addEventListener("click", addManualEntry);
   document.getElementById("quickDate").addEventListener("change", renderManagePanel);
   document.getElementById("showAllDates").addEventListener("change", renderManagePanel);
+  document.getElementById("bugSearch").addEventListener("input", renderManagePanel);
+  document.getElementById("bugPriority").addEventListener("change", renderManagePanel);
 
   // ================= entry detail modal =================
   function openEntryModal(id){
@@ -1449,6 +1776,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     addFilesToStaging(files);
   });
   dropZone.addEventListener("click", ()=>fileInput.click());
+  dropZone.addEventListener("keydown", e=>{ if(e.key==="Enter" || e.key===" "){ e.preventDefault(); fileInput.click(); } });
   fileInput.addEventListener("change", e=>{ addFilesToStaging(Array.from(e.target.files||[])); fileInput.value=""; });
 
   function addFilesToStaging(files){
@@ -2794,7 +3122,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
           html += '<div class="enh-foot"><span class="enh-projchip" title="'+esc(enhProjName(e.projectId))+'">'+esc(enhProjName(e.projectId))+'</span>'+
                   '<span class="badge-priority '+(e.priority||"Medium")+'">'+(e.priority||"Medium")+'</span></div>';
           html += '<div class="meta">'+fmtDate(e.date)+'</div>';
-          html += '<div class="quick-status">'+ENH_STATUS.map(s=>'<button type="button" data-enh-quick="'+s+'" data-enh-id="'+e.id+'" class="'+(e.status===s?'active':'')+'" style="background:'+ENH_COLOR[s]+'; color:'+ENH_COLOR[s]+';" title="'+s+'"></button>').join('')+'</div>';
+          html += '<div class="quick-status">'+ENH_STATUS.map(s=>'<button type="button" data-enh-quick="'+s+'" data-enh-id="'+e.id+'" class="'+(e.status===s?'active':'')+'" style="background:'+ENH_COLOR[s]+'; color:'+ENH_COLOR[s]+';" title="'+s+'" aria-label="Ubah status ke '+s+'"></button>').join('')+'</div>';
           html += '</div>';
         }
       }
@@ -3665,6 +3993,8 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     const ageOf = e=>Math.max(0, Math.round((new Date(today+"T00:00:00") - new Date((e.date||today)+"T00:00:00"))/86400000));
     const avgAge = unres.length ? Math.round(unres.reduce((a,e)=>a+ageOf(e),0)/unres.length) : 0;
     const nOpen = unres.filter(e=>e.status==="Open").length;
+    document.getElementById("heroOpenCount").textContent = unres.length+" temuan";
+    document.getElementById("heroDoneCount").textContent = resolved.length+" selesai";
 
     const byProj = projects.map(p=>{
       const mine = entries.filter(e=>e.projectId===p.id), un = mine.filter(dashUn);
@@ -3790,11 +4120,63 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   // ================= tabs =================
   document.querySelectorAll(".tab-btn").forEach(btn=>{
     btn.addEventListener("click", ()=>{
-      document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+      document.querySelectorAll(".tab-btn").forEach(b=>{ b.classList.remove("active"); b.removeAttribute("aria-current"); });
       document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
       btn.classList.add("active");
+      btn.setAttribute("aria-current", "page");
       document.getElementById("tab-"+btn.dataset.tab).classList.add("active");
+      window.scrollTo({ top:0, behavior:"instant" });
     });
+  });
+  document.querySelector('.tab-btn[data-tab="dash"]').setAttribute("aria-current", "page");
+  const navigateTo = tab=>document.querySelector('.tab-btn[data-tab="'+tab+'"]').click();
+  document.getElementById("heroAddBug").addEventListener("click", ()=>navigateTo("manage"));
+  document.getElementById("heroDaily").addEventListener("click", ()=>navigateTo("daily"));
+
+  const quickCommands = [
+    { label:"Dashboard", note:"Ringkasan kualitas", icon:"◫", action:()=>navigateTo("dash") },
+    { label:"Kelola Bug", note:"Temuan & papan status", icon:"▦", action:()=>navigateTo("manage") },
+    { label:"Enhancement", note:"Ide perbaikan", icon:"✧", action:()=>navigateTo("enh") },
+    { label:"Catatan Meeting", note:"MoM & action item", icon:"✎", action:()=>navigateTo("mom") },
+    { label:"Laporan Harian", note:"Rekap & export", icon:"▤", action:()=>navigateTo("daily") },
+    { label:"Ceklis Scan AI", note:"Pemeriksaan harian", icon:"◎", action:()=>navigateTo("scan") },
+    { label:"All Akses", note:"Akses project", icon:"⌘", action:()=>navigateTo("akses") },
+    { label:"Knowledge", note:"Informasi produk", icon:"◇", action:()=>navigateTo("knowledge") },
+    { label:"Cari temuan", note:"Filter bug di project", icon:"⌕", action:()=>{ navigateTo("manage"); document.getElementById("bugSearch").focus(); } }
+  ];
+  function openQuickJump(){
+    if(document.querySelector(".command-overlay")) return;
+    const overlay = document.createElement("div");
+    overlay.className = "command-overlay";
+    overlay.innerHTML = '<div class="command-box" role="dialog" aria-modal="true" aria-label="Jelajah cepat"><div class="command-search"><span>⌕</span><input id="commandInput" type="text" placeholder="Cari halaman atau aksi…" autocomplete="off" aria-label="Cari halaman atau aksi"><kbd>ESC</kbd></div><div class="command-results" id="commandResults"></div></div>';
+    document.body.appendChild(overlay);
+    const input = overlay.querySelector("#commandInput"), results = overlay.querySelector("#commandResults");
+    let matches = quickCommands, selected = 0;
+    const close = ()=>{ overlay.remove(); document.getElementById("quickJump").focus(); };
+    const run = index=>{ const command = matches[index]; if(!command) return; overlay.remove(); command.action(); };
+    const render = ()=>{
+      matches = quickCommands.filter(c=>(c.label+" "+c.note).toLowerCase().includes(input.value.trim().toLowerCase()));
+      selected = Math.min(selected,Math.max(0,matches.length-1));
+      results.innerHTML = '<div class="command-heading">NAVIGASI & AKSI</div>'+
+        (matches.length ? matches.map((c,i)=>'<button class="command-item '+(i===selected?'is-selected':'')+'" type="button" data-command="'+i+'"><span class="nav-icon">'+c.icon+'</span><span>'+c.label+'</span><small>'+c.note+'</small></button>').join("") : '<div class="command-empty">Tidak ada hasil. Coba kata lain.</div>');
+      results.querySelectorAll("[data-command]").forEach(btn=>btn.addEventListener("click", ()=>run(Number(btn.dataset.command))));
+    };
+    input.addEventListener("input", ()=>{ selected=0; render(); });
+    input.addEventListener("keydown", e=>{
+      if(e.key==="Escape"){ e.preventDefault(); close(); }
+      if(e.key==="ArrowDown"){ e.preventDefault(); selected=Math.min(selected+1,matches.length-1); render(); }
+      if(e.key==="ArrowUp"){ e.preventDefault(); selected=Math.max(selected-1,0); render(); }
+      if(e.key==="Enter"){ e.preventDefault(); run(selected); }
+    });
+    overlay.addEventListener("click", e=>{ if(e.target===overlay) close(); });
+    render(); input.focus();
+  }
+  document.getElementById("quickJump").addEventListener("click", openQuickJump);
+  document.addEventListener("keydown", e=>{
+    if((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==="k"){ e.preventDefault(); openQuickJump(); return; }
+    if(e.key==="/" && !e.target.closest("input, textarea, select, [contenteditable]")){
+      e.preventDefault(); navigateTo("manage"); document.getElementById("bugSearch").focus();
+    }
   });
 
   // ================= generator teks laporan (untuk dikirim ke atasan) =================
