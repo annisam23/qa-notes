@@ -881,6 +881,7 @@
     <button class="tab-btn" data-tab="akses"><span class="nav-icon">⌘</span><span>All Akses</span></button>
     <button class="tab-btn" data-tab="knowledge"><span class="nav-icon">◇</span><span>Knowledge</span></button>
     <button class="tab-btn" data-tab="audit"><span class="nav-icon">☰</span><span>Riwayat</span></button>
+    <button class="tab-btn" data-tab="users"><span class="nav-icon">◎</span><span>Pengguna</span></button>
     <div class="sidebar-footer"><div class="sidebar-footer-icon">✦</div><strong>Bekerja lebih fokus.</strong><p>Setiap detail QA, tertata di satu tempat.</p></div>
   </div>
 
@@ -896,12 +897,12 @@
         <h2 style="margin:0;">Ringkasan kualitas</h2>
         <div class="hint" id="dashRangeLabel" style="margin:2px 0 0;"></div>
       </div>
-      <select id="dashRange" style="width:auto; min-width:170px;">
+      <div style="display:flex; gap:8px; align-items:center;"><button type="button" id="dashPdf">⬇ Export PDF</button><select id="dashRange" style="width:auto; min-width:170px;">
         <option value="week">Minggu ini</option>
         <option value="lastweek">Minggu lalu</option>
         <option value="d7">7 hari terakhir</option>
         <option value="d30">30 hari terakhir</option>
-      </select>
+      </select></div>
     </div>
     <div id="dashWrap"></div>
   </div>
@@ -1001,8 +1002,22 @@
       <h3 style="margin:0;">Riwayat Perubahan</h3>
       <input type="text" id="auditSearch" placeholder="Cari nama, modul, item…" style="width:220px;">
     </div>
+    <div class="row-flex" style="gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+      <select id="auditFWho" style="width:auto;"><option value="">Semua orang</option></select>
+      <select id="auditFAct" style="width:auto;"><option value="">Semua aksi</option><option>tambah</option><option>ubah</option><option>hapus</option></select>
+      <select id="auditFMod" style="width:auto;"><option value="">Semua modul</option></select>
+      <input type="date" id="auditFFrom" style="width:auto;" title="Dari tanggal"><input type="date" id="auditFTo" style="width:auto;" title="Sampai tanggal">
+      <button type="button" id="auditFReset">Reset filter</button>
+    </div>
     <div class="hint" style="margin:0 0 10px;">300 aktivitas terakhir: siapa menambah, mengubah, atau menghapus data. Isi data (mis. password) tidak dicatat, hanya nama field yang berubah.</div>
     <div id="auditWrap" style="overflow-x:auto;"><div class="empty-state">Memuat…</div></div>
+  </div>
+
+  <!-- ===== TAB: PENGGUNA ===== -->
+  <div class="tab-panel" id="tab-users">
+    <div class="row-flex" style="justify-content:space-between; margin-bottom:4px;"><h3 style="margin:0;">Daftar Pengguna</h3><button class="primary" type="button" id="userAdd">+ Pengguna</button></div>
+    <div class="hint" style="margin:0 0 10px;">Akun yang pernah membuka aplikasi ini. Firebase tidak mengizinkan daftar akun dibaca dari browser, jadi akun baru muncul setelah login pertamanya. Untuk menambah atau menghapus akun, gunakan Firebase Console → Authentication.</div>
+    <div id="usersWrap" style="overflow-x:auto;"><div class="empty-state">Memuat…</div></div>
   </div>
 
   <!-- ===== TAB 2: DAILY REPORT ===== -->
@@ -1251,6 +1266,9 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   document.getElementById("appRoot").style.display = "grid";
   const logoutBtn = document.getElementById("logoutBtn");
   logoutBtn.title = "Masuk sebagai " + (authUser.email || "");
+  (async ()=>{ try{ const ref = _dbCol("users").doc(authUser.uid), snap = await ref.get(), d = snap.exists ? snap.data() : {}, now = Date.now();
+    if(d.disabled){ alert("Akun ini dinonaktifkan. Hubungi admin."); await auth.signOut(); return; }
+    await ref.set({ email: authUser.email||"", firstSeen: d.firstSeen||now, lastLogin: now, loginCount: (d.loginCount||0)+1 }, { merge:true }); }catch(e){} })();
   logoutBtn.addEventListener("click", ()=>{ auth.signOut(); });
   auth.onAuthStateChanged(u=>{ if(!u) location.reload(); });  // keluar / sesi dicabut -> kembali ke halaman login
 
@@ -2947,13 +2965,57 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   const KN_LANGS = { id:"Indonesia", my:"Malaysia", en:"English" };
   // ---- parameter hasil scan per produk (diambil dari laporan PDF; produk lain ditambah di sini bila sudah ada contoh laporannya) ----
   const KN_PARAMS = {"assure": {"src": "laporan ASSURE-00000070", "sections": [["01 Tanda Vital", ["Saturasi Oksigen", "Detak Jantung", "Tekanan Nadi", "Curah Jantung", "Tekanan Sistolik", "Tekanan Diastolik"]], ["02 Antropometri", ["Indeks Massa Tubuh", "Indeks Kebulatan Tubuh", "Indeks Bentuk Tubuh", "Rasio Pinggang-Tinggi", "Usia Kulit", "Usia Jantung", "Usia Biologis", "Usia Pembuluh Darah"]], ["03 Fisiologi & HRV", ["Rasio Nadi-Napas", "HRV SDNN", "Laju Napas"]], ["04 Mental & Saraf Otonom", ["HRV SDSD", "CV RR", "HRV pNN50", "HRV RMSSD", "Rata-rata RR", "Tingkat Stres", "Aktivitas Simpatik", "Aktivitas Parasimpatik"]], ["05 Penanda Darah", ["HbA1c", "Asam Urat", "Hemoglobin", "Glukosa Darah", "Kolesterol Total"]], ["06 Komposisi Tubuh", ["Laju Metabolisme Basal", "Total Pengeluaran Energi Harian", "Massa Otot", "Massa Lemak", "Persentase Otot", "Massa Tulang", "Massa Protein", "Lemak Subkutan", "Lemak Visceral", "Persentase Protein", "Persentase Lemak Tubuh", "Persentase Cairan Tubuh"]]], "diseases": ["Hipertensi", "Diabetes Tipe 2", "Hiperkolesterolemia", "Hipertrigliseridemia", "Stroke", "Serangan Jantung", "Penyakit Kardiovaskular", "Gula Darah Puasa", "ASCVD", "Hemoglobin Rendah / Anemia", "Gagal Jantung", "Perlemakan Hati"]}, "salvion": {"src": "laporan SLV-00016", "sections": [["01 Vital Signs", ["Oxygen Saturation", "Heart Rate", "Pulse Pressure", "Cardiac Output", "Systolic Pressure", "Diastolic Pressure"]], ["02 Anthropometry", ["Body Mass Index", "Body Roundness Index", "Body Shape Index", "Waist-to-Height Ratio", "Skin Age", "Heart Age", "Biological Age", "Vascular Age"]], ["03 Physiology & HRV", ["Pulse-Respiration Quotient", "HRV SDNN", "Breathing Rate"]], ["04 Mental & Autonomic", ["HRV SDSD", "CV RR", "HRV pNN50", "HRV RMSSD", "Mean RR", "Stress Level", "Sympathetic Activity", "Parasympathetic Activity"]], ["05 Blood Markers", ["HbA1c", "Uric Acid", "Haemoglobin", "Blood Glucose", "Total Cholesterol"]], ["06 Body Composition", ["Basal Metabolic Rate", "Total Daily Energy Expenditure", "Muscle Mass", "Fat Mass", "Muscle Rate", "Bone Mass", "Protein Mass", "Subcutaneous Fat", "Visceral Fat", "Protein Rate", "Body Fat Rate", "Body Water"]]], "diseases": ["Hypertension", "Type 2 Diabetes", "Hypercholesterolemia", "Hypertriglyceridemia", "Stroke", "Heart Attack", "Cardiovascular Disease", "Fasting Blood Glucose", "ASCVD", "Low Haemoglobin / Anaemia", "Heart Failure", "Fatty Liver"]}, "aurora": {"src": "laporan Aurora VS-2026-51608280", "sections": [["A · Tanda Vital", ["Saturasi oksigen", "Detak jantung", "Tekanan nadi", "Curah jantung", "Tekanan sistolik", "Tekanan diastolik"]], ["B · Antropometri", ["Indeks Massa Tubuh (BMI)", "Indeks kebulatan tubuh", "Indeks bentuk tubuh", "Rasio pinggang-tinggi", "Usia kulit", "Usia jantung", "Usia biologis", "Indeks konisitas", "Usia pembuluh darah"]], ["C · Fisiologi & HRV", ["Rasio nadi-napas", "HRV S", "HRV SD2", "HRV SDNN", "HRV SDSD", "Variasi interval RR", "HRV pNN50", "HRV RMSSD", "Laju napas", "Rerata interval RR", "HRV daya HF", "HRV daya LF", "HRV daya VLF"]], ["D · Mental & Saraf Otonom", ["HRV SD1", "Tingkat stres", "Rasio LF/HF", "Aktivitas simpatik", "Transition activity", "Aktivitas parasimpatik"]], ["E · Profil Darah", ["HbA1c", "Asam urat", "Hemoglobin", "Glukosa darah", "Kolesterol total"]], ["F · Komposisi Tubuh", ["Laju Metabolisme Basal (BMR)", "Total Pengeluaran Energi Harian (TDEE)", "Massa otot", "Massa lemak", "Persentase otot", "Massa tulang", "Massa protein", "Lemak subkutan", "Lemak viseral", "Protein", "Lemak tubuh", "Cairan tubuh"]]], "diseases": ["Penyakit kardiovaskular", "Stroke", "Diabetes tipe 2", "Hipertensi", "Serangan jantung", "Hipertrigliseridemia", "Gagal jantung", "Perlemakan hati", "Hiperkolesterolemia", "Gula darah puasa", "Hemoglobin rendah atau anemia", "ASCVD"]}, "allegra": {"src": "laporan Allegra Plan 62 (ALG-2610060245)", "sections": [["01 Tanda-Tanda Vital", ["Detak Jantung", "Saturasi Oksigen (SpO2)", "Tekanan Darah Sistolik", "Tekanan Darah Diastolik", "Curah Jantung", "Tekanan Nadi"]], ["02 Antropometri dan Usia", ["Indeks Massa Tubuh (BMI)", "Rasio Pinggang-Tinggi", "Indeks Bentuk Tubuh (BSI)", "Indeks Kebulatan Tubuh (BRI)", "Indeks Konisitas (CI)", "Usia Biologis", "Usia Kulit", "Usia Jantung", "Usia Pembuluh Darah"]], ["03 HRV, Stres, dan Fisiologis", ["HRV SDNN", "Laju Napas", "Rasio Pulsa-Napas (PRQ)", "Tingkat Stres", "HRV RMSSD", "HRV pNN50", "HRV Mean RR", "HRV CV RR", "HRV SDSD", "HRV SD1", "Aktivitas Parasimpatis", "Aktivitas Simpatis", "HRV LF Power", "HRV HF Power", "HRV VLF Power", "HRV LF/HF Ratio", "HRV SD2", "HRV S"]], ["04 Pemeriksaan Darah", ["Glukosa Darah", "Kolesterol Total", "Hemoglobin", "Asam Urat", "HbA1c"]], ["05 Komposisi Tubuh", ["Persentase Lemak Tubuh", "Lemak Viseral", "Lemak Subkutan", "Massa Lemak", "Persentase Otot", "Massa Tulang", "Massa Otot", "Persentase Cairan Tubuh", "Persentase Protein", "Massa Protein", "Laju Metabolisme Basal (BMR)", "Pengeluaran Energi Harian (TDEE)"]]], "diseases": ["Hipertensi", "Diabetes Tipe 2", "Hiperkolesterolemia", "Hipertrigliseridemia", "Stroke", "Serangan Jantung", "Penyakit Kardiovaskular", "Glukosa Puasa Abnormal", "ASCVD", "Anemia / Hb Rendah", "Gagal Jantung", "Perlemakan Hati"]}};
-  const KN_EXTRA = {"salvion": {"title": "Salvion Life", "lead": "Life Underwriting Intelligence: skrining kesehatan lewat scan kamera (rPPG) untuk membantu underwriting asuransi jiwa. Setiap sesi scan menghasilkan satu laporan Screening & Underwriting (kode SLV-xxxxx) yang bersifat rahasia, hanya untuk keperluan underwriting internal.", "points": [["Data tertanggung", "Nama, jenis kelamin, usia, tinggi, berat, agen, dan waktu scan."], ["Skor & kategori risiko", "Health score 0–100 dan kategori risiko (misalnya Standard)."], ["Keputusan underwriting", "Extra premium, risk accumulation, dan risk score. Keputusan dihasilkan Blooxia dari skor fisiologis, risiko penyakit, demografi, gaya hidup, dan aturan knockout. Keputusan akhir tetap di underwriter."], ["Rekomendasi pertanggungan", "Saran uang pertanggungan (× penghasilan), saran masa pertanggungan, dan batas usia pertanggungan, dibandingkan dengan nilai yang diajukan."], ["Penilaian per produk", "Life Insurance: PLF, extra mortality, keputusan (Standard / Sub-Standard), rentang PLF 95%, dan keyakinan keputusan. Critical Illness, Health, dan Disability: hubungi Customer Service."], ["Profil usia", "Usia biologis, kulit, jantung, dan pembuluh darah."], ["42 parameter dalam 6 domain", "Tanda vital, antropometri, fisiologi & HRV, mental & saraf otonom, penanda darah, dan komposisi tubuh. Tiap domain punya skor, tiap parameter punya nilai, rentang 95%, kategori, dan keyakinan."], ["12 indeks risiko penyakit", "Persentase risiko beserta rentang 95% dan keyakinan (lihat daftar di bawah)."], ["Proyeksi mortalitas", "Tiga skenario (pesimistis, moderat, optimistis), qx per 1.000 menurut usia."], ["Kualitas sinyal & catatan", "Laporan menampilkan kualitas sinyal kamera dan jumlah parameter dinilai per tingkat keyakinan. Hasilnya informasi skrining, bukan diagnosis medis; rentang bisa lebih lebar jika sinyal kurang baik, dan scan ulang disarankan dengan wajah diam dan cahaya merata dari depan."]]}, "aurora": {"title": "Aurora Health Analysis", "lead": "Aurora Smart Healthcare Assistant: skrining kesehatan berbasis AI dari hasil pemindaian. Setiap sesi menghasilkan Laporan kesehatan pribadi (kode VS-xxxx) yang bersifat informasi saja dan bukan diagnosis medis.", "points": [["Data pengguna", "Nama, ID (SED-xxxx), jenis kelamin, usia, tinggi badan, dan berat badan."], ["Skor kesehatan keseluruhan", "Skor 0–100 beserta status (misalnya Perlu perhatian), terdiri dari GHS (kesehatan) dan DHS (domain)."], ["6 domain, 51 parameter", "Tanda vital (6), antropometri (9), fisiologi & HRV (13), mental & saraf otonom (6), profil darah (5), dan komposisi tubuh (12)."], ["Status parameter", "Optimal, Sehat, Perlu perhatian, dan Perlu evaluasi. Sebaran jumlah parameter per status ditampilkan di halaman Insight."], ["Estimasi risiko penyakit", "12 penyakit dengan persentase dan tingkat (Sangat Rendah, Rendah, Sedang, Tinggi). Ini estimasi model dari scan, bukan kepastian diagnosis."], ["Fokus kesehatan", "Daftar hasil di luar rentang sehat, diurutkan dari yang paling mendesak, sebagai bahan diskusi saat konsultasi."], ["Detail per domain", "Tiap parameter menampilkan status, hasil, rentang acuan (sehat atau waspada), dan garis penanda posisi hasil pada skala."], ["Catatan", "Hasil dapat bervariasi tergantung pencahayaan, gerakan, dan kualitas perangkat. Konsultasikan dengan dokter sebelum mengambil keputusan kesehatan."]]}, "allegra": {"title": "Laporan Allegra · Plan 62", "lead": "Allegra (Selangkah Lebih Sehat), milik PT. Milla Manajemen Mahardika (allegra.id): skrining kesehatan dari pemindaian yang menghasilkan laporan peserta (kode ALG-xxxx) sesuai paket layanan. Paket Plan 62 menampilkan 62 parameter kesehatan: 50 parameter terukur ditambah 12 indikator risiko penyakit.", "points": [["Profil peserta & gaya hidup", "Usia, jenis kelamin, tinggi, berat, BMI, serta kebiasaan yang dicatat saat pendaftaran (merokok, alkohol, aktivitas fisik, durasi tidur, paparan layar, hobi berisiko, berkendara motor, status pernikahan, pekerjaan)."], ["Skor utama", "Skor Akhir 0–100 beserta kategori (misalnya Bugar), Skor Kesehatan Keseluruhan (OWS, Overall Wellness Score), dan Skor Risiko Keseluruhan (ORS, Overall Risk Score) dengan kategori seperti Standar atau Substandar."], ["Profil skor domain", "Radar 6 domain (Fisik, Vital, Fisiologis, Mental, Darah, Komposisi Tubuh) dengan skor 0–100 dan kategori tiap domain."], ["Halaman detail", "Tanda vital, antropometri dan usia, HRV-stres-fisiologis, pemeriksaan darah, dan komposisi tubuh. Tiap parameter menampilkan nilai, kategori, acuan, dan status perhatian."], ["Indikator risiko kesehatan", "12 indikator risiko penyakit dengan persentase dan kategori, plus indeks risiko komposit."], ["Status kebugaran & prioritas", "Jumlah parameter Perlu Evaluasi, Perlu Perhatian, dan Dalam Batas, serta daftar area perhatian utama."], ["Saran & tindak lanjut", "Hanya saran non-kosong dari hasil Allegra yang ditampilkan, tidak ada saran tambahan."], ["Kualitas sinyal", "Jika sinyal denyut lemah (di bawah ambang), laporan memberi tanda Rendah. Nilai tetap dihitung dengan rentang toleransi lebih lebar, dan skrining disarankan diulang di cahaya stabil tanpa gerakan."]]}, "flexa": {"title": "Panduan Produk Flexa", "lead": "Flexa (Asuransi Suka-Suka), PT Flexa Asia Solusi: platform enablement produk asuransi digital yang fleksibel untuk mitra perusahaan asuransi, dengan enam kategori perlindungan: personal, perjalanan, kesehatan, jiwa, kendaraan, dan rumah. Mitra asuransi tetap menjadi penanggung risiko dan penerbit polis. Sumber: PDF Panduan Produk Flexa.", "points": [["Model fleksibilitas", "Pilih Paket (Dasar, Seimbang, Maksimal) atau Atur Sendiri (nilai pertanggungan, premi sekali bayar, dan durasi)."], ["3 mode FlexPersona", "Flex Premium: atur nilai pertanggungan + durasi, premi dihitung otomatis. Flex Cover: atur premi sekali bayar + durasi, nilai pertanggungan dihitung. Flex Time: atur premi sekali bayar + nilai pertanggungan, durasi dihitung otomatis (menurut gambar slider di PDF; teks keterangannya menulis premi + durasi, sama seperti Flex Cover, jadi perlu dikonfirmasi)."], ["Durasi perlindungan per produk", "FlexPersona: jam, hari, bulan. FlexTravel: hari. FlexCare: bulan, tahun. FlexLife: tahun. FlexAuto: jam, hari, bulan. FlexHome: hari, bulan. Minimum dan maksimum mengikuti karakteristik tiap produk."], ["FlexPersona (asuransi kecelakaan diri)", "Fleksibel dalam durasi, tingkat perlindungan, dan manfaat tambahan."], ["FlexTravel (asuransi perjalanan)", "Pilih durasi perjalanan: 1–3 hari, 4–7 hari, 8–14 hari, atau lebih dari 14 hari. Untuk perjalanan bisnis, liburan, maupun kebutuhan pribadi."], ["FlexLife (perlindungan jiwa)", "Premi sekali bayar. Pilihan uang pertanggungan dan durasi perlindungan; manfaat utama meninggal dunia dan cacat tetap total. Alur: pilih perlindungan, masukkan preferensi, asesmen digital berbasis video wajah, dapatkan rekomendasi, tinjau manfaat, pilih penanggung. Proses analisis dan penyesuaian premi dijalankan otomatis oleh sistem di belakang layar."], ["FlexCare (cash-plan kesehatan)", "Satu kali pembayaran untuk periode yang dipilih. Manfaat: santunan harian rawat inap, santunan harian ICU, dan pemulihan setelah pembedahan. Alur: pilih produk, atur santunan dan periode, asesmen kesehatan digital, terima rekomendasi, tinjau manfaat, pilih penanggung."], ["FlexAuto (perlindungan kendaraan)", "Didukung penilaian aset digital. Alur: pilih FlexAuto, isi detail kendaraan (merek, model, tipe, tahun), konfirmasi kendaraan, unggah foto dari beberapa sisi, informasi tambahan (kilometer dan kondisi), penilaian digital, lalu pilih nilai pertanggungan dan aktifkan dengan pembayaran sekali untuk periode yang dipilih."], ["FlexHome (perlindungan rumah/properti)", "Pilih jenis properti (rumah tinggal, apartemen, ruko/rukan), isi informasi (lokasi, luas, tahun bangun, jumlah lantai), pilih kondisi (baru, baik, sedang, perlu renovasi), unggah foto, lalu terima hasil penilaian dengan rentang nilai pertanggungan rekomendasi. Risiko yang dapat dipilih antara lain kebakaran dan bencana alam."], ["Alur pengalaman pengguna", "1) Pilih produk, 2) pilih pendekatan perlindungan, 3) atur parameter, 4) lengkapi informasi, 5) sistem menampilkan konfigurasi yang sesuai, 6) pilih perusahaan asuransi, 7) aktivasi perlindungan."], ["Alur pemilihan penanggung & aktivasi", "Atur parameter, lihat alternatif penanggung, tinjau ringkasan produk, pilih penanggung, lalu lanjut ke penerbitan dan aktivasi. Daftar penanggung bisa berbeda tergantung produk dan konfigurasi mitra."], ["Konsep premi", "Premi durasi pendek tidak dihitung proporsional dari premi tahunan: Flexa mempertimbangkan risiko jangka pendek dan potensi anti-seleksi. Untuk durasi lebih panjang, premi mendekati pola premi tahunan."], ["Peran Flexa vs mitra asuransi", "Flexa: pengalaman digital, pengaturan parameter fleksibel, dukungan rekomendasi, orkestrasi input nasabah dan opsi produk, menampilkan pilihan mitra. Mitra asuransi: persetujuan produk, kebijakan underwriting, penerbitan polis, pengelolaan premi, layanan klaim, dukungan nasabah."], ["Komponen pengaturan produk", "Jenis produk, manfaat utama, rentang premi, rentang nilai pertanggungan/santunan, pilihan durasi, paket atau kustom, kriteria eligibilitas, faktor penyesuaian umum, tampilan pilihan penanggung, dan ketentuan ringkas. Mesin perhitungan harga (pricing engine) tidak ditampilkan."], ["Ketentuan operasional umum", "Premi dibayar satu kali untuk masa perlindungan yang dipilih. Setelah perlindungan aktif, perubahan seperti perpanjangan, perubahan jadwal, penambahan manfaat, atau jeda umumnya bukan bagian dari alur standar. Ketentuan akhir mengikuti kebijakan dan proses perusahaan asuransi mitra."], ["Tahapan implementasi bersama mitra", "1) Penyelarasan konsep produk, 2) penetapan parameter dan manfaat, 3) penyesuaian tampilan dan alur digital, 4) uji coba dan validasi, 5) peluncuran terbatas, 6) evaluasi dan penyempurnaan."], ["Kontak", "PT Flexa Asia Solusi, Graha Surveyor Indonesia lt. 18 suite 1801, Jl. Jend. Gatot Subroto Kav. 56, Jakarta 12950. Email support@flexa.asia, situs flexa.asia, telepon +62 (21) 5265 235."]]}};
+  const KN_EXTRA = {"salvion": {"title": "Salvion Life", "lead": "Life Underwriting Intelligence: skrining kesehatan lewat scan kamera (rPPG) untuk membantu underwriting asuransi jiwa. Setiap sesi scan menghasilkan satu laporan Screening & Underwriting (kode SLV-xxxxx) yang bersifat rahasia, hanya untuk keperluan underwriting internal.", "points": [["Data tertanggung", "Nama, jenis kelamin, usia, tinggi, berat, agen, dan waktu scan."], ["Skor & kategori risiko", "Health score 0–100 dan kategori risiko (misalnya Standard)."], ["Keputusan underwriting", "Extra premium, risk accumulation, dan risk score. Keputusan dihasilkan Blooxia dari skor fisiologis, risiko penyakit, demografi, gaya hidup, dan aturan knockout. Keputusan akhir tetap di underwriter."], ["Rekomendasi pertanggungan", "Saran uang pertanggungan (× penghasilan), saran masa pertanggungan, dan batas usia pertanggungan, dibandingkan dengan nilai yang diajukan."], ["Penilaian per produk", "Life Insurance: PLF, extra mortality, keputusan (Standard / Sub-Standard), rentang PLF 95%, dan keyakinan keputusan. Critical Illness, Health, dan Disability: hubungi Customer Service."], ["Profil usia", "Usia biologis, kulit, jantung, dan pembuluh darah."], ["42 parameter dalam 6 domain", "Tanda vital, antropometri, fisiologi & HRV, mental & saraf otonom, penanda darah, dan komposisi tubuh. Tiap domain punya skor, tiap parameter punya nilai, rentang 95%, kategori, dan keyakinan."], ["12 indeks risiko penyakit", "Persentase risiko beserta rentang 95% dan keyakinan (lihat daftar di bawah)."], ["Proyeksi mortalitas", "Tiga skenario (pesimistis, moderat, optimistis), qx per 1.000 menurut usia."], ["Kualitas sinyal & catatan", "Laporan menampilkan kualitas sinyal kamera dan jumlah parameter dinilai per tingkat keyakinan. Hasilnya informasi skrining, bukan diagnosis medis; rentang bisa lebih lebar jika sinyal kurang baik, dan scan ulang disarankan dengan wajah diam dan cahaya merata dari depan."]]}, "aurora": {"title": "Aurora Health Analysis", "lead": "Aurora Smart Healthcare Assistant: skrining kesehatan berbasis AI dari hasil pemindaian. Setiap sesi menghasilkan Laporan kesehatan pribadi (kode VS-xxxx) yang bersifat informasi saja dan bukan diagnosis medis.", "points": [["Data pengguna", "Nama, ID (SED-xxxx), jenis kelamin, usia, tinggi badan, dan berat badan."], ["Skor kesehatan keseluruhan", "Skor 0–100 beserta status (misalnya Perlu perhatian), terdiri dari GHS (kesehatan) dan DHS (domain)."], ["6 domain, 51 parameter", "Tanda vital (6), antropometri (9), fisiologi & HRV (13), mental & saraf otonom (6), profil darah (5), dan komposisi tubuh (12)."], ["Status parameter", "Optimal, Sehat, Perlu perhatian, dan Perlu evaluasi. Sebaran jumlah parameter per status ditampilkan di halaman Insight."], ["Estimasi risiko penyakit", "12 penyakit dengan persentase dan tingkat (Sangat Rendah, Rendah, Sedang, Tinggi). Ini estimasi model dari scan, bukan kepastian diagnosis."], ["Fokus kesehatan", "Daftar hasil di luar rentang sehat, diurutkan dari yang paling mendesak, sebagai bahan diskusi saat konsultasi."], ["Detail per domain", "Tiap parameter menampilkan status, hasil, rentang acuan (sehat atau waspada), dan garis penanda posisi hasil pada skala."], ["Catatan", "Hasil dapat bervariasi tergantung pencahayaan, gerakan, dan kualitas perangkat. Konsultasikan dengan dokter sebelum mengambil keputusan kesehatan."]]}, "allegra": {"title": "Laporan Allegra · Plan 62", "lead": "Allegra (Selangkah Lebih Sehat), milik PT. Milla Manajemen Mahardika (allegra.id): skrining kesehatan dari pemindaian yang menghasilkan laporan peserta (kode ALG-xxxx) sesuai paket layanan. Paket Plan 62 menampilkan 62 parameter kesehatan: 50 parameter terukur ditambah 12 indikator risiko penyakit.", "points": [["Alur peran: PT MMM → RS → Pasien (info terbaru, 8 Okt 2026)", "PT MMM menyediakan platform Allegra. RS bisa membuat dan mengatur paket layanan sendiri di Allegra. Petugas RS membantu scan pasien. Pasien melihat, membeli, atau menggunakan paket tersebut dan bisa scan diri sendiri.", "2026-10-08"], ["Kode Referral dan Kode RS", "Kode Referral digunakan untuk promo/referral. Kode RS digunakan sebagai identitas masing-masing RS.", "2026-10-08"], ["Telekonsul", "Fitur tambahan untuk summary hasil konsultasi antara dokter dan pasien.", "2026-10-08"], ["Persetujuan paket", "RS mengajukan (request) paket, lalu paket tersebut di-approve oleh admin.", "2026-10-08"], ["Profil peserta & gaya hidup", "Usia, jenis kelamin, tinggi, berat, BMI, serta kebiasaan yang dicatat saat pendaftaran (merokok, alkohol, aktivitas fisik, durasi tidur, paparan layar, hobi berisiko, berkendara motor, status pernikahan, pekerjaan)."], ["Skor utama", "Skor Akhir 0–100 beserta kategori (misalnya Bugar), Skor Kesehatan Keseluruhan (OWS, Overall Wellness Score), dan Skor Risiko Keseluruhan (ORS, Overall Risk Score) dengan kategori seperti Standar atau Substandar."], ["Profil skor domain", "Radar 6 domain (Fisik, Vital, Fisiologis, Mental, Darah, Komposisi Tubuh) dengan skor 0–100 dan kategori tiap domain."], ["Halaman detail", "Tanda vital, antropometri dan usia, HRV-stres-fisiologis, pemeriksaan darah, dan komposisi tubuh. Tiap parameter menampilkan nilai, kategori, acuan, dan status perhatian."], ["Indikator risiko kesehatan", "12 indikator risiko penyakit dengan persentase dan kategori, plus indeks risiko komposit."], ["Status kebugaran & prioritas", "Jumlah parameter Perlu Evaluasi, Perlu Perhatian, dan Dalam Batas, serta daftar area perhatian utama."], ["Saran & tindak lanjut", "Hanya saran non-kosong dari hasil Allegra yang ditampilkan, tidak ada saran tambahan."], ["Kualitas sinyal", "Jika sinyal denyut lemah (di bawah ambang), laporan memberi tanda Rendah. Nilai tetap dihitung dengan rentang toleransi lebih lebar, dan skrining disarankan diulang di cahaya stabil tanpa gerakan."]]}, "flexa": {"title": "Panduan Produk Flexa", "lead": "Flexa (Asuransi Suka-Suka), PT Flexa Asia Solusi: platform enablement produk asuransi digital yang fleksibel untuk mitra perusahaan asuransi, dengan enam kategori perlindungan: personal, perjalanan, kesehatan, jiwa, kendaraan, dan rumah. Mitra asuransi tetap menjadi penanggung risiko dan penerbit polis. Sumber: PDF Panduan Produk Flexa.", "points": [["Model fleksibilitas", "Pilih Paket (Dasar, Seimbang, Maksimal) atau Atur Sendiri (nilai pertanggungan, premi sekali bayar, dan durasi)."], ["3 mode FlexPersona", "Flex Premium: atur nilai pertanggungan + durasi, premi dihitung otomatis. Flex Cover: atur premi sekali bayar + durasi, nilai pertanggungan dihitung. Flex Time: atur premi sekali bayar + nilai pertanggungan, durasi dihitung otomatis (menurut gambar slider di PDF; teks keterangannya menulis premi + durasi, sama seperti Flex Cover, jadi perlu dikonfirmasi)."], ["Durasi perlindungan per produk", "FlexPersona: jam, hari, bulan. FlexTravel: hari. FlexCare: bulan, tahun. FlexLife: tahun. FlexAuto: jam, hari, bulan. FlexHome: hari, bulan. Minimum dan maksimum mengikuti karakteristik tiap produk."], ["FlexPersona (asuransi kecelakaan diri)", "Fleksibel dalam durasi, tingkat perlindungan, dan manfaat tambahan."], ["FlexTravel (asuransi perjalanan)", "Pilih durasi perjalanan: 1–3 hari, 4–7 hari, 8–14 hari, atau lebih dari 14 hari. Untuk perjalanan bisnis, liburan, maupun kebutuhan pribadi."], ["FlexLife (perlindungan jiwa)", "Premi sekali bayar. Pilihan uang pertanggungan dan durasi perlindungan; manfaat utama meninggal dunia dan cacat tetap total. Alur: pilih perlindungan, masukkan preferensi, asesmen digital berbasis video wajah, dapatkan rekomendasi, tinjau manfaat, pilih penanggung. Proses analisis dan penyesuaian premi dijalankan otomatis oleh sistem di belakang layar."], ["FlexCare (cash-plan kesehatan)", "Satu kali pembayaran untuk periode yang dipilih. Manfaat: santunan harian rawat inap, santunan harian ICU, dan pemulihan setelah pembedahan. Alur: pilih produk, atur santunan dan periode, asesmen kesehatan digital, terima rekomendasi, tinjau manfaat, pilih penanggung."], ["FlexAuto (perlindungan kendaraan)", "Didukung penilaian aset digital. Alur: pilih FlexAuto, isi detail kendaraan (merek, model, tipe, tahun), konfirmasi kendaraan, unggah foto dari beberapa sisi, informasi tambahan (kilometer dan kondisi), penilaian digital, lalu pilih nilai pertanggungan dan aktifkan dengan pembayaran sekali untuk periode yang dipilih."], ["FlexHome (perlindungan rumah/properti)", "Pilih jenis properti (rumah tinggal, apartemen, ruko/rukan), isi informasi (lokasi, luas, tahun bangun, jumlah lantai), pilih kondisi (baru, baik, sedang, perlu renovasi), unggah foto, lalu terima hasil penilaian dengan rentang nilai pertanggungan rekomendasi. Risiko yang dapat dipilih antara lain kebakaran dan bencana alam."], ["Alur pengalaman pengguna", "1) Pilih produk, 2) pilih pendekatan perlindungan, 3) atur parameter, 4) lengkapi informasi, 5) sistem menampilkan konfigurasi yang sesuai, 6) pilih perusahaan asuransi, 7) aktivasi perlindungan."], ["Alur pemilihan penanggung & aktivasi", "Atur parameter, lihat alternatif penanggung, tinjau ringkasan produk, pilih penanggung, lalu lanjut ke penerbitan dan aktivasi. Daftar penanggung bisa berbeda tergantung produk dan konfigurasi mitra."], ["Konsep premi", "Premi durasi pendek tidak dihitung proporsional dari premi tahunan: Flexa mempertimbangkan risiko jangka pendek dan potensi anti-seleksi. Untuk durasi lebih panjang, premi mendekati pola premi tahunan."], ["Peran Flexa vs mitra asuransi", "Flexa: pengalaman digital, pengaturan parameter fleksibel, dukungan rekomendasi, orkestrasi input nasabah dan opsi produk, menampilkan pilihan mitra. Mitra asuransi: persetujuan produk, kebijakan underwriting, penerbitan polis, pengelolaan premi, layanan klaim, dukungan nasabah."], ["Komponen pengaturan produk", "Jenis produk, manfaat utama, rentang premi, rentang nilai pertanggungan/santunan, pilihan durasi, paket atau kustom, kriteria eligibilitas, faktor penyesuaian umum, tampilan pilihan penanggung, dan ketentuan ringkas. Mesin perhitungan harga (pricing engine) tidak ditampilkan."], ["Ketentuan operasional umum", "Premi dibayar satu kali untuk masa perlindungan yang dipilih. Setelah perlindungan aktif, perubahan seperti perpanjangan, perubahan jadwal, penambahan manfaat, atau jeda umumnya bukan bagian dari alur standar. Ketentuan akhir mengikuti kebijakan dan proses perusahaan asuransi mitra."], ["Tahapan implementasi bersama mitra", "1) Penyelarasan konsep produk, 2) penetapan parameter dan manfaat, 3) penyesuaian tampilan dan alur digital, 4) uji coba dan validasi, 5) peluncuran terbatas, 6) evaluasi dan penyempurnaan."], ["Kontak", "PT Flexa Asia Solusi, Graha Surveyor Indonesia lt. 18 suite 1801, Jl. Jend. Gatot Subroto Kav. 56, Jakarta 12950. Email support@flexa.asia, situs flexa.asia, telepon +62 (21) 5265 235."]]}};
   function knExtraSec(p){
     const d = KN_EXTRA[String(p.name||"").trim().toLowerCase()];
     if(!d) return "";
     return '<div class="kn-dsec"><h4>Detail produk · '+esc(d.title)+'</h4>'+
       '<div class="kn-text" style="margin-bottom:8px;">'+esc(d.lead)+'</div>'+
-      d.points.map(x=>'<div style="margin:6px 0;"><b>'+esc(x[0])+'</b><div class="kn-text">'+esc(x[1])+'</div></div>').join("")+'</div>';
+      d.points.map(x=>{
+        const t = x[2] ? (x[2]===todayStr() ? "today" : "old") : "";
+        const badge = t==="today" ? ' <span style="background:#f59e0b; color:#1f2937; font-size:11px; font-weight:800; padding:2px 8px; border-radius:99px; margin-left:6px;">INFO HARI INI</span>'
+          : t==="old" ? ' <span style="background:rgba(245,158,11,.18); color:#b45309; font-size:11px; font-weight:700; padding:2px 8px; border-radius:99px; margin-left:6px;">Update '+esc(fmtDate(x[2]))+'</span>' : "";
+        const box = t==="today" ? "background:rgba(250,204,21,.22); border-left:4px solid #f59e0b; padding:8px 10px; border-radius:8px;" : "";
+        return '<div style="margin:6px 0; '+box+'"><b>'+esc(x[0])+'</b>'+badge+'<div class="kn-text">'+esc(x[1])+'</div></div>';
+      }).join("")+'</div>';
+  }
+  // ---- Update terbaru per produk (tersimpan di Firestore, tanggal & pembuat otomatis) ----
+  function knUpTag(date){
+    const t = date===todayStr();
+    return { badge: t ? ' <span style="background:#f59e0b; color:#1f2937; font-size:11px; font-weight:800; padding:2px 8px; border-radius:99px; margin-left:6px;">INFO HARI INI</span>'
+                      : ' <span style="background:rgba(245,158,11,.18); color:#b45309; font-size:11px; font-weight:700; padding:2px 8px; border-radius:99px; margin-left:6px;">Update '+esc(fmtDate(date))+'</span>',
+             box: t ? "background:rgba(250,204,21,.22); border-left:4px solid #f59e0b; padding:8px 10px; border-radius:8px;" : "" };
+  }
+  function knUpdatesSec(p){
+    const ups = (p.updates||[]).slice().sort((a,b)=>(b.at||0)-(a.at||0));
+    const body = ups.length ? ups.map(u=>{ const g = knUpTag(u.date);
+      return '<div style="margin:6px 0; '+g.box+'"><b>'+esc(u.title)+'</b>'+g.badge+'<div class="kn-text">'+esc(u.text)+'</div>'+
+        '<div class="kn-muted" style="font-size:11px;">'+esc(fmtDate(u.date))+' · '+esc(u.by||"-")+' · <a href="#" data-ue="'+esc(u.id)+'">edit</a> · <a href="#" data-ud="'+esc(u.id)+'">hapus</a></div></div>'; }).join("")
+      : '<div class="kn-muted">Belum ada update. Klik "+ Update" di bawah.</div>';
+    return '<div class="kn-dsec"><h4>Update terbaru<span class="n">'+ups.length+'</span></h4>'+body+'</div>';
+  }
+  async function knSaveUpdates(p, arr){
+    try{ await db.collection("knowledgeProducts").doc(p.id).update({ updates: arr }); return true; }
+    catch(e){ toast("Gagal menyimpan update: "+e.message); return false; }
+  }
+  function knUpdateForm(p, ex, done){
+    const o = document.createElement("div"); o.className = "modal-overlay"; o.style.zIndex = 10000;
+    o.innerHTML = '<div class="modal-box" style="max-width:520px;"><h3 style="margin-top:0;">'+(ex?"Edit update":"Tambah update")+' · '+esc(p.name)+'</h3>'+
+      '<label>Judul</label><input type="text" id="kuT" value="'+esc(ex?ex.title:"")+'" placeholder="mis. Fitur telekonsul ditambahkan">'+
+      '<label style="margin-top:8px;">Isi update</label><textarea id="kuX" rows="5">'+esc(ex?ex.text:"")+'</textarea>'+
+      '<div class="hint">Tanggal ('+esc(fmtDate(ex?ex.date:todayStr()))+') dan pembuat ('+esc(ex?ex.by:auditWho())+') terisi otomatis.</div>'+
+      '<div class="row-flex" style="justify-content:flex-end; gap:8px; margin-top:12px;"><button id="kuC">Batal</button><button class="primary" id="kuS">Simpan</button></div></div>';
+    document.body.appendChild(o);
+    o.querySelector("#kuT").focus();
+    o.querySelector("#kuC").onclick = ()=>o.remove();
+    o.querySelector("#kuS").onclick = async ()=>{
+      const title = o.querySelector("#kuT").value.trim(), text = o.querySelector("#kuX").value.trim();
+      if(!title || !text){ toast("Judul dan isi wajib diisi."); return; }
+      const cur = (p.updates||[]).slice();
+      if(ex){ const i = cur.findIndex(u=>u.id===ex.id); if(i>=0) cur[i] = { ...cur[i], title, text, editedBy: auditWho(), editedAt: Date.now() }; }
+      else cur.push({ id:"u"+Date.now(), title, text, date: todayStr(), by: auditWho(), at: Date.now() });
+      if(await knSaveUpdates(p, cur)){ o.remove(); toast("Update disimpan."); done(); }
+    };
   }
   function knParamSec(p){
     const d = KN_PARAMS[String(p.name||"").trim().toLowerCase()];
@@ -3155,10 +3217,15 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     if(feats.length){ k.label("Fitur / modul ("+feats.length+")"); k.chips(feats, C.chip, C.chipText); }
     if(roles.length){ k.label("Peran pengguna ("+roles.length+")"); k.chips(roles, C.okSoft, [14,120,84]); }
     if((pr.note||"").trim()) k.callout(pr.note.trim(), C.warnSoft, C.warn);
+    const ups = (pr.updates||[]).slice().sort((a,b)=>(b.at||0)-(a.at||0));
+    if(ups.length){
+      k.y += 4; k.section("Update terbaru ("+ups.length+")", rgb);
+      ups.forEach(u=>{ k.label(u.title+(u.date===todayStr() ? "  [INFO HARI INI]" : "  [Update "+fmtDate(u.date)+"]")); k.lines(u.text, 10); k.lines("Oleh "+(u.by||"-")+" · "+fmtDate(u.date), 8.5, "normal", C.dim); });
+    }
     if(ex){
       k.y += 4; k.section("Detail produk - "+ex.title, rgb);
       k.lines(ex.lead, 10);
-      ex.points.forEach(x=>{ k.label(x[0]); k.lines(x[1], 10); });
+      ex.points.forEach(x=>{ k.label(x[0]+(x[2] ? (x[2]===todayStr() ? "  [INFO HARI INI]" : "  [Update "+fmtDate(x[2])+"]") : "")); k.lines(x[1], 10); });
     }
     if(pm){
       const total = pm.sections.reduce((a,x)=>a+x[1].length,0);
@@ -3195,6 +3262,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
           sec("Deskripsi", null, p.desc ? '<div class="kn-text">'+esc(p.desc)+'</div>' : '<div class="kn-muted">Belum diisi.</div>', langPill)+
           sec("Fitur / modul", feats.length, chips(feats, "feat"))+
           sec("Peran pengguna", roles.length, chips(roles, "role"))+
+          knUpdatesSec(p)+
           knExtraSec(p)+
           knParamSec(p)+
           (p.note ? sec("Catatan", null, '<div class="kn-note">'+esc(p.note)+'</div>') : '')+
@@ -3202,6 +3270,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         '<div class="kn-foot">'+
           '<button class="danger-outline spacer" id="kdDel">Hapus</button>'+
           '<button id="kdAkses">🔑 Lihat akses</button>'+
+          '<button id="kdUpd">+ Update</button>'+
           '<button id="kdPdf">⬇ Export PDF</button>'+
           '<button id="kdEdit">✎ Edit</button>'+
           '<button class="primary" id="kdClose">Tutup</button>'+
@@ -3215,6 +3284,10 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     overlay.querySelector("#kdClose").onclick = close;
     overlay.querySelector("#kdX").onclick = close;
     overlay.querySelector("#kdPdf").onclick = ()=>buildKnProductPdf(p);
+    const reopen = ()=>{ close(); setTimeout(()=>openKnDetail(p.id), 400); };
+    overlay.querySelector("#kdUpd").onclick = ()=>knUpdateForm(p, null, reopen);
+    overlay.querySelectorAll("[data-ue]").forEach(a=>a.onclick = e=>{ e.preventDefault(); knUpdateForm(p, (p.updates||[]).find(u=>u.id===a.dataset.ue), reopen); });
+    overlay.querySelectorAll("[data-ud]").forEach(a=>a.onclick = async e=>{ e.preventDefault(); if(!confirm("Hapus update ini?")) return; if(await knSaveUpdates(p, (p.updates||[]).filter(u=>u.id!==a.dataset.ud))) reopen(); });
     overlay.querySelector("#kdEdit").onclick = ()=>{ close(); openKnModal(p.id); };
     overlay.querySelector("#kdAkses").onclick = ()=>{
       close();
@@ -4267,6 +4340,108 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     return h + '</div>';
   }
 
+  function buildDashPdf(){
+    if(!window.jspdf){ toast("Library PDF gagal dimuat."); return; }
+    const { jsPDF } = window.jspdf, T = pdfText;
+    const doc = new jsPDF({ unit:"mm", format:"a4", orientation:"portrait" });
+    const pageW = doc.internal.pageSize.getWidth(), pageH = doc.internal.pageSize.getHeight();
+    const mx = 16, availW = pageW - mx*2, top = 18, bottom = pageH - 24;
+    const hex = h=>[1,3,5].map(i=>parseInt(h.substr(i,2),16));
+    const today = todayStr(), r = dashRange(), rl = fmtDate(r.from)+" s/d "+fmtDate(r.to);
+    const unres = entries.filter(dashUn), overdue = unres.filter(e=>e.dueDate && e.dueDate < today),
+          crit = unres.filter(e=>e.priority==="Critical"||e.priority==="High"), reported = entries.filter(e=>dashIn(e.date, r)),
+          resolved = entries.filter(e=>!dashUn(e) && dashIn(e.statusChangedDate, r)), nOpen = unres.filter(e=>e.status==="Open").length;
+    const ageOf = e=>Math.max(0, Math.round((new Date(today+"T00:00:00") - new Date((e.date||today)+"T00:00:00"))/86400000));
+    const avgAge = unres.length ? Math.round(unres.reduce((a,e)=>a+ageOf(e),0)/unres.length) : 0;
+    const byProj = projects.map(p=>{ const mine = entries.filter(e=>e.projectId===p.id), un = mine.filter(dashUn);
+      return { name:p.name, un:un.length, od:un.filter(e=>e.dueDate && e.dueDate < today).length, cr:un.filter(e=>e.priority==="Critical"||e.priority==="High").length,
+        rep:mine.filter(e=>dashIn(e.date, r)).length, res:mine.filter(e=>!dashUn(e) && dashIn(e.statusChangedDate, r)).length }; });
+    const bh = pdfBanner(doc, "DASHBOARD QA", "Ringkasan Kualitas", "Periode: "+rl, pageW);
+    let y = bh + 8;
+    const need = h=>{ if(y + h > bottom){ doc.addPage(); y = top; } };
+    // kartu KPI (3 x 2), warna sama seperti di layar
+    const kp = [["Belum selesai", unres.length, "Open "+nOpen+" · In Progress "+(unres.length-nOpen), "#e0363c"], ["Lewat due date", overdue.length, "belum selesai & terlambat", "#b4232a"],
+      ["Critical / High", crit.length, "belum selesai", "#e08a1c"], ["Diselesaikan", resolved.length, "pada periode ini", "#17a673"],
+      ["Dilaporkan", reported.length, "bug baru pada periode ini", "#2f80ed"], ["Rata-rata umur", avgAge+" hari", "bug yang belum selesai", "#6d5ef5"]];
+    const gw = 4, cw = (availW - gw*2)/3, ch = 24;
+    kp.forEach((c,i)=>{
+      const col = i%3; if(col===0) need(ch+gw);
+      const x = mx + col*(cw+gw), rgb = hex(c[3]);
+      doc.setFillColor(...rgb.map(v=>Math.round(v+(255-v)*0.9))); doc.roundedRect(x, y, cw, ch, 2.5, 2.5, "F");
+      doc.setFillColor(...rgb); doc.roundedRect(x, y, 1.8, ch, 0.9, 0.9, "F");
+      doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(90,98,115); doc.text(T(c[0]), x+5, y+6.5);
+      doc.setFont("helvetica","bold"); doc.setFontSize(18); doc.setTextColor(...rgb); doc.text(T(String(c[1])), x+5, y+15.5);
+      doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(120,128,145); doc.text(T(c[2]), x+5, y+21);
+      if(col===2) y += ch + gw;
+    });
+    // daftar batang (paling banyak dikerjakan / dilaporkan / belum selesai)
+    const barList = (title, sub, key, color)=>{
+      const list = byProj.filter(x=>x[key]>0).sort((a,b)=>b[key]-a[key]).slice(0,5), max = list.length ? list[0][key] : 1;
+      need(12 + Math.max(1,list.length)*7);
+      doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(31,56,100); doc.text(T(title), mx, y+4);
+      doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(120,128,145); doc.text(T(sub), mx+availW, y+4, { align:"right" });
+      y += 9;
+      if(!list.length){ doc.setFontSize(9); doc.text("Belum ada data.", mx, y+3); y += 8; return; }
+      const rgb = hex(color), bx = mx + 62, bw = availW - 62 - 12;
+      list.forEach(x=>{
+        doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(40,48,66); doc.text(T(doc.splitTextToSize(x.name, 58)[0]), mx, y+3.5);
+        doc.setFillColor(...rgb.map(v=>Math.round(v+(255-v)*0.88))); doc.roundedRect(bx, y, bw, 4.6, 2.3, 2.3, "F");
+        doc.setFillColor(...rgb); doc.roundedRect(bx, y, Math.max(4.6, bw*x[key]/max), 4.6, 2.3, 2.3, "F");
+        doc.setFont("helvetica","bold"); doc.setTextColor(...rgb); doc.text(String(x[key]), mx+availW, y+3.7, { align:"right" });
+        y += 7;
+      });
+      y += 4;
+    };
+    y += 2;
+    barList("Paling banyak dikerjakan", "bug diselesaikan", "res", "#17a673");
+    barList("Paling banyak dilaporkan", "bug baru", "rep", "#2f80ed");
+    barList("Paling banyak belum selesai", "bug aktif", "un", "#e0363c");
+    // pengingat due date
+    const rem = dueReminders(today);
+    if(rem.length){
+      need(14 + Math.min(rem.length,8)*6);
+      doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(180,35,42); doc.text(T("Pengingat due date ("+rem.length+")"), mx, y+4);
+      doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(120,128,145); doc.text("Critical/High H-1, Medium H-2, Low H-3", mx+availW, y+4, { align:"right" }); y += 9;
+      rem.slice(0,8).forEach(x=>{ const pr = projects.find(q=>q.id===x.e.projectId), l = x.left<0 ? "Lewat "+(-x.left)+" hari" : x.left===0 ? "Hari ini" : x.left===1 ? "Besok" : "H-"+x.left;
+        doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(x.left<0?180:224, x.left<0?35:138, x.left<0?42:28); doc.text(T(l), mx, y+3.5);
+        doc.setFont("helvetica","normal"); doc.setTextColor(40,48,66); doc.text(T(doc.splitTextToSize((x.e.priority||"Medium")+" · "+(pr?pr.name+" · ":"")+String(x.e.existing||""), availW-30)[0]), mx+28, y+3.5); y += 6; });
+      y += 4;
+    }
+    // tabel per project
+    const rows = byProj.filter(x=>x.un||x.rep||x.res).sort((a,b)=>b.un-a.un).map(x=>[x.name, x.un, x.od, x.cr, x.rep, x.res]);
+    if(rows.length){
+      need(30);
+      doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(31,56,100); doc.text("Per project", mx, y+4);
+      doc.autoTable({ startY:y+8, head:[["Project","Belum selesai","Lewat due","Critical/High","Dilaporkan","Selesai"]], body:rows,
+        margin:{ left:mx, right:mx, top:top, bottom:24 }, styles:{ fontSize:9 }, headStyles:{ fillColor:[31,56,100] } });
+    }
+    pdfFooter(doc, "Dashboard QA - "+rl, mx, [pdfCreatedLine(), "Dokumen ini bersifat rahasia dan tidak boleh disebarkan tanpa izin."]);
+    toast(pdfDownload(doc, "dashboard_qa_"+today+".pdf") ? "PDF dashboard berhasil dibuat." : "Gagal membuat PDF.");
+  }
+  document.getElementById("dashPdf").addEventListener("click", buildDashPdf);
+  // ===== Pengingat due date: Critical/High H-1, Medium H-2, Low H-3 (termasuk yang sudah lewat) =====
+  const DUE_REMIND_DAYS = { Critical:1, High:1, Medium:2, Low:3 };
+  function dueReminders(today){
+    today = today || todayStr();
+    return entries.filter(e=>dashUn(e) && e.dueDate).map(e=>{
+      const left = Math.round((new Date(e.dueDate+"T00:00:00") - new Date(today+"T00:00:00"))/86400000);
+      return { e, left, thr: DUE_REMIND_DAYS[e.priority||"Medium"] || 2 };
+    }).filter(x=>x.left <= x.thr).sort((a,b)=>a.left-b.left);
+  }
+  let dueToastShown = false;
+  function dueReminderHtml(){
+    const rem = dueReminders();
+    if(!rem.length) return "";
+    if(!dueToastShown){ dueToastShown = true; toast("⏰ "+rem.length+" temuan mendekati/lewat due date."); }
+    const lbl = l=>l<0 ? "Lewat "+(-l)+" hari" : l===0 ? "Hari ini" : l===1 ? "Besok" : "H-"+l;
+    return '<div class="dcard" style="margin-bottom:14px; border-left:4px solid #e0363c;"><h3>⏰ Pengingat due date<span class="sub">'+rem.length+' temuan · Critical/High H-1, Medium H-2, Low H-3</span></h3>'+
+      rem.slice(0,8).map(x=>{ const pr = projects.find(p=>p.id===x.e.projectId);
+        return '<div style="display:flex; gap:8px; align-items:center; padding:5px 0; border-top:1px solid rgba(128,128,128,.18);">'+
+          '<span style="min-width:92px; font-weight:800; color:'+(x.left<0?"#b4232a":"#b45309")+';">'+esc(lbl(x.left))+'</span>'+
+          '<span style="font-size:12px; opacity:.75; min-width:60px;">'+esc(x.e.priority||"Medium")+'</span>'+
+          '<span style="flex:1;">'+esc((pr?pr.name+" · ":"")+String(x.e.existing||"").slice(0,90))+'</span></div>'; }).join("")+
+      (rem.length>8 ? '<div class="kn-muted" style="margin-top:6px;">+ '+(rem.length-8)+' lainnya</div>' : '')+'</div>';
+  }
   function renderDash(){
     const wrap = document.getElementById("dashWrap");
     const today = todayStr(), r = dashRange();
@@ -4296,7 +4471,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     const topUn = byProj.filter(x=>x.un>0).sort((a,b)=>b.un-a.un).slice(0,5);
 
     const kpi = (label, val, sub, color)=>'<div class="dkpi" style="--c:'+color+';"><div class="dk-l">'+label+'</div><div class="dk-v">'+val+'</div><div class="dk-s">'+sub+'</div></div>';
-    let html = '<div class="dash-kpis">'+
+    let html = dueReminderHtml()+'<div class="dash-kpis">'+
       kpi("Belum selesai", unres.length, "Open "+nOpen+" · In Progress "+(unres.length-nOpen), "#e0363c")+
       kpi("Lewat due date", overdue.length, "belum selesai & terlambat", "#b4232a")+
       kpi("Critical / High", crit.length, "belum selesai", "#e08a1c")+
@@ -4470,17 +4645,74 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   let auditRows = [];
   function renderAudit(){
     const q = (document.getElementById("auditSearch").value||"").toLowerCase(), wrap = document.getElementById("auditWrap");
-    const rows = auditRows.filter(r=>!q || [r.by,r.module,r.label,r.action,(r.fields||[]).join(" "),r.detail].join(" ").toLowerCase().includes(q));
+    const fw = document.getElementById("auditFWho").value, fa = document.getElementById("auditFAct").value, fm = document.getElementById("auditFMod").value,
+          ff = document.getElementById("auditFFrom").value, ft = document.getElementById("auditFTo").value;
+    const dayOf = t=>new Date(t).toLocaleDateString("sv-SE",{ timeZone:"Asia/Jakarta" });
+    const rows = auditRows.filter(r=>(!q || [r.by,r.module,r.label,r.action,(r.fields||[]).join(" "),r.detail].join(" ").toLowerCase().includes(q)) &&
+      (!fw || r.by===fw) && (!fa || r.action===fa) && (!fm || r.module===fm) && (!ff || dayOf(r.at)>=ff) && (!ft || dayOf(r.at)<=ft));
     if(!rows.length){ wrap.innerHTML = '<div class="empty-state">'+(auditRows.length ? "Tidak ada yang cocok." : "Belum ada riwayat.")+'</div>'; return; }
     const fmt = t=>new Intl.DateTimeFormat("id-ID",{ timeZone:"Asia/Jakarta", day:"numeric", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit", hour12:false }).format(new Date(t)).replace(/\./g,":");
     wrap.innerHTML = '<table><thead><tr><th>Waktu (WIB)</th><th>Oleh</th><th>Aksi</th><th>Modul</th><th>Item</th><th>Detail</th></tr></thead><tbody>'+
       rows.map(r=>'<tr><td style="white-space:nowrap;">'+esc(fmt(r.at))+'</td><td>'+esc(r.by)+'</td><td><b>'+esc(r.action)+'</b></td><td>'+esc(r.module)+'</td><td>'+esc(r.label||"-")+'</td><td style="font-size:12px; color:var(--text-dim);">'+esc(r.detail || (r.fields||[]).join(", "))+'</td></tr>').join("")+'</tbody></table>';
   }
   _dbCol("auditLog").orderBy("at","desc").limit(300).onSnapshot(
-    snap=>{ auditRows = snap.docs.map(d=>d.data()); renderAudit(); },
+    snap=>{ auditRows = snap.docs.map(d=>d.data());
+      [["auditFWho","by"],["auditFMod","module"]].forEach(([id,k])=>{ const el = document.getElementById(id), cur = el.value, first = el.options[0].outerHTML;
+        el.innerHTML = first + [...new Set(auditRows.map(r=>r[k]).filter(Boolean))].sort().map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join(""); el.value = cur; });
+      renderAudit(); renderUsers(); },
     err=>{ document.getElementById("auditWrap").innerHTML = '<div class="empty-state">Gagal memuat riwayat: '+esc(err.message)+'</div>'; }
   );
   document.getElementById("auditSearch").addEventListener("input", renderAudit);
+  ["auditFWho","auditFAct","auditFMod","auditFFrom","auditFTo"].forEach(id=>document.getElementById(id).addEventListener("change", renderAudit));
+  document.getElementById("auditFReset").addEventListener("click", ()=>{ ["auditFWho","auditFAct","auditFMod","auditFFrom","auditFTo","auditSearch"].forEach(id=>document.getElementById(id).value=""); renderAudit(); });
+
+  // ================= daftar pengguna (akun yang pernah membuka aplikasi) =================
+  let userRows = [];
+  function renderUsers(){
+    const wrap = document.getElementById("usersWrap"); if(!wrap) return;
+    if(!userRows.length){ wrap.innerHTML = '<div class="empty-state">Belum ada data pengguna.</div>'; return; }
+    const fmt = t=>t ? new Intl.DateTimeFormat("id-ID",{ timeZone:"Asia/Jakarta", day:"numeric", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit", hour12:false }).format(new Date(t)).replace(/\./g,":") : "-";
+    const me = auditWho();
+    wrap.innerHTML = '<table><thead><tr><th>Email</th><th>Nama / catatan</th><th>Status</th><th>Terakhir aktif (WIB)</th><th>Kali dibuka</th><th>Aktivitas</th><th>Aksi</th></tr></thead><tbody>'+
+      userRows.map(u=>'<tr><td><b>'+esc(u.email)+'</b>'+(u.email===me?' <span class="kn-muted">(Anda)</span>':'')+'</td><td>'+esc([u.name,u.note].filter(Boolean).join(" · ")||"-")+'</td><td>'+(u.disabled?'<span style="color:#b4232a; font-weight:700;">Nonaktif</span>':'Aktif')+'</td><td>'+esc(fmt(u.lastLogin))+'</td><td>'+(u.loginCount||0)+'</td><td>'+auditRows.filter(r=>r.by===u.email).length+'</td>'+
+        '<td style="white-space:nowrap;"><a href="#" data-uact="edit" data-uid="'+esc(u.id)+'">edit</a> · <a href="#" data-uact="reset" data-uid="'+esc(u.id)+'">reset sandi</a>'+(u.email===me?'':' · <a href="#" data-uact="toggle" data-uid="'+esc(u.id)+'">'+(u.disabled?'aktifkan':'nonaktifkan')+'</a> · <a href="#" data-uact="del" data-uid="'+esc(u.id)+'">hapus</a>')+'</td></tr>').join("")+'</tbody></table>';
+    wrap.querySelectorAll("[data-uact]").forEach(a=>a.onclick = e=>{ e.preventDefault(); userAction(a.dataset.uact, userRows.find(x=>x.id===a.dataset.uid)); });
+  }
+  async function userAction(act, u){
+    if(!u) return; const ref = _dbCol("users").doc(u.id);
+    try{
+      if(act==="edit") return userForm(u);
+      if(act==="reset"){ if(confirm("Kirim email reset kata sandi ke "+u.email+"?")){ await auth.sendPasswordResetEmail(u.email); toast("Email reset sandi dikirim."); } }
+      if(act==="toggle"){ await ref.update({ disabled: !u.disabled }); toast(u.disabled ? "Akun diaktifkan." : "Akun dinonaktifkan (berlaku saat login berikutnya)."); }
+      if(act==="del" && confirm("Hapus "+u.email+" dari daftar? Akun login-nya di Firebase tetap ada; hapus juga di Firebase Console → Authentication bila perlu.")){ await ref.delete(); toast("Dihapus dari daftar."); }
+    }catch(err){ toast("Gagal: "+err.message); }
+  }
+  function userForm(u){
+    const o = document.createElement("div"); o.className = "modal-overlay"; o.style.zIndex = 10000;
+    o.innerHTML = '<div class="modal-box" style="max-width:480px;"><h3 style="margin-top:0;">'+(u?"Edit pengguna":"Tambah pengguna")+'</h3>'+
+      '<label>Email</label><input type="email" id="ufE" value="'+esc(u?u.email:"")+'"'+(u?' disabled':'')+' placeholder="nama@qa.ai">'+
+      (u?'':'<label style="margin-top:8px;">Kata sandi awal (min. 6 karakter)</label><input type="text" id="ufP">')+
+      '<label style="margin-top:8px;">Nama</label><input type="text" id="ufN" value="'+esc(u?u.name||"":"")+'">'+
+      '<label style="margin-top:8px;">Catatan / peran</label><input type="text" id="ufC" value="'+esc(u?u.note||"":"")+'">'+
+      '<div class="row-flex" style="justify-content:flex-end; gap:8px; margin-top:12px;"><button id="ufX">Batal</button><button class="primary" id="ufS">Simpan</button></div></div>';
+    document.body.appendChild(o); o.querySelector("#ufX").onclick = ()=>o.remove();
+    o.querySelector("#ufS").onclick = async ()=>{
+      const name = o.querySelector("#ufN").value.trim(), note = o.querySelector("#ufC").value.trim();
+      try{
+        if(u){ await _dbCol("users").doc(u.id).update({ name, note }); }
+        else{
+          const email = o.querySelector("#ufE").value.trim().toLowerCase(), pass = o.querySelector("#ufP").value;
+          if(!email || pass.length<6){ toast("Email wajib dan kata sandi minimal 6 karakter."); return; }
+          const app2 = firebase.initializeApp(firebase.app().options, "sec"+Date.now());   // app kedua supaya sesi kamu tidak berganti
+          let uid; try{ uid = (await app2.auth().createUserWithEmailAndPassword(email, pass)).user.uid; await app2.auth().signOut(); } finally { await app2.delete(); }
+          await _dbCol("users").doc(uid).set({ email, name, note, firstSeen:Date.now(), lastLogin:0, loginCount:0, createdBy:auditWho() });
+        }
+        o.remove(); toast("Pengguna disimpan.");
+      }catch(err){ toast("Gagal: "+err.message); }
+    };
+  }
+  document.getElementById("userAdd").addEventListener("click", ()=>userForm(null));
+  _dbCol("users").orderBy("lastLogin","desc").onSnapshot(snap=>{ userRows = snap.docs.map(d=>({ id:d.id, ...d.data() })); renderUsers(); }, err=>{ const w = document.getElementById("usersWrap"); if(w) w.innerHTML = '<div class="empty-state">Gagal memuat pengguna: '+esc(err.message)+'</div>'; });
 
   // ================= generator teks laporan (untuk dikirim ke atasan) =================
   const REPORT_MENTIONS = "@\u2068~J\u2069 @\u2068SMI,-Fendy\u2069";
@@ -4511,12 +4743,11 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       L.push(STATUS_OPTS.filter(st=>cnt(day,"status",st)).map(st=>st+": "+cnt(day,"status",st)).join(" | "));
       L.push("Prioritas: "+PRIORITY_OPTS.filter(pr=>cnt(day,"priority",pr)).map(pr=>pr+" "+cnt(day,"priority",pr)).join(", "));
     }
-    const open = entries.filter(e=>UNRESOLVED_STATUSES.includes(e.status) && e.dueDate);
-    const late = open.filter(e=>e.dueDate < date), soon = open.filter(e=>e.dueDate >= date && e.dueDate <= addDays(date,1));
+    const rem = dueReminders(date), late = rem.filter(x=>x.left<0), soon = rem.filter(x=>x.left>=0);
     if(late.length || soon.length){
       L.push("", "*Perlu perhatian*");
       if(late.length) L.push("Lewat due date: "+late.length+" temuan");
-      if(soon.length) L.push("Due hari ini/besok: "+soon.length+" temuan");
+      if(soon.length) L.push("Mendekati due date (Critical/High H-1, Medium H-2, Low H-3): "+soon.length+" temuan");
     }
     const scanP = projects.filter(p=>p.scanAi), sc = { success:0, fail:0, none:0 };
     scanP.forEach(p=>{ sc[scanState(scanChecks[scanKey(date,p.id)])]++; });
