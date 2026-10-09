@@ -954,6 +954,7 @@
 
       <div class="row-flex" style="margin-top:14px;">
         <button id="btnManualRow">+ Tambah bug manual (tanpa gambar)</button>
+        <button id="btnAutoPrioAll" title="Terapkan prioritas & due date otomatis ke bug lama yang belum diatur manual">⚡ Prioritas otomatis (bug lama)</button>
       </div>
     </div>
 
@@ -1117,6 +1118,7 @@
           <select id="momProject" style="width:auto; min-width:160px;"><option value="">Semua Project</option></select>
           <input type="text" id="momSearch" placeholder="Cari…" style="width:170px;">
           <button class="primary" id="momAdd">+ Catatan Meeting</button>
+        
           <button id="momExport">⬇ Export PDF</button>
         </div>
       </div>
@@ -1848,6 +1850,35 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       toast("Bug manual ditambahkan.");
     }catch(e){ toast("Gagal menambah bug."); }
   }
+  // Terapkan prioritas otomatis ke bug lama (semua project). Bug yang prioritasnya
+  // pernah diubah manual (prioManual) dilewati; bug Fixed/Rejected tidak disentuh.
+  async function applyAutoPriorityAll(){
+    const todo = [];
+    entries.forEach(e=>{
+      if(e.prioManual || e.status==="Fixed" || e.status==="Rejected") return;
+      const ap = autoPriority((e.existing||"")+" "+(e.expected||""));
+      if(!ap) return;
+      const patch = {};
+      if(ap !== (e.priority||"Medium")) patch.priority = ap;
+      if(!e.dueDate || e.dueAuto===true){
+        const nd = autoDue(e.date, ap);
+        if(nd !== e.dueDate){ patch.dueDate = nd; patch.dueAuto = true; }
+      }
+      if(Object.keys(patch).length) todo.push({ id:e.id, patch });
+    });
+    if(!todo.length){ toast("Tidak ada bug lama yang perlu diubah."); return; }
+    const nPrio = todo.filter(t=>t.patch.priority).length;
+    if(!confirm("Terapkan prioritas otomatis?\n\n"+nPrio+" bug berubah prioritas, "+todo.length+" bug diperbarui (termasuk due date).\nBug yang prioritasnya pernah diatur manual & bug Fixed/Rejected dilewati.")) return;
+    try{
+      for(let i=0;i<todo.length;i+=400){
+        const batch = db.batch();
+        todo.slice(i,i+400).forEach(t=>batch.update(db.collection("entries").doc(t.id), t.patch));
+        await batch.commit();
+      }
+      toast("Selesai: "+todo.length+" bug diperbarui.");
+    }catch(err){ toast("Gagal menerapkan prioritas otomatis."); }
+  }
+  document.getElementById("btnAutoPrioAll").addEventListener("click", applyAutoPriorityAll);
   document.getElementById("btnManualRow").addEventListener("click", addManualEntry);
   document.getElementById("quickDate").addEventListener("change", renderManagePanel);
   document.getElementById("showAllDates").addEventListener("change", renderManagePanel);
@@ -3751,6 +3782,13 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   document.getElementById("momProject").addEventListener("change", renderMom);
   document.getElementById("momSearch").addEventListener("input", renderMom);
   document.getElementById("momAdd").addEventListener("click", ()=>openMomModal(null));
+  const MOM_PRESET_AURORA = {"title": "Aurora x Mediflash - PT Sarana Solusi Amanah (SSA)", "date": "2026-10-08", "time": "10.00 WIB", "place": "Kantor PT SSA", "notulis": "Nisa", "attendees": "Pak Rinaldi, Pak Roland, Pak Defit, Pak Fikri, Zahwa, Nisa, Ahmad, 6 perwakilan PT SSA", "agenda": "1. Perkenalan SSA dan produk Mediflash.\n2. Demo Aurora.\n3. Pembahasan skema kerja sama dan persiapan PKS.", "discussion": "A. Skema Kerja Sama\n- Konsep kerja sama yang dibahas adalah produk hybrid Aurora x Mediflash.\n- SSA/Mediflash tetap menjalankan sistem dan layanan existing, sedangkan Aurora berfokus pada marketing, onboarding klien, dan pengembangan layanan baru.\n- Aurora akan menggunakan jaringan provider Mediflash yang saat ini berjumlah sekitar 2.500 provider.\n- Terdapat kemungkinan penggunaan konsep re-branding Aurora x Mediflash.\n- Diperkirakan masih diperlukan 1-2 pertemuan untuk finalisasi, serta kemungkinan pertemuan tambahan untuk ceremonial.\n\nB. Produk dan Pricing\n- Produk dan layanan SSA meliputi Mediflash, ASO, Provider Setup, Reimbursement Klaim, konsultasi asuransi jiwa dan kesehatan, MCU, serta Claim Assistance.\n- Skema ASO telah menjadi pilihan SSA saat ini. Secara umum, rawat jalan dapat menggunakan ASO, sedangkan rawat inap dapat menggunakan fully funded, sesuai kebutuhan klien SSA.\n- SSA akan menggunakan pricing existing sebagai dasar simulasi paket, sementara biaya Aurora akan ditambahkan.\n- Aurora belum dapat menentukan harga final karena biaya provider dan operasional masih perlu dihitung.\n- Kedua pihak akan membawa pricing masing-masing pada pertemuan berikutnya.\n\nC. Integrasi Sistem dan Data\n- Di TPA lain terdapat concern terkait ketidaksesuaian data antara portal HR, data peserta, dan sistem lainnya.\n- Dibutuhkan integrasi API antara Mediflash dan Aurora untuk mengambil data peserta, termasuk pencarian berdasarkan nomor peserta melalui portal provider.\n- Data peserta yang telah diproses melalui Aurora diharapkan dapat terhubung dan tampil di Mediflash.\n- Aurora membutuhkan akun staging untuk mempelajari sistem existing Mediflash.\n- Perlu disiapkan kebutuhan dashboard untuk Mediflash, termasuk reporting dalam format Excel atau PDF.\n- Usulan dari Pak Rinaldi: peremajaan UI Mediflash agar lebih user friendly, termasuk kemungkinan pengembangan Mediflash Mobile.\n\nD. Verifikasi Peserta dan Layanan Provider\n- Saat ini Mediflash melakukan verifikasi menggunakan nomor kartu, kemudian rumah sakit mencocokkan data dengan identitas peserta.\n- Dengan Aurora, verifikasi hanya menggunakan wajah untuk mempermudah proses pelayanan.\n- Pengadaan perangkat tambahan untuk provider menjadi concern karena dapat menambah biaya operasional. Mekanisme verifikasi perlu menyesuaikan fasilitas yang tersedia di rumah sakit.\n- Saat ini di SSA, untuk kondisi darurat atau IGD, peserta dilayani terlebih dahulu sebelum verifikasi identitas.\n- Aurora berpotensi menangani layanan di luar jaringan provider Mediflash sesuai kesepakatan.\n- Perlu ditentukan pembagian tanggung jawab terkait verifikasi identitas dan kasus ketidaksesuaian data.\n\nE. Surat Jaminan dan Fitur Layanan\n- Alur surat jaminan merupakan salah satu prioritas utama dalam pengembangan sistem.\n- Pada sistem existing, surat jaminan disetujui oleh SSA dan ditargetkan dapat diproses sekitar lima menit melalui Call Center.\n- Perlu dibahas lebih lanjut integrasi surat jaminan dengan telemedicine, admission, dan FWA.\n- Fitur telemedicine berpotensi menggunakan sistem pemilihan jadwal berdasarkan ketersediaan.\n- Fitur SCPA juga menjadi perhatian dan perlu dikonfirmasi kebutuhan detailnya.\n- Aurora mempertimbangkan kerja sama dengan vendor wellness, seperti gym, untuk mendukung pencegahan dan pengendalian biaya klaim.\n\nF. Branding dan Pengembangan Sistem\n- Aurora mengusulkan penyesuaian UI Mediflash agar lebih modern dan mudah digunakan.\n- Penamaan Aurora x Mediflash masih perlu dibahas.\n- SSA perlu mengonfirmasi rencana perubahan UI dan branding kepada pihak EDI.\n- Perlu disusun metrik layanan dan pembagian tanggung jawab dalam draft PKS.\n- Aurora juga perlu memperbaiki wording pada dokumen PDF Biosense.", "decisions": "1. Kerja sama akan dilanjutkan dengan konsep produk hybrid Aurora x Mediflash.\n2. SSA/Mediflash mempertahankan sistem existing, sedangkan Aurora menangani marketing, onboarding klien, dan pengembangan layanan baru sesuai kesepakatan.\n3. Aurora akan memanfaatkan jaringan provider Mediflash.\n4. Pricing existing SSA menjadi dasar simulasi paket, dengan penambahan biaya layanan Aurora.\n5. Pricing final akan dibahas kembali setelah kedua pihak menyiapkan simulasi biaya.\n6. Integrasi sistem, perubahan UI, dan branding akan dibahas lebih lanjut bersama tim terkait.\n7. Draft PKS akan disiapkan untuk mengatur ruang lingkup kerja sama, metrik layanan, dan pembagian tanggung jawab.", "actionItems": [{"task": "Menyiapkan materi presentasi Aurora yang lebih mudah dipahami.", "pic": "Aurora", "due": "", "done": false}, {"task": "Menyiapkan pricing dan simulasi paket masing-masing.", "pic": "Aurora & SSA", "due": "", "done": false}, {"task": "Menyusun draft PKS.", "pic": "Aurora & SSA", "due": "", "done": false}, {"task": "Menyediakan akun staging Mediflash.", "pic": "SSA/Mediflash", "due": "", "done": false}, {"task": "Membahas kebutuhan API, integrasi data, dan dashboard.", "pic": "Tim IT Aurora & Mediflash", "due": "", "done": false}, {"task": "Membahas alur surat jaminan, FWA, admission, dan verifikasi peserta.", "pic": "Aurora & Mediflash", "due": "", "done": false}, {"task": "Mengonfirmasi perubahan UI dan branding kepada EDI.", "pic": "SSA", "due": "", "done": false}, {"task": "Memperbaiki wording PDF Biosense.", "pic": "Aurora", "due": "", "done": false}], "nextMeeting": "Pricing & simulasi paket; draft PKS; evaluasi sistem existing & integrasi; alur surat jaminan, verifikasi peserta, dan dashboard. Catatan: detail fitur, integrasi, pricing, dan branding masih perlu konfirmasi kedua pihak."};
+  document.getElementById("momPresetAurora").addEventListener("click", ()=>{
+    const ap = projects.find(x=>/aurora/i.test(x.name||""));
+    const exist = momItems.find(m=>m.title===MOM_PRESET_AURORA.title && m.date===MOM_PRESET_AURORA.date);
+    if(exist){ openMomModal(exist.id); toast("Catatan ini sudah tersimpan, dibuka untuk diedit."); return; }
+    openMomModal(null, { ...MOM_PRESET_AURORA, ...(ap ? { projectId: ap.id } : {}) });
+  });
   document.getElementById("momExport").addEventListener("click", openMomExportModal);
 
   // ---- teks MoM (siap tempel ke WhatsApp / email) ----
@@ -3777,13 +3815,13 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   }
 
   // ---- tambah / edit ----
-  function openMomModal(id){
+  function openMomModal(id, prefill){
     const cur = id ? momItems.find(x=>x.id===id) : null;
     if(id && !cur) return;
     if(!projects.length){ toast("Tambahkan project dulu."); return; }
     const fp = document.getElementById("momProject").value;
     const d = cur || { title:"", projectId: fp || selectedProjectId || projects[0].id, date: todayStr(), time:"", place:"", notulis:"",
-      attendees:"", agenda:"", discussion:"", decisions:"", nextMeeting:"", actionItems:[] };
+      attendees:"", agenda:"", discussion:"", decisions:"", nextMeeting:"", actionItems:[], ...(prefill||{}) };
     const overlay = document.createElement("div");
     overlay.className = "modal-overlay";
     overlay.innerHTML =
