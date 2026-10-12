@@ -363,6 +363,16 @@
   .scan-seg button.on-none { background:var(--gray); color:#fff; border-color:transparent; }
   .scan-seg button.on-success { background:var(--ok); color:#fff; border-color:transparent; }
   .scan-seg button.on-fail { background:var(--danger); color:#fff; border-color:transparent; }
+  .scan-log { display:flex; flex-direction:column; gap:6px; max-height:160px; overflow:auto; }
+  .scan-log-item { display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:start; padding:7px 9px; border-radius:9px; background:var(--surface); border:1px solid var(--border); font-size:12.5px; line-height:1.4; }
+  .scan-log-time { font-size:10.5px; font-weight:800; color:var(--accent); white-space:nowrap; padding-top:1px; }
+  .scan-log-text { overflow-wrap:anywhere; white-space:pre-wrap; }
+  .scan-log-by { display:block; font-size:10px; color:var(--text-dim); margin-top:1px; }
+  .scan-log-del { width:22px; height:22px; padding:0; border-radius:6px; font-size:10px; background:transparent; border:none; color:var(--text-dim); opacity:.5; }
+  .scan-log-del:hover { opacity:1; color:var(--danger); }
+  .scan-add { display:flex; gap:6px; }
+  .scan-add input { flex:1; min-width:0; }
+  .scan-add button { flex:none; padding:6px 11px; font-size:12px; }
 
   /* ===== All Akses ===== */
   .ak-toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
@@ -1471,6 +1481,27 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     renderDash();
   }
   function currentProject(){ return projects.find(p=>p.id===selectedProjectId) || null; }
+  // ---- project "Lainnya" (teks bebas) ----
+  const OTHER = "__other__", OTHER_PREFIX = "other:";
+  const OTHER_OPT = '<option value="__other__">Lainnya (ketik sendiri)…</option>';
+  const projOtherInputHtml = id=>'<input type="text" id="'+id+'" placeholder="Ketik nama project / topik bebas" style="display:none; margin-top:6px;">';
+  function isOtherId(id){ return String(id||"").indexOf(OTHER_PREFIX) === 0; }
+  function projPickerInit(sel, inp, id){
+    if(isOtherId(id)){ sel.value = OTHER; inp.value = String(id).slice(OTHER_PREFIX.length); }
+    else sel.value = id;
+    const sync = ()=>{ inp.style.display = sel.value===OTHER ? "" : "none"; };
+    sel.addEventListener("change", ()=>{ sync(); if(sel.value===OTHER) inp.focus(); });
+    sync();
+  }
+  function projPickerValue(sel, inp){
+    if(sel.value !== OTHER) return sel.value;
+    const t = inp.value.trim().replace(/\s+/g," ");
+    return t ? OTHER_PREFIX + t : "";
+  }
+  function customProjOptions(items){
+    return [...new Set(items.map(x=>x.projectId).filter(isOtherId))]
+      .map(id=>'<option value="'+esc(id)+'">'+esc(id.slice(OTHER_PREFIX.length))+' (lainnya)</option>').join("");
+  }
 
   // ================= project tabs (card grid) =================
   function projectStatusCounts(projectId){
@@ -2011,12 +2042,12 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     const actions = document.getElementById("stagingActions");
     if(!staging.length){ wrap.innerHTML=""; actions.style.display="none"; return; }
     actions.style.display = "flex";
-    const projOpts = projects.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join("");
+    const projOpts = projects.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join("") + OTHER_OPT;
     wrap.innerHTML = staging.map(s=>{
       return '<div class="staging-item" data-id="'+s.localId+'">'+
         '<img src="'+s.previewUrl+'">'+
         '<div class="staging-fields">'+
-          '<div class="full"><label>Project</label><select data-sf="projectId">'+projOpts+'</select></div>'+
+          '<div class="full"><label>Project</label><select data-sf="projectId">'+projOpts+'</select><input type="text" data-sf="projectOther" placeholder="Nama project baru (otomatis dibuat)" style="display:none; margin-top:6px;"></div>'+
           '<div><label>Existing</label><textarea data-sf="existing" placeholder="Kondisi saat ini">'+esc(s.existing)+'</textarea></div>'+
           '<div><label>Expected</label><textarea data-sf="expected" placeholder="Kondisi diharapkan">'+esc(s.expected)+'</textarea></div>'+
           '<div class="full"><label>Gambar Expected (opsional)</label><div class="mini-thumb-btn" style="align-items:flex-start;">'+
@@ -2033,6 +2064,10 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     wrap.querySelectorAll(".staging-item").forEach(el=>{
       const s = staging.find(x=>x.localId===el.dataset.id);
       el.querySelector('[data-sf="projectId"]').value = s.projectId || "";
+      const pSel = el.querySelector('[data-sf="projectId"]'), pOth = el.querySelector('[data-sf="projectOther"]');
+      pOth.value = s.projectOther || "";
+      const syncOther = ()=>{ pOth.style.display = pSel.value==="__other__" ? "" : "none"; };
+      pSel.addEventListener("change", syncOther); syncOther();
       el.querySelector('[data-sf="status"]').value = s.status;
       el.querySelector('[data-sf="priority"]').value = s.priority || "Medium";
       el.querySelector('[data-sf="dueDate"]').value = s.dueDate || "";
@@ -2068,19 +2103,29 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   });
   document.getElementById("btnSaveStaging").addEventListener("click", async ()=>{
     if(!staging.length) return;
+    if(staging.some(s=>s.projectId==="__other__" && !(s.projectOther||"").trim())){ toast("Isi nama project untuk gambar yang memilih Lainnya."); return; }
+    const made = {};
     const date = document.getElementById("quickDate").value || todayStr();
     const btn = document.getElementById("btnSaveStaging");
     btn.disabled = true; btn.textContent = "Menyimpan...";
     let ok = 0, tooBig = 0;
     for(const s of staging){
       if(!s.projectId) continue;
+      let pid = s.projectId;
+      if(pid === "__other__"){
+        const nm = s.projectOther.trim(), k = nm.toLowerCase();
+        const ex = projects.find(p=>p.name.trim().toLowerCase()===k);
+        if(ex) pid = ex.id;
+        else if(made[k]) pid = made[k];
+        else { try{ pid = made[k] = (await db.collection("projects").add({ name:nm, createdAt:Date.now() })).id; }catch(e){ continue; } }
+      }
       try{
         const imageData = await fileToStoredImage(s.file);
         if(!imageData){ tooBig++; URL.revokeObjectURL(s.previewUrl); if(s.expectedPreviewUrl) URL.revokeObjectURL(s.expectedPreviewUrl); continue; }
         let expectedImageData = null;
         if(s.expectedFile){ expectedImageData = await fileToStoredImage(s.expectedFile); }
         await db.collection("entries").add({
-          projectId: s.projectId, date, imageData, expectedImageData,
+          projectId: pid, date, imageData, expectedImageData,
           existing: s.existing||"", expected: s.expected||"", status: s.status||"Open",
           ...(function(){
             const ap = autoPriority((s.existing||"")+" "+(s.expected||""));
@@ -2239,11 +2284,48 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   function scanPatch(res){
     return { result:res, done:res==="success", checkedAt: res==="none" ? null : Date.now() };
   }
+  // ---- riwayat catatan scan (jam + penulis), catatan lama (field "note") ikut tampil ----
+  function scanTimeLabel(t){ return new Date(t).toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"}); }
+  function scanNotesOf(c){
+    if(!c) return [];
+    if(Array.isArray(c.notes)) return c.notes.slice().sort((a,b)=>(a.at||0)-(b.at||0));
+    return c.note ? [{ text:c.note, at:c.checkedAt||0, by:"" }] : [];
+  }
+  function scanNoteText(c){
+    return scanNotesOf(c).map(n=>(n.at ? scanTimeLabel(n.at)+" - " : "")+n.text).join("\n");
+  }
+  function scanLogHtml(c){
+    const ns = scanNotesOf(c);
+    if(!ns.length) return "";
+    return '<div class="scan-log">'+ns.map(n=>
+      '<div class="scan-log-item"><span class="scan-log-time" title="'+esc(n.at ? new Date(n.at).toLocaleString("id-ID") : "")+'">'+(n.at ? scanTimeLabel(n.at) : "–")+'</span>'+
+      '<span class="scan-log-text">'+esc(n.text)+(n.by ? '<span class="scan-log-by">'+esc(String(n.by).split("@")[0])+'</span>' : '')+'</span>'+
+      '<button type="button" class="scan-log-del" data-note-del="'+(n.at||0)+'" title="Hapus catatan ini" aria-label="Hapus catatan">✕</button></div>'
+    ).join("")+'</div>';
+  }
+  async function scanAddNote(date, pid, text){
+    const c = scanChecks[scanKey(date,pid)] || {};
+    const n = { text, at: Date.now(), by: auditWho() };
+    const ref = db.collection("scanChecks").doc(scanKey(date,pid));
+    try{
+      if(Array.isArray(c.notes)) await ref.set({ date, projectId:pid, notes: firebase.firestore.FieldValue.arrayUnion(n), note:text }, { merge:true });
+      else await ref.set({ date, projectId:pid, notes: scanNotesOf(c).concat(n), note:text }, { merge:true });
+    }catch(e){ toast("Gagal menyimpan catatan."); }
+  }
+  async function scanDelNote(date, pid, at){
+    const c = scanChecks[scanKey(date,pid)] || {};
+    const rest = scanNotesOf(c).filter(n=>(n.at||0)!==at);
+    try{
+      await db.collection("scanChecks").doc(scanKey(date,pid)).set({ date, projectId:pid, notes:rest, note: rest.length ? rest[rest.length-1].text : "" }, { merge:true });
+    }catch(e){ toast("Gagal menghapus catatan."); }
+  }
   function renderScanTab(){
     const list = document.getElementById("scanList");
     // Jangan render ulang saat user sedang mengetik catatan, supaya input tidak hilang fokus.
     const ae = document.activeElement;
-    if(ae && ae.classList && ae.classList.contains("scan-note") && list.contains(ae)) return;
+    const inList = ae && ae.classList && ae.classList.contains("scan-note-input") && list.contains(ae);
+    if(inList && ae.value) return;   // sedang mengetik: jangan render ulang
+    const refocusPid = inList ? ae.closest(".scan-row").dataset.pid : null;
 
     const date = document.getElementById("scanDate").value || todayStr();
     const sumEl = document.getElementById("scanSummary"), barEl = document.getElementById("scanBar");
@@ -2307,7 +2389,8 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       return '<div class="scan-row '+st+'" data-pid="'+p.id+'">'+
         '<div class="scan-head"><span class="scan-name" title="'+esc(p.name)+'">'+esc(p.name)+'</span></div>'+
         '<div class="scan-seg">'+seg+'</div>'+
-        '<input type="text" class="scan-note" placeholder="Catatan scan (opsional)" value="'+esc(c.note||"")+'">'+
+        scanLogHtml(c)+
+        '<div class="scan-add"><input type="text" class="scan-note-input" placeholder="'+(scanNotesOf(c).length ? 'Tambah update…' : 'Catatan scan (opsional)')+'"><button type="button" class="scan-note-add">Tambah</button></div>'+
         '<div class="scan-foot">'+
           '<span class="scan-time">'+(time ? SCAN_META[st].label+' · '+time : '')+'</span>'+
           '<span class="scan-hist">'+hist+'</span>'+
@@ -2320,10 +2403,15 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       row.querySelectorAll("[data-res]").forEach(btn=>{
         btn.addEventListener("click", ()=> scanSet(date, pid, scanPatch(btn.dataset.res)));
       });
-      row.querySelector(".scan-note").addEventListener("change", e=>{
-        scanSet(date, pid, { note:e.target.value });
-      });
+      const inp = row.querySelector(".scan-note-input");
+      const add = ()=>{ const v = inp.value.trim(); if(!v) return; inp.value = ""; scanAddNote(date, pid, v); };
+      inp.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); add(); } });
+      inp.addEventListener("change", add);
+      row.querySelector(".scan-note-add").addEventListener("click", add);
+      row.querySelectorAll("[data-note-del]").forEach(b=>b.addEventListener("click", ()=>scanDelNote(date, pid, Number(b.dataset.noteDel))));
     });
+    list.querySelectorAll(".scan-log").forEach(l=>{ l.scrollTop = l.scrollHeight; });
+    if(refocusPid){ const r = list.querySelector('.scan-row[data-pid="'+refocusPid+'"] .scan-note-input'); if(r) r.focus(); }
   }
   // ---- export PDF hasil ceklis scan AI ----
   function openScanExportModal(){
@@ -2364,7 +2452,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         const c = scanChecks[scanKey(d,x.id)] || {};
         const st = scanState(c);
         if(!sts.includes(st)) return;
-        rows.push({ date:d, name:x.name, st, note:c.note||"",
+        rows.push({ date:d, name:x.name, st, note:scanNoteText(c),
           time: st!=="none" && c.checkedAt ? new Date(c.checkedAt).toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"}) : "" });
       }));
       if(!rows.length){ toast("Tidak ada data untuk diekspor."); return; }
@@ -3429,7 +3517,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     const q = document.getElementById("enhSearch").value.trim().toLowerCase();
     return enhItems.filter(e=>(!pid || e.projectId===pid) && (!q || ((e.title||"")+" "+(e.desc||"")).toLowerCase().includes(q)));
   }
-  function enhProjName(id){ const p = projects.find(x=>x.id===id); return p ? p.name : "-"; }
+  function enhProjName(id){ if(isOtherId(id)) return id.slice(OTHER_PREFIX.length); const p = projects.find(x=>x.id===id); return p ? p.name : "-"; }
   async function enhUpdate(id, patch){
     if(patch.status){
       const cur = enhItems.find(x=>x.id===id);
@@ -3442,8 +3530,8 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   function renderEnh(){
     const sel = document.getElementById("enhProject");
     const prev = sel.value;
-    sel.innerHTML = '<option value="">Semua Project</option>' + projects.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join("");
-    if(prev && projects.find(p=>p.id===prev)) sel.value = prev;
+    sel.innerHTML = '<option value="">Semua Project</option>' + projects.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join("") + customProjOptions(enhItems);
+    if(prev && (projects.find(p=>p.id===prev) || isOtherId(prev))) sel.value = prev;
 
     const list = enhFiltered();
     let html = '<div class="enh-board">';
@@ -3522,7 +3610,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       '<div class="modal-box" style="max-width:520px;">'+
         '<h3 style="margin:0 0 4px; font-size:15px;">'+(cur?'Edit enhancement':'Tambah enhancement')+'</h3>'+
         '<label>Judul</label><input type="text" id="enTitle" placeholder="mis. Tambah filter tanggal di laporan">'+
-        '<label>Project</label><select id="enProj">'+projects.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join("")+'</select>'+
+        '<label>Project</label><select id="enProj">'+projects.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join("")+OTHER_OPT+'</select>'+projOtherInputHtml("enProjOther")+
         '<label>Deskripsi</label><textarea id="enDesc" rows="4" placeholder="Apa yang ingin ditingkatkan dan kenapa?"></textarea>'+
         '<label>Prioritas</label><select id="enPrio">'+PRIORITY_OPTS.map(x=>'<option value="'+x+'">'+x+'</option>').join("")+'</select>'+
         '<label>Status</label><select id="enStatus">'+ENH_STATUS.map(x=>'<option value="'+x+'">'+x+'</option>').join("")+'</select>'+
@@ -3534,7 +3622,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     document.body.appendChild(overlay);
     const $f = sel=>overlay.querySelector(sel);
     $f("#enTitle").value = d.title || "";
-    $f("#enProj").value = d.projectId;
+    projPickerInit($f("#enProj"), $f("#enProjOther"), d.projectId);
     $f("#enDesc").value = d.desc || "";
     $f("#enPrio").value = d.priority || "Medium";
     $f("#enStatus").value = d.status || "Usulan";
@@ -3560,8 +3648,10 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     $f("#enSave").onclick = async ()=>{
       const title = $f("#enTitle").value.trim();
       if(!title){ toast("Judul wajib diisi."); return; }
+      const projectId = projPickerValue($f("#enProj"), $f("#enProjOther"));
+      if(!projectId){ toast("Isi nama project (Lainnya)."); return; }
       const data = {
-        title, projectId: $f("#enProj").value, desc: $f("#enDesc").value.trim(),
+        title, projectId, desc: $f("#enDesc").value.trim(),
         priority: $f("#enPrio").value, status: $f("#enStatus").value, imageData: img
       };
       const btn = $f("#enSave"); btn.disabled = true;
@@ -3699,7 +3789,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     err=>toast("Gagal memuat catatan meeting: "+err.message)
   );
 
-  function momProjName(id){ const p = projects.find(x=>x.id===id); return p ? p.name : "(project dihapus)"; }
+  function momProjName(id){ if(isOtherId(id)) return id.slice(OTHER_PREFIX.length); const p = projects.find(x=>x.id===id); return p ? p.name : "(project dihapus)"; }
   function momAiList(m){ return Array.isArray(m.actionItems) ? m.actionItems.filter(a=>a && (a.task||"").trim()) : []; }
   function momTimeLabel(m){ return fmtDate(m.date) + (m.time ? ", "+m.time : ""); }
   function momAttendees(m){ return (m.attendees||"").split(/[,\n]/).map(x=>x.trim()).filter(Boolean); }
@@ -3720,8 +3810,8 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     if(!wrap) return;
     const sel = document.getElementById("momProject");
     const prev = sel.value;
-    sel.innerHTML = '<option value="">Semua Project</option>' + projects.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join("");
-    if(prev && projects.find(p=>p.id===prev)) sel.value = prev;
+    sel.innerHTML = '<option value="">Semua Project</option>' + projects.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join("") + customProjOptions(momItems);
+    if(prev && (projects.find(p=>p.id===prev) || isOtherId(prev))) sel.value = prev;
 
     const list = momFiltered();
     if(!list.length){
@@ -3829,7 +3919,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         '<h3 style="margin:0 0 4px; font-size:15px;">'+(cur?'Edit catatan meeting':'Catatan meeting baru')+'</h3>'+
         '<label>Judul / topik meeting</label><input type="text" id="mmTitle" placeholder="mis. Review UAT modul pembayaran">'+
         '<div class="mom-form-row">'+
-          '<div><label>Project</label><select id="mmProj">'+projects.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join("")+'</select></div>'+
+          '<div><label>Project</label><select id="mmProj">'+projects.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join("")+OTHER_OPT+'</select>'+projOtherInputHtml("mmProjOther")+'</div>'+
           '<div><label>Tanggal</label><input type="date" id="mmDate"></div>'+
           '<div><label>Jam</label><input type="text" id="mmTime" placeholder="mis. 10:00 - 11:00"></div>'+
         '</div>'+
@@ -3852,7 +3942,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     document.body.appendChild(overlay);
     const $f = q=>overlay.querySelector(q);
     $f("#mmTitle").value = d.title || "";
-    $f("#mmProj").value = d.projectId;
+    projPickerInit($f("#mmProj"), $f("#mmProjOther"), d.projectId);
     $f("#mmDate").value = d.date || todayStr();
     $f("#mmTime").value = d.time || "";
     $f("#mmPlace").value = d.place || "";
@@ -3894,7 +3984,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     let docId = cur ? cur.id : null, autoTimer = null, dirty = false, closed = false, chain = Promise.resolve();
     const autoEl = $f("#mmAuto");
     const collect = ()=>({
-      title: $f("#mmTitle").value.trim(), projectId: $f("#mmProj").value, date: $f("#mmDate").value, time: $f("#mmTime").value.trim(),
+      title: $f("#mmTitle").value.trim(), projectId: projPickerValue($f("#mmProj"), $f("#mmProjOther")), date: $f("#mmDate").value, time: $f("#mmTime").value.trim(),
       place: $f("#mmPlace").value.trim(), notulis: $f("#mmNotulis").value.trim(),
       attendees: $f("#mmAtt").value.trim(), agenda: $f("#mmAgenda").value.trim(),
       discussion: $f("#mmDisc").value.trim(), decisions: $f("#mmDec").value.trim(),
@@ -3906,7 +3996,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       chain = chain.then(async ()=>{
         if(!dirty) return;
         const data = collect();
-        if(!data.title || !data.date){ autoEl.textContent = "Isi judul dan tanggal supaya tersimpan otomatis."; return; }
+        if(!data.title || !data.date || !data.projectId){ autoEl.textContent = "Isi judul, tanggal, dan project supaya tersimpan otomatis."; return; }
         dirty = false;
         autoEl.textContent = "Menyimpan…";
         try{
@@ -3940,8 +4030,10 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       if(!title){ toast("Judul meeting wajib diisi."); return; }
       const date = $f("#mmDate").value;
       if(!date){ toast("Tanggal wajib diisi."); return; }
+      const projectId = projPickerValue($f("#mmProj"), $f("#mmProjOther"));
+      if(!projectId){ toast("Isi nama project (Lainnya)."); return; }
       const data = {
-        title, projectId: $f("#mmProj").value, date, time: $f("#mmTime").value.trim(),
+        title, projectId, date, time: $f("#mmTime").value.trim(),
         place: $f("#mmPlace").value.trim(), notulis: $f("#mmNotulis").value.trim(),
         attendees: $f("#mmAtt").value.trim(), agenda: $f("#mmAgenda").value.trim(),
         discussion: $f("#mmDisc").value.trim(), decisions: $f("#mmDec").value.trim(),
@@ -4936,7 +5028,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     if(!o.allDates && o.from===o.to){
       ai.forEach(p=>{
         const c = scanChecks[scanKey(o.from,p.id)] || {};
-        rows.push({ date:o.from, projectName:p.name, state:scanState(c), note:c.note||"" });
+        rows.push({ date:o.from, projectName:p.name, state:scanState(c), note:scanNoteText(c) });
       });
     } else {
       const byId = {}; ai.forEach(p=>byId[p.id]=p);
@@ -4945,8 +5037,8 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         if(!p) return;
         if(!o.allDates && (c.date < o.from || c.date > o.to)) return;
         const st = scanState(c);
-        if(st==="none" && !c.note) return;
-        rows.push({ date:c.date, projectName:p.name, state:st, note:c.note||"" });
+        if(st==="none" && !scanNotesOf(c).length) return;
+        rows.push({ date:c.date, projectName:p.name, state:st, note:scanNoteText(c) });
       });
     }
     return rows.sort((a,b)=> (a.date<b.date?-1:a.date>b.date?1:0) || a.projectName.localeCompare(b.projectName));
