@@ -17,6 +17,9 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
@@ -811,6 +814,56 @@
   @media (prefers-reduced-motion:reduce) {
     *,*::before,*::after { animation-duration:.01ms!important; animation-iteration-count:1!important; scroll-behavior:auto!important; transition-duration:.01ms!important; }
   }
+  /* ===== Dokumen (ala Drive) ===== */
+  .dv-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .dv-crumbs { display:flex; align-items:center; gap:4px; flex-wrap:wrap; font-size:14px; font-weight:700; flex:1; min-width:180px; }
+  .dv-crumbs button { background:transparent; border:none; padding:5px 8px; border-radius:8px; color:var(--text-dim); font-weight:700; }
+  .dv-crumbs button:hover, .dv-crumbs button.dv-over { background:var(--surface-2); color:var(--accent); }
+  .dv-crumbs button.dv-over { outline:2px dashed var(--accent); }
+  .dv-crumbs .cur { color:var(--text); padding:5px 8px; }
+  .dv-area { position:relative; min-height:320px; border-radius:14px; padding:4px; transition:background .15s; }
+  .dv-area.dv-drag { background:rgba(109,94,245,.08); outline:2px dashed var(--accent); outline-offset:-2px; }
+  .dv-area.dv-drag::after { content:"Lepaskan file di sini untuk mengunggah"; position:absolute; inset:0; display:grid; place-items:center; font-weight:800; font-size:16px; color:var(--accent); background:color-mix(in srgb,var(--surface) 78%,transparent); border-radius:14px; pointer-events:none; }
+  .dv-label { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim); font-weight:800; margin:10px 2px 8px; }
+  .dv-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(168px,1fr)); gap:10px; }
+  .dv-item { position:relative; display:flex; flex-direction:column; gap:6px; padding:12px; border:1px solid var(--border); border-radius:12px; background:var(--surface); cursor:pointer; user-select:none; transition:.15s; min-width:0; }
+  .dv-item:hover { box-shadow:var(--shadow); border-color:var(--accent); }
+  .dv-item.dv-folder { flex-direction:row; align-items:center; background:var(--surface-2); }
+  .dv-item.dv-target { outline:2px dashed var(--accent); background:rgba(109,94,245,.12); }
+  .dv-item.dragging { opacity:.4; }
+  .dv-ico { width:100%; height:78px; display:grid; place-items:center; border-radius:9px; font-size:11px; font-weight:800; color:#fff; letter-spacing:.04em; background:var(--c,#6c6f85); }
+  .dv-folder .dv-ico { width:34px; height:34px; font-size:20px; background:none; color:var(--accent); flex:none; }
+  .dv-name { font-size:13px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .dv-meta { font-size:11px; color:var(--text-dim); }
+  .dv-acts { position:absolute; top:6px; right:6px; display:none; gap:3px; }
+  .dv-item:hover .dv-acts { display:flex; }
+  .dv-acts button { padding:3px 7px; font-size:12px; border-radius:7px; background:var(--surface); }
+  .dv-list .dv-grid { display:block; }
+  .dv-list .dv-item, .dv-list .dv-item.dv-folder { flex-direction:row; align-items:center; gap:12px; margin-bottom:6px; padding:8px 12px; }
+  .dv-list .dv-ico { width:34px; height:34px; flex:none; font-size:9px; }
+  .dv-list .dv-name { flex:1; } .dv-list .dv-meta { width:150px; text-align:right; }
+  .dv-up { position:fixed; right:18px; bottom:18px; width:300px; z-index:1000; background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-lift); padding:10px 12px; display:none; font-size:12.5px; }
+  .dv-up.show { display:block; }
+  .dv-up .row { margin:6px 0; } .dv-up .bar { height:5px; border-radius:4px; background:var(--surface-2); overflow:hidden; margin-top:4px; } .dv-up .bar i { display:block; height:100%; width:0; background:var(--accent-grad); transition:width .2s; }
+  .dv-pv { max-width:900px !important; width:100%; } .dv-pv iframe, .dv-pv img { width:100%; max-height:72vh; border:0; border-radius:10px; } .dv-pv iframe { height:72vh; } .dv-pv img { object-fit:contain; }
+  .dv-ck { position:absolute; top:8px; left:8px; width:17px; height:17px; accent-color:var(--accent); display:none; cursor:pointer; z-index:2; }
+  .dv-item:hover .dv-ck, .dv-selmode .dv-ck, .dv-item.dv-sel .dv-ck { display:block; }
+  .dv-item.dv-sel { background:rgba(109,94,245,.14); border-color:var(--accent); }
+  .dv-folder .dv-ck { top:50%; transform:translateY(-50%); }
+  .dv-list .dv-ck { position:static; transform:none; flex:none; }
+  .dv-badge { font-size:10.5px; font-weight:800; color:var(--accent); }
+  .dv-selbar { display:none; align-items:center; gap:8px; flex-wrap:wrap; padding:8px 12px; margin-bottom:10px; border-radius:12px; background:rgba(109,94,245,.12); border:1px solid var(--accent); font-size:13px; font-weight:700; }
+  .dv-selbar.show { display:flex; }
+  #dvTrashBtn.on { background:var(--danger); color:#fff; border-color:transparent; }
+  .dv-menu { position:fixed; z-index:1200; display:none; min-width:190px; padding:6px; background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow-lift); }
+  .dv-menu button { display:block; width:100%; text-align:left; border:none; background:transparent; padding:8px 10px; border-radius:8px; font-size:13px; }
+  .dv-menu button:hover { background:var(--surface-2); } .dv-menu button.danger { color:var(--danger); }
+  .dv-menu hr { border:0; border-top:1px solid var(--border); margin:5px 0; }
+  .dv-nav { position:fixed; top:50%; transform:translateY(-50%); width:44px; height:44px; border-radius:50%; font-size:22px; padding:0; z-index:1; }
+  .dv-pv iframe.dv-doc { background:#fff; }
+  .dv-lnk { display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; background:var(--surface-2); margin:4px 0; font-size:12.5px; }
+  .dv-lnk span { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .dv-pick { max-height:200px; overflow:auto; margin-top:6px; } .dv-pick button { display:block; width:100%; text-align:left; margin:3px 0; font-size:12.5px; }
 </style>
 </head>
 <body>
@@ -871,7 +924,7 @@
       <div class="sub">Semua temuan, progres, dan laporan dalam satu alur yang rapi.</div>
     </div>
     <div class="top-actions">
-      <button class="quick-jump" id="quickJump" type="button" aria-label="Buka navigasi cepat"><span class="quick-search-icon">⌕</span><span>Jelajah cepat</span><kbd>⌘ K</kbd></button>
+      <button class="quick-jump" id="quickJump" type="button" aria-label="Buka navigasi cepat"><span class="quick-search-icon">⌕</span><span>Jelajah cepat</span><span id="qjBadge" style="display:none;background:var(--danger);color:#fff;border-radius:20px;font-size:10px;font-weight:800;padding:1px 7px;margin-left:2px"></span><kbd>⌘ K</kbd></button>
       <button class="theme-toggle" id="themeToggle" type="button" aria-label="Ganti tema"><span id="themeIcon">☾</span><span id="themeLabel">Mode gelap</span></button>
       <button id="logoutBtn" type="button" aria-label="Keluar dari akun">Keluar</button>
       <span class="status-pill" id="connPill">Menghubungkan…</span>
@@ -890,6 +943,7 @@
     <button class="tab-btn" data-tab="scan"><span class="nav-icon">◎</span><span>Ceklis Scan AI</span></button>
     <button class="tab-btn" data-tab="akses"><span class="nav-icon">⌘</span><span>All Akses</span></button>
     <button class="tab-btn" data-tab="knowledge"><span class="nav-icon">◇</span><span>Knowledge</span></button>
+    <button class="tab-btn" data-tab="files"><span class="nav-icon">▣</span><span>Dokumen</span></button>
     <button class="tab-btn" data-tab="audit"><span class="nav-icon">☰</span><span>Riwayat</span></button>
     <button class="tab-btn" data-tab="users"><span class="nav-icon">◎</span><span>Pengguna</span></button>
     <div class="sidebar-footer"><div class="sidebar-footer-icon">✦</div><strong>Bekerja lebih fokus.</strong><p>Setiap detail QA, tertata di satu tempat.</p></div>
@@ -924,7 +978,7 @@
     <div class="proj-picker">
       <div class="proj-picker-head">
         <div><span class="plabel">PILIH PROJECT</span><p class="picker-sub">Tentukan area kerja sebelum mencatat temuan.</p></div>
-        <input type="text" id="projSearch" placeholder="Cari project…" aria-label="Cari project">
+        <div class="row-flex"><button id="btnDevLinks" title="Buat link baca-saja per developer">🔗 Link Developer</button><input type="text" id="projSearch" placeholder="Cari project…" aria-label="Cari project"></div>
       </div>
       <div class="proj-grid" id="projTabs"><div class="hint">Memuat…</div></div>
       <div style="position:relative;">
@@ -1120,6 +1174,26 @@
     </div>
   </div>
 
+  <!-- ===== TAB: DOKUMEN (drag & drop ala Drive) ===== -->
+  <div class="tab-panel" id="tab-files">
+    <div class="card">
+      <div class="dv-bar">
+        <div class="dv-crumbs" id="dvCrumbs"></div>
+        <input type="text" id="dvSearch" class="ak-search" placeholder="Cari nama / tautan…" style="max-width:220px;">
+        <button id="dvAll">☑ Pilih semua</button>
+        <button id="dvView" title="Ganti tampilan">☰ / ▦</button>
+        <button id="dvTrashBtn">🗑 Sampah</button>
+        <button id="dvNewFolder">+ Folder</button>
+        <button class="primary" id="dvUpload">↥ Unggah</button>
+        <input type="file" id="dvInput" multiple style="display:none;">
+      </div>
+      <div class="dv-selbar" id="dvSelBar"></div>
+      <div class="dv-area" id="dvArea"></div>
+      <div class="hint">Seret file dari komputer, atau tempel screenshot dengan Ctrl+V. Klik kanan untuk menu; Ctrl/Shift+klik atau centang untuk memilih banyak. Maks. <span id="dvMaxLbl"></span> per file. Item di Sampah dihapus permanen setelah 30 hari.</div>
+    </div>
+  </div>
+  <div class="dv-up" id="dvUp"></div>
+
   <div class="tab-panel" id="tab-mom">
     <div class="card">
       <div class="row-flex between" style="margin-bottom:10px;">
@@ -1186,7 +1260,132 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   firebase.initializeApp(cfg);
   const db = firebase.firestore();
   // ===== Riwayat perubahan (audit log): mencatat siapa mengubah apa dan kapan. Nilai field TIDAK disimpan (All Akses berisi password). =====
-  const AUDIT_MOD = { entries:"Bug", enhancements:"Enhancement", meetings:"Catatan Meeting", projects:"Project", accessProjects:"All Akses", knowledgeProducts:"Knowledge" };
+  // ===== Halaman publik link berbagi (?share=TOKEN): tanpa login, hanya tampil tombol unduh =====
+  const __dvSid = new URLSearchParams(location.search).get("share");
+  if(__dvSid){ dvShareView(__dvSid); throw new Error("share-view"); }
+  const __dvDevId = new URLSearchParams(location.search).get("dev");
+  if(__dvDevId){ devView(__dvDevId); throw new Error("dev-view"); }
+  function devView(id){
+    document.body.innerHTML = '<div id="dvW" class="dvp">Memuat…</div>';
+    const W = document.getElementById("dvW"), E = x=>String(x==null?"":x).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+    const st = document.createElement("style"); st.textContent = `
+      .dvp{max-width:1080px;margin:0 auto;padding:26px 16px 70px;font-family:"DM Sans",-apple-system,"Segoe UI",Roboto,sans-serif}
+      .dvp h1{margin:0;font-size:26px;font-weight:800;letter-spacing:-.02em}
+      .dvp .hd{display:flex;gap:14px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;margin-bottom:18px}
+      .dvp .who{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:99px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--text-dim)}
+      .dvp .sub{font-size:12.5px;color:var(--text-dim);margin-top:6px;line-height:1.5}
+      .dvp .note{background:color-mix(in srgb,#f59e0b 12%,var(--surface));border:1px solid color-mix(in srgb,#f59e0b 40%,var(--border));border-radius:12px;padding:10px 14px;font-size:12.5px;margin-bottom:16px}
+      .dvp .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:12px}
+      .dvp .stat{all:unset;box-sizing:border-box;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--c);border-radius:14px;padding:11px 14px;box-shadow:var(--shadow);transition:.15s}
+      .dvp .stat:hover{transform:translateY(-2px);box-shadow:var(--shadow-lift)}
+      .dvp .stat.on{background:color-mix(in srgb,var(--c) 12%,var(--surface));border-color:var(--c)}
+      .dvp .stat b{display:block;font-size:24px;font-weight:800;line-height:1.1;color:var(--c)}
+      .dvp .stat span{font-size:11.5px;color:var(--text-dim);font-weight:700}
+      .dvp .prog{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text-dim);font-weight:700;margin-bottom:16px}
+      .dvp .prog i{flex:1;height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden;display:block}
+      .dvp .prog i u{display:block;height:100%;background:linear-gradient(90deg,#17a673,#3ddb9a);border-radius:99px;transition:width .4s}
+      .dvp .tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+      .dvp .tools input{flex:1;min-width:180px}.dvp .tools select{width:auto;min-width:130px}
+      .dvp .bug{position:relative;background:var(--surface);border:1px solid var(--border);border-left:5px solid var(--c);border-radius:14px;padding:14px 16px;margin-bottom:10px;box-shadow:var(--shadow);animation:dvIn .25s ease both}
+      @keyframes dvIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+      .dvp .meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;font-size:12px}
+      .dvp .tag{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:700;background:var(--surface-2);color:var(--text-dim);white-space:nowrap}
+      .dvp .tag.n{background:transparent;padding-left:0;font-weight:800;color:var(--text-dim)}
+      .dvp .pill{color:#fff;padding:3px 11px;border-radius:99px;font-size:11.5px;font-weight:800;white-space:nowrap}
+      .dvp .sp{flex:1}
+      .dvp .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+      .dvp .col{background:var(--surface-2);border-radius:10px;padding:10px 12px;font-size:13.5px;line-height:1.5;word-break:break-word}
+      .dvp .col small{display:block;font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--text-dim);margin-bottom:3px}
+      .dvp .foot{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:11px}
+      .dvp .wait{margin-top:10px;background:color-mix(in srgb,#f59e0b 13%,var(--surface));border:1px dashed #f59e0b;border-radius:10px;padding:8px 12px;font-size:12.5px}
+      .dvp .ed{margin-top:10px;background:var(--surface-2);border-radius:12px;padding:12px}
+      .dvp .seg{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+      .dvp .seg button.on{background:var(--c);color:#fff;border-color:transparent}
+      .dvp .imgs{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px}
+      .dvp .imgs figure{margin:0}.dvp .imgs figcaption{font-size:11px;font-weight:700;color:var(--text-dim);margin-bottom:4px}
+      .dvp .imgs img{max-width:300px;max-height:220px;border-radius:10px;border:1px solid var(--border);cursor:zoom-in;display:block}
+      .dvp .empty{text-align:center;color:var(--text-dim);padding:50px 10px}
+      @media(max-width:700px){.dvp .cols{grid-template-columns:1fr}.dvp h1{font-size:22px}.dvp .imgs img{max-width:100%}}`;
+    document.head.appendChild(st);
+    const COL = {"Open":"#e0363c","In Progress":"#e08a1c","Fixed":"#17a673","Rejected":"#6c6f85","Update":"#2f80ed"}, ALLOW = ["Open","In Progress","Fixed","Rejected"];
+    const PCOL = {"Critical":"#e0363c","High":"#e08a1c","Medium":"#4f6ef7","Low":"#6c6f85"}, PRANK = {"Critical":0,"High":1,"Medium":2,"Low":3};
+    const PK = "devpend_"+id; let pend = {}; try{ pend = JSON.parse(localStorage.getItem(PK)||"{}"); }catch(_){}
+    const savePend = ()=>{ try{ localStorage.setItem(PK, JSON.stringify(pend)); }catch(_){} };
+    let data = null, flt = "", qq = "", fp = "", fpr = "", srt = "new", built = false, editId = null, edSt = ""; const openImg = new Set(), imgCache = {};
+    function pst(b){ const q = pend[b.i]; if(!q) return null; if(b.ds===q.status || b.s===q.status || Date.now()-q.at>1728e5){ delete pend[b.i]; savePend(); return null; } return q; }
+    async function loadImg(b){
+      const box = document.getElementById("im_"+b.i); if(!box) return;
+      if(!imgCache[b.i]){ box.textContent = "Memuat gambar…"; const o = {}; for(const k of ["x","e"]) if(b["i"+k]){ try{ const d = await db.collection("devImg").doc(id+"_"+b.i+"_"+k).get(); if(d.exists) o[k] = d.data().d; }catch(_){} } imgCache[b.i] = o; }
+      const o = imgCache[b.i], b2 = document.getElementById("im_"+b.i); if(!b2) return;
+      b2.innerHTML = '<div class="imgs">'+(["x","e"].map(k=>o[k] ? '<figure><figcaption>'+(k==="x"?"Existing":"Expected")+'</figcaption><img data-lb src="'+o[k]+'"></figure>' : "").join("") || '<span style="color:var(--text-dim);font-size:12.5px">Gambar belum tersedia (menunggu sinkron QA).</span>')+'</div>';
+    }
+    function rows(){
+      const all = data.bugs||[], today = new Date().toLocaleDateString("sv-SE"), cnt = {}; all.forEach(b=>cnt[b.s] = (cnt[b.s]||0)+1);
+      const done = (cnt.Fixed||0)+(cnt.Rejected||0), pct = all.length ? Math.round(done/all.length*100) : 0, wait = all.filter(b=>b.ds||pst(b)).length;
+      const tiles = [["","Semua","#6d5ef5",all.length]].concat(["Open","In Progress","Fixed","Rejected","Update"].filter(k=>cnt[k]).map(k=>[k,k,COL[k],cnt[k]]));
+      document.getElementById("dvStats").innerHTML = tiles.map(t=>'<button class="stat'+(flt===t[0]?' on':'')+'" data-f="'+t[0]+'" style="--c:'+t[2]+'"><b>'+t[3]+'</b><span>'+t[1]+'</span></button>').join("");
+      document.getElementById("dvProg").innerHTML = '<span>Selesai '+pct+'%</span><i><u style="width:'+pct+'%"></u></i><span>'+done+'/'+all.length+(wait?' · ⏳ '+wait+' menunggu cek QA':'')+'</span>';
+      let list = all.filter(b=>(!flt||b.s===flt) && (!fp||b.p===fp) && (!fpr||b.pr===fpr) && (!qq||(b.x+" "+b.e+" "+b.p).toLowerCase().includes(qq)));
+      if(srt==="prio") list = list.slice().sort((a,b)=>(PRANK[a.pr]??9)-(PRANK[b.pr]??9)); else if(srt==="due") list = list.slice().sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999"));
+      document.getElementById("dvRows").innerHTML = list.length ? list.map((b,n)=>{
+        const q = pst(b), ds = b.ds || (q && q.status), dn = b.ds ? b.dn : (q && q.note), open = b.s==="Open"||b.s==="In Progress", late = b.due && b.due<today && open;
+        const wait = ds ? '<div class="wait"><b>⏳ Dev mengusulkan: '+E(ds)+'</b> · '+(b.ds?'belum dicek QA':'terkirim, menunggu QA')+(dn?'<div style="margin-top:3px">“'+E(dn)+'”</div>':'')+'</div>' : "";
+        const cur = ds||b.s, ed = editId===b.i ? '<div class="ed"><div class="seg">'+ALLOW.map(a=>'<button data-st="'+a+'" class="'+(a===edSt?'on':'')+'" style="--c:'+COL[a]+'">'+a+'</button>').join("")+'</div><input type="text" id="edNt" maxlength="500" placeholder="Catatan untuk QA (opsional)"><div class="foot"><button class="primary" data-send="'+b.i+'">Kirim ke QA</button><button data-cancel>Batal</button><span style="font-size:11.5px;color:var(--text-dim)">Status resmi menunggu pengecekan QA.</span></div></div>' : "";
+        return '<div class="bug" style="--c:'+(COL[b.s]||"#6c6f85")+'"><div class="meta"><span class="tag n">#'+(n+1)+'</span>'+((data.projectNames||[]).length>1?'<span class="tag">📁 '+E(b.p)+'</span>':'')+'<span class="tag">📅 '+E(b.d)+'</span>'+(b.due?'<span class="tag" style="'+(late?'background:#e0363c;color:#fff':'')+'">⏰ '+E(b.due)+(late?' · terlambat':'')+'</span>':'')+'<span class="sp"></span><span class="pill" style="background:'+(PCOL[b.pr]||"#6c6f85")+'">'+E(b.pr)+'</span><span class="pill" style="background:'+(COL[b.s]||"#6c6f85")+'">'+E(b.s)+'</span></div>'+
+          '<div class="cols"><div class="col"><small>Existing</small>'+E(b.x||"-")+'</div><div class="col"><small>Expected</small>'+E(b.e||"-")+'</div></div>'+
+          '<div id="im_'+b.i+'"></div>'+wait+ed+
+          (editId===b.i ? '' : '<div class="foot">'+((b.ix||b.ie)?'<button data-im="'+b.i+'">🖼 '+(openImg.has(b.i)?'Sembunyikan':'Lihat')+' screenshot</button>':'')+'<button data-ed="'+b.i+'" data-cur="'+E(cur)+'">✎ Ubah status</button></div>')+'</div>';
+      }).join("") : '<div class="empty">Tidak ada bug yang cocok.</div>';
+      list.forEach(b=>{ if(openImg.has(b.i)) loadImg(b); });
+    }
+    function build(){
+      built = true; const pn = data.projectNames||[];
+      W.innerHTML = '<div class="hd"><div><h1><span style="background:var(--accent-grad);-webkit-background-clip:text;background-clip:text;color:transparent">Bug Report</span></h1><div class="sub">'+E(pn.join(" · "))+'<br>Diperbarui '+E(new Date(data.updatedAt).toLocaleString("id-ID"))+'</div></div><span class="who">👤 '+E(data.name)+'</span></div>'+
+        '<div class="note">Kamu bisa mengusulkan perubahan status. Usulan berstatus <b>belum dicek QA</b> sampai QA menyetujuinya.</div>'+
+        '<div class="stats" id="dvStats"></div><div class="prog" id="dvProg"></div>'+
+        '<div class="tools"><input type="text" id="dvQ" placeholder="🔍 Cari bug…">'+(pn.length>1?'<select id="dvP"><option value="">Semua project</option>'+pn.map(x=>'<option>'+E(x)+'</option>').join("")+'</select>':'')+'<select id="dvPr"><option value="">Semua prioritas</option><option>Critical</option><option>High</option><option>Medium</option><option>Low</option></select><select id="dvS"><option value="new">Urut: Terbaru</option><option value="prio">Urut: Prioritas</option><option value="due">Urut: Due terdekat</option></select></div><div id="dvRows"></div>';
+      const on = (i,f)=>{ const el = document.getElementById(i); if(el) el.onchange = el.oninput = f; };
+      on("dvQ", e=>{ qq = e.target.value.trim().toLowerCase(); rows(); }); on("dvP", e=>{ fp = e.target.value; rows(); }); on("dvPr", e=>{ fpr = e.target.value; rows(); }); on("dvS", e=>{ srt = e.target.value; rows(); });
+      document.getElementById("dvStats").onclick = e=>{ const b = e.target.closest("[data-f]"); if(b){ flt = b.dataset.f; rows(); } };
+      document.getElementById("dvRows").onclick = async e=>{
+        const t = e.target;
+        if(t.matches("[data-lb]")){ const ov = document.createElement("div"); ov.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.88);display:grid;place-items:center;z-index:9999;cursor:zoom-out;padding:20px"; ov.innerHTML = '<img src="'+t.src+'" style="max-width:100%;max-height:100%;border-radius:8px">'; ov.onclick = ()=>ov.remove(); document.body.appendChild(ov); return; }
+        const im = t.closest("[data-im]"), ed = t.closest("[data-ed]"), sd = t.closest("[data-send]"), sg = t.closest("[data-st]");
+        if(im){ openImg.has(im.dataset.im) ? openImg.delete(im.dataset.im) : openImg.add(im.dataset.im); rows(); }
+        else if(ed){ editId = ed.dataset.ed; edSt = ALLOW.includes(ed.dataset.cur) ? ed.dataset.cur : "In Progress"; rows(); }
+        else if(t.closest("[data-cancel]")){ editId = null; rows(); }
+        else if(sg){ edSt = sg.dataset.st; sg.parentNode.querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===sg)); }
+        else if(sd){
+          const nt = document.getElementById("edNt").value.trim().slice(0,500), bid = sd.dataset.send;
+          try{ await db.collection("devUpdates").add({ linkId:id, bugId:bid, status:edSt, note:nt, by:data.name, at:Date.now() }); pend[bid] = { status:edSt, note:nt, at:Date.now() }; savePend(); editId = null; rows(); }
+          catch(err){ alert("Gagal mengirim: "+err.message); }
+        }
+      };
+    }
+    db.collection("devPages").doc(id).onSnapshot(d=>{
+      if(!d.exists){ W.textContent = "Link tidak ditemukan atau sudah dicabut."; built = false; return; }
+      const nd = d.data();
+      if(nd.expiresAt && Date.now()>nd.expiresAt){ W.textContent = "Link ini sudah kedaluwarsa."; built = false; return; }
+      data = nd; if(!built) build(); if(!editId) rows();
+    }, e=>{ W.textContent = "Tidak bisa membuka link: "+e.message; });
+  }
+  async function dvShareView(sid){
+    document.body.innerHTML = '<div style="max-width:440px;margin:12vh auto;padding:24px;text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow)" id="shBox">Memuat…</div>';
+    const box = document.getElementById("shBox");
+    try{
+      const d = await db.collection("driveShares").doc(sid).get();
+      if(!d.exists){ box.textContent = "Link tidak ditemukan atau sudah dicabut."; return; }
+      const s = d.data();
+      if(s.expiresAt && Date.now() > s.expiresAt){ box.textContent = "Link ini sudah kedaluwarsa."; return; }
+      box.innerHTML = '<div style="font-size:42px">📄</div><h2 style="margin:8px 0;word-break:break-all"></h2><p style="color:var(--text-dim);font-size:13px"></p><button class="primary" id="shDl">⬇ Unduh</button>';
+      box.querySelector("h2").textContent = s.name;
+      box.querySelector("p").textContent = (s.size ? (s.size/1024).toFixed(0)+" KB · " : "") + (s.expiresAt ? "Berlaku sampai "+new Date(s.expiresAt).toLocaleString("id-ID") : "Tanpa batas waktu");
+      box.querySelector("#shDl").onclick = async ()=>{
+        try{ dvSave(await dvFetchBlob(s.fid, s.chunks, s.mime), s.name); }catch(e){ box.querySelector("p").textContent = "Gagal mengunduh: "+e.message; }
+      };
+    }catch(e){ box.textContent = "Tidak bisa membuka link: "+e.message; }
+  }
+  const AUDIT_MOD = { entries:"Bug", enhancements:"Enhancement", meetings:"Catatan Meeting", projects:"Project", accessProjects:"All Akses", knowledgeProducts:"Knowledge", driveItems:"Dokumen" };
   const AUDIT_SAFE = ["status","priority","dueDate"];
   const _dbCol = db.collection.bind(db), _dbBatch = db.batch.bind(db);
   function auditWho(){ const u = firebase.auth().currentUser; return u ? (u.email || u.uid) : "-"; }
@@ -1454,7 +1653,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   );
   db.collection("entries").orderBy("createdAt","desc").limit(1000).onSnapshot(
     snap=>{
-      entries = snap.docs.map(d=>({ id:d.id, ...d.data() })); window.__entries = entries;
+      entries = snap.docs.map(d=>({ id:d.id, ...d.data() })); window.__entries = entries; if(typeof devSchedule==="function") devSchedule();
       renderAll();
       document.getElementById("connPill").innerHTML = "💾 Tersinkron via Firebase";
     },
@@ -3502,6 +3701,481 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   });
   renderKnowledge();
 
+  // ================= dokumen ala Drive (Firestore: driveItems = metadata, driveChunks = isi base64, driveShares = link berbagi) =================
+  const DV_MAX = 5*1024*1024, DV_CHUNK = 600000, DV_TRASH_DAYS = 30; // 600000 habis dibagi 4 -> potongan base64 bisa disambung
+  let dvVisible = [], dvItems = [], dvFolder = null, dvQuery = "", dvList = false, dvTrash = false, dvSel = new Set(), dvLast = null, dvDragIds = null, dvOrder = [], dvPurged = false;
+  document.getElementById("dvMaxLbl").textContent = (DV_MAX/1048576)+" MB";
+  const dvById = id=>dvItems.find(x=>x.id===id);
+  const dvSelItems = ()=>Array.from(dvSel).map(dvById).filter(Boolean);
+  const dvSize = b=>b<1024 ? b+" B" : b<1048576 ? (b/1024).toFixed(0)+" KB" : (b/1048576).toFixed(1)+" MB";
+  const dvExt = n=>((n||"").split(".").pop()||"").toLowerCase();
+  function dvType(it){
+    const e = dvExt(it.name), c = e==="pdf" ? "#e0363c" : /^(docx?|rtf)$/.test(e) ? "#2f80ed" : /^(xlsx?|csv)$/.test(e) ? "#17a673" : /^pptx?$/.test(e) ? "#e08a1c" : /^image\//.test(it.mime||"") ? "#9b6ff8" : "#6c6f85";
+    return { label:(e||"file").slice(0,4).toUpperCase(), color:c };
+  }
+  function dvPath(id){ const p = []; for(let c = dvById(id); c; c = c.parentId ? dvById(c.parentId) : null) p.unshift(c.name); return p.join(" / "); }
+  function dvDescendants(id){ const o = []; dvItems.filter(x=>x.parentId===id).forEach(c=>{ o.push(c); if(c.kind==="folder") o.push(...dvDescendants(c.id)); }); return o; }
+  function dvSave(blob, name){ const u = URL.createObjectURL(blob), a = document.createElement("a"); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u), 4000); }
+  function dvOv(html){
+    const ov = document.createElement("div"); ov.className = "modal-overlay"; ov.innerHTML = '<div class="modal-box">'+html+'</div>';
+    ov.close = ()=>ov.remove(); ov.onclick = e=>{ if(e.target===ov) ov.remove(); };
+    document.body.appendChild(ov); return ov;
+  }
+  async function dvFetchBlob(fid, n, mime){
+    const parts = await Promise.all(Array.from({length:n||0}, (_,i)=>db.collection("driveChunks").doc(fid+"_"+i).get()));
+    const bin = atob(parts.map(p=>p.exists ? p.data().data : "").join("")), u8 = new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) u8[i] = bin.charCodeAt(i);
+    return new Blob([u8], { type: mime || "application/octet-stream" });
+  }
+  const dvBlob = it=>dvFetchBlob(it.id, it.chunks, it.mime);
+
+  db.collection("driveItems").onSnapshot(s=>{
+    dvItems = s.docs.map(d=>({id:d.id,...d.data()}));
+    dvSel.forEach(id=>{ if(!dvById(id)) dvSel.delete(id); });
+    if(!dvPurged){ dvPurged = true; const old = dvItems.filter(x=>x.trashedAt && Date.now()-x.trashedAt > DV_TRASH_DAYS*864e5); if(old.length) dvPermDelete(old, true); }
+    dvRender();
+  }, e=>toast("Gagal memuat Dokumen: "+e.message));
+
+  // ---- tampilan ----
+  function dvRender(){
+    const area = document.getElementById("dvArea"), q = dvQuery.trim().toLowerCase();
+    const crumbs = document.getElementById("dvCrumbs");
+    let list;
+    if(dvTrash){
+      crumbs.innerHTML = '<span class="cur">🗑 Sampah</span><span style="font-size:12px;color:var(--text-dim);font-weight:500">dihapus permanen setelah '+DV_TRASH_DAYS+' hari</span>';
+      list = dvItems.filter(x=>x.trashedAt && !(x.parentId && dvById(x.parentId) && dvById(x.parentId).trashedAt));
+    } else {
+      const path = []; for(let c = dvFolder ? dvById(dvFolder) : null; c; c = c.parentId ? dvById(c.parentId) : null) path.unshift(c);
+      crumbs.innerHTML = '<button data-go="" data-drop="">📁 Dokumen</button>' + path.map((p,i)=> i===path.length-1 ? '<span>›</span><span class="cur">'+esc(p.name)+'</span>' : '<span>›</span><button data-go="'+p.id+'" data-drop="'+p.id+'">'+esc(p.name)+'</button>').join("");
+      const live = dvItems.filter(x=>!x.trashedAt);
+      list = q ? live.filter(x=>(x.name||"").toLowerCase().includes(q) || (x.links||[]).some(l=>(l.label||"").toLowerCase().includes(q))) : live.filter(x=>(x.parentId||null)===dvFolder);
+    }
+    if(dvQuery && dvTrash) list = list.filter(x=>(x.name||"").toLowerCase().includes(q));
+    const byName = (a,b)=>(a.name||"").localeCompare(b.name||"","id",{numeric:true});
+    const folders = list.filter(x=>x.kind==="folder").sort(byName), files = list.filter(x=>x.kind!=="folder").sort(byName);
+    dvOrder = files; dvVisible = folders.concat(files);
+    const allOn = dvVisible.length>0 && dvVisible.every(x=>dvSel.has(x.id));
+    const ab = document.getElementById("dvAll"); ab.textContent = allOn ? "☐ Batal pilih" : "☑ Pilih semua"; ab.disabled = !dvVisible.length;
+    const card = it=>{
+      const f = it.kind==="folder", t = dvType(it), nl = (it.links||[]).length;
+      return '<div class="dv-item'+(f?' dv-folder':'')+(dvSel.has(it.id)?' dv-sel':'')+'" draggable="true" data-id="'+it.id+'"'+(f&&!dvTrash?' data-drop="'+it.id+'"':'')+'>'+
+        '<input type="checkbox" class="dv-ck" data-ck'+(dvSel.has(it.id)?' checked':'')+'>'+
+        '<div class="dv-ico"'+(f?'':' style="--c:'+t.color+'"')+'>'+(f?'📁':esc(t.label))+'</div>'+
+        '<div style="min-width:0;flex:1"><div class="dv-name" title="'+esc(it.name)+'">'+esc(it.name)+'</div>'+
+        '<div class="dv-meta">'+(f?'Folder':dvSize(it.size||0))+' · '+esc(fmtDate(new Date(it.createdAt||Date.now()).toISOString().slice(0,10)))+(nl?' · <span class="dv-badge">🔗 '+nl+'</span>':'')+'</div></div>'+
+        '<div class="dv-acts"><button data-a="menu" title="Menu">⋮</button></div></div>';
+    };
+    area.classList.toggle("dv-list", dvList); area.classList.toggle("dv-selmode", dvSel.size>0);
+    document.getElementById("dvTrashBtn").classList.toggle("on", dvTrash);
+    document.getElementById("dvTrashBtn").textContent = dvTrash ? "← Kembali" : "🗑 Sampah";
+    const bar = document.getElementById("dvSelBar"), n = dvSel.size;
+    bar.classList.toggle("show", n>0);
+    bar.innerHTML = n ? '<span>'+n+' dipilih</span><span class="ak-spacer" style="flex:1"></span>'+
+      (dvTrash ? '<button data-b="restore">↩ Pulihkan</button><button class="danger-outline" data-b="perm">Hapus permanen</button>'
+               : '<button data-b="zip">⬇ Unduh'+(n>1?' ZIP':'')+'</button><button data-b="move">📂 Pindahkan</button><button class="danger-outline" data-b="del">🗑 Hapus</button>')+'<button data-b="clear">✕</button>' : "";
+    if(!folders.length && !files.length){
+      area.innerHTML = '<div style="padding:70px 10px;text-align:center;color:var(--text-dim)">'+(dvTrash?'Sampah kosong.':q?'Tidak ada hasil.':'Folder kosong.<br>Seret file ke sini, tempel screenshot (Ctrl+V), atau klik <b>Unggah</b>.')+'</div>'; return;
+    }
+    area.innerHTML = (folders.length?'<div class="dv-label">Folder</div><div class="dv-grid">'+folders.map(card).join("")+'</div>':"") + (files.length?'<div class="dv-label">File</div><div class="dv-grid">'+files.map(card).join("")+'</div>':"");
+  }
+
+  // ---- unggah ----
+  const dvUp = document.getElementById("dvUp");
+  const dvB64 = file=>new Promise((ok,no)=>{ const r = new FileReader(); r.onload = ()=>ok(String(r.result).split(",")[1]||""); r.onerror = no; r.readAsDataURL(file); });
+  async function dvUploadFiles(files, parentId){
+    files = Array.from(files).filter(f=>f.size || f.type); if(!files.length) return;
+    if(dvTrash){ toast("Keluar dari Sampah dulu untuk mengunggah."); return; }
+    dvUp.classList.add("show");
+    dvUp.innerHTML = files.map((f,i)=>'<div class="row"><div class="dv-name">'+esc(f.name)+'</div><div class="bar"><i id="dvP'+i+'"></i></div></div>').join("");
+    let okN = 0;
+    for(let i=0;i<files.length;i++){
+      const f = files[i], bar = document.getElementById("dvP"+i);
+      if(f.size > DV_MAX){ bar.style.background = "var(--danger)"; bar.style.width = "100%"; toast(f.name+" melebihi "+dvSize(DV_MAX)); continue; }
+      try{
+        const data = await dvB64(f), n = Math.max(1, Math.ceil(data.length/DV_CHUNK)), ref = db.collection("driveItems").doc();
+        for(let c=0;c<n;c++){
+          await db.collection("driveChunks").doc(ref.id+"_"+c).set({ fid:ref.id, i:c, data:data.slice(c*DV_CHUNK,(c+1)*DV_CHUNK) });
+          bar.style.width = Math.round((c+1)/n*100)+"%";
+        }
+        await ref.set({ kind:"file", name:f.name, parentId:parentId||null, size:f.size, mime:f.type||"", chunks:n, createdAt:Date.now(), by:auditWho() });
+        okN++;
+      }catch(e){ bar.style.background = "var(--danger)"; toast("Gagal unggah "+f.name+": "+e.message); }
+    }
+    if(okN) toast(okN+" file terunggah.");
+    setTimeout(()=>dvUp.classList.remove("show"), 1800);
+  }
+
+  // ---- unduh / ZIP ----
+  async function dvDownload(items){
+    if(items.length===1 && items[0].kind!=="folder"){ toast("Menyiapkan unduhan…"); try{ dvSave(await dvBlob(items[0]), items[0].name); }catch(e){ toast("Gagal: "+e.message); } return; }
+    if(!window.JSZip){ toast("Pustaka ZIP belum termuat, coba muat ulang halaman."); return; }
+    toast("Menyiapkan ZIP…");
+    try{
+      const zip = new JSZip();
+      const add = async (it, base)=>{
+        if(it.kind==="folder"){ zip.folder(base+it.name); for(const c of dvItems.filter(x=>x.parentId===it.id && !x.trashedAt)) await add(c, base+it.name+"/"); }
+        else zip.file(base+it.name, await dvBlob(it));
+      };
+      for(const it of items) await add(it, "");
+      dvSave(await zip.generateAsync({type:"blob"}), items.length===1 ? items[0].name+".zip" : "dokumen_"+todayStr()+".zip");
+    }catch(e){ toast("Gagal membuat ZIP: "+e.message); }
+  }
+
+  // ---- sampah / hapus / pindah ----
+  const dvUpd = (id,d)=>db.collection("driveItems").doc(id).update(d);
+  const dvWithKids = items=>{ const m = new Map(); items.forEach(it=>[it, ...(it.kind==="folder"?dvDescendants(it.id):[])].forEach(x=>m.set(x.id,x))); return Array.from(m.values()); };
+  async function dvToTrash(items){
+    try{ const t = Date.now(); await Promise.all(dvWithKids(items).map(x=>dvUpd(x.id,{trashedAt:t}))); dvSel.clear(); toast("Dipindah ke Sampah (bisa dipulihkan "+DV_TRASH_DAYS+" hari)."); }
+    catch(e){ toast("Gagal: "+e.message); }
+  }
+  async function dvRestore(items){
+    try{
+      const del = firebase.firestore.FieldValue.delete();
+      await Promise.all(dvWithKids(items).map(x=>{ const top = items.some(i=>i.id===x.id), orphan = top && x.parentId && (!dvById(x.parentId) || (dvById(x.parentId).trashedAt && !items.some(i=>i.id===x.parentId)));
+        return dvUpd(x.id, orphan ? {trashedAt:del, parentId:null} : {trashedAt:del}); }));
+      dvSel.clear(); toast("Dipulihkan.");
+    }catch(e){ toast("Gagal: "+e.message); }
+  }
+  async function dvPermDelete(items, silent){
+    if(!silent && !await confirmDialog("Hapus permanen "+items.length+" item (termasuk isinya)? Tidak bisa dibatalkan.", "Hapus permanen")) return;
+    try{
+      for(const x of dvWithKids(items)){
+        if(x.kind!=="folder"){
+          for(let i=0;i<(x.chunks||0);i++) await db.collection("driveChunks").doc(x.id+"_"+i).delete();
+          const sh = await db.collection("driveShares").where("fid","==",x.id).get(); for(const d of sh.docs) await d.ref.delete();
+        }
+        await db.collection("driveItems").doc(x.id).delete();
+      }
+      dvSel.clear(); if(!silent) toast("Dihapus permanen.");
+    }catch(e){ toast("Gagal menghapus: "+e.message); }
+  }
+  function dvPick(items){
+    return new Promise(res=>{
+      const bad = new Set(); dvWithKids(items).forEach(x=>bad.add(x.id));
+      const opts = dvItems.filter(x=>x.kind==="folder" && !x.trashedAt && !bad.has(x.id)).map(x=>({id:x.id,p:dvPath(x.id)})).sort((a,b)=>a.p.localeCompare(b.p));
+      const ov = dvOv('<p>Pindahkan '+items.length+' item ke:</p><select id="pkSel"><option value="">📁 Dokumen (utama)</option>'+opts.map(o=>'<option value="'+o.id+'">'+esc(o.p)+'</option>').join("")+'</select><div class="modal-actions"><button id="pkNo">Batal</button><button class="primary" id="pkOk">Pindahkan</button></div>');
+      ov.querySelector("#pkNo").onclick = ()=>{ ov.close(); res(undefined); };
+      ov.querySelector("#pkOk").onclick = ()=>{ const v = ov.querySelector("#pkSel").value || null; ov.close(); res(v); };
+    });
+  }
+  async function dvMove(items, target){
+    target = target || null;
+    items = items.filter(it=>it.id!==target && (it.parentId||null)!==target && !(target && it.kind==="folder" && dvDescendants(it.id).some(d=>d.id===target)));
+    if(!items.length) return;
+    try{ await Promise.all(items.map(it=>dvUpd(it.id,{parentId:target}))); dvSel.clear(); toast(items.length+" item dipindah ke "+(target ? '"'+dvById(target).name+'"' : "Dokumen")+"."); }
+    catch(e){ toast("Gagal memindahkan: "+e.message); }
+  }
+  async function dvRename(it){ const v = await promptDialog("Nama baru:", it.name); if(v && v!==it.name) dvUpd(it.id,{name:v}).catch(e=>toast("Gagal: "+e.message)); }
+
+  // ---- link berbagi (kedaluwarsa) ----
+  async function dvShareDlg(it){
+    const ov = dvOv('<h3 style="margin:0 0 10px">Bagikan "'+esc(it.name)+'"</h3><div class="row-flex"><select id="shExp" style="flex:1"><option value="3600000">Berlaku 1 jam</option><option value="86400000" selected>Berlaku 1 hari</option><option value="604800000">Berlaku 7 hari</option><option value="2592000000">Berlaku 30 hari</option><option value="0">Tanpa batas waktu</option></select><button class="primary" id="shMk">Buat link</button></div><div id="shList" style="margin-top:12px"></div><div class="modal-actions"><button id="shX">Tutup</button></div>');
+    ov.querySelector("#shX").onclick = ov.close;
+    const load = async ()=>{
+      const box = ov.querySelector("#shList"); box.textContent = "Memuat…";
+      try{
+        const s = await db.collection("driveShares").where("fid","==",it.id).get();
+        box.innerHTML = s.docs.length ? s.docs.map(d=>{ const x = d.data(), exp = x.expiresAt && Date.now()>x.expiresAt;
+          return '<div class="dv-lnk" data-id="'+d.id+'"><span title="'+esc(location.origin+location.pathname+"?share="+d.id)+'">'+(exp?'⛔ Kedaluwarsa · ':'🔗 ')+(x.expiresAt?'sampai '+esc(new Date(x.expiresAt).toLocaleString("id-ID")):'tanpa batas')+'</span><button data-cp>Salin</button><button data-rv class="danger-outline">Cabut</button></div>'; }).join("") : '<div class="hint">Belum ada link.</div>';
+      }catch(e){ box.textContent = "Gagal memuat: "+e.message; }
+    };
+    ov.querySelector("#shMk").onclick = async ()=>{
+      const ms = parseInt(ov.querySelector("#shExp").value,10);
+      try{ await db.collection("driveShares").add({ fid:it.id, name:it.name, mime:it.mime||"", size:it.size||0, chunks:it.chunks||0, createdAt:Date.now(), expiresAt: ms ? Date.now()+ms : null, by:auditWho() }); load(); }
+      catch(e){ toast("Gagal: "+e.message); }
+    };
+    ov.querySelector("#shList").onclick = async e=>{
+      const row = e.target.closest("[data-id]"); if(!row) return;
+      if(e.target.closest("[data-cp]")){ const url = location.origin+location.pathname+"?share="+row.dataset.id; try{ await navigator.clipboard.writeText(url); toast("Link disalin."); }catch(_){ window.prompt("Salin link:", url); } }
+      else if(e.target.closest("[data-rv]")){ await db.collection("driveShares").doc(row.dataset.id).delete(); load(); }
+    };
+    load();
+  }
+
+  // ---- tautkan ke bug / enhancement / project ----
+  function dvLinkSources(){
+    const E = typeof entries!=="undefined" ? entries : (window.__entries||[]), H = window.__enh||[], P = typeof projects!=="undefined" ? projects : [];
+    const pn = id=>{ const p = P.find(x=>x.id===id); return p ? p.name+" · " : ""; };
+    return { bug: E.map(x=>({t:"bug", id:x.id, label:pn(x.projectId)+String(x.existing||x.title||x.id).slice(0,70)})),
+             enh: H.map(x=>({t:"enh", id:x.id, label:String(x.title||x.name||x.existing||x.id).slice(0,80)})),
+             proj: P.map(x=>({t:"proj", id:x.id, label:x.name})) };
+  }
+  function dvLinkDlg(it){
+    const ov = dvOv('<h3 style="margin:0 0 8px">Tautkan "'+esc(it.name)+'"</h3><div id="lkCur"></div><div class="row-flex" style="margin-top:10px"><select id="lkT" style="width:auto"><option value="bug">Bug</option><option value="enh">Enhancement</option><option value="proj">Project</option></select><input type="text" id="lkQ" placeholder="Cari…" style="flex:1"></div><div class="dv-pick" id="lkRes"></div><div class="modal-actions"><button id="lkX">Selesai</button></div>');
+    ov.querySelector("#lkX").onclick = ov.close;
+    const NAMES = {bug:"Bug", enh:"Enhancement", proj:"Project"};
+    const draw = ()=>{
+      const cur = (dvById(it.id)||it).links||[];
+      ov.querySelector("#lkCur").innerHTML = cur.length ? cur.map((l,i)=>'<div class="dv-lnk"><span>'+NAMES[l.t]+' · '+esc(l.label)+'</span><button data-rm="'+i+'">✕</button></div>').join("") : '<div class="hint">Belum ditautkan.</div>';
+      const t = ov.querySelector("#lkT").value, q = ov.querySelector("#lkQ").value.trim().toLowerCase();
+      const res = dvLinkSources()[t].filter(x=>!cur.some(l=>l.t===x.t&&l.id===x.id) && (!q || x.label.toLowerCase().includes(q))).slice(0,30);
+      ov.querySelector("#lkRes").innerHTML = res.length ? res.map((x,i)=>'<button data-add="'+i+'">+ '+esc(x.label)+'</button>').join("") : '<div class="hint">Tidak ada data.</div>';
+      ov._res = res;
+    };
+    const save = async links=>{ try{ await dvUpd(it.id,{links}); setTimeout(draw,250); }catch(e){ toast("Gagal: "+e.message); } };
+    ov.querySelector("#lkT").onchange = draw; ov.querySelector("#lkQ").oninput = draw;
+    ov.onclick = e=>{
+      if(e.target===ov) return ov.close();
+      const cur = (dvById(it.id)||it).links||[], a = e.target.closest("[data-add]"), r = e.target.closest("[data-rm]");
+      if(a) save([...cur, ov._res[+a.dataset.add]]); else if(r) save(cur.filter((_,i)=>i!==+r.dataset.rm));
+    };
+    draw();
+  }
+
+  // ---- pratinjau (gambar, PDF, teks, CSV/Excel, Word) dengan panah ----
+  let dvPvTok = 0, dvPvKey = null;
+  async function dvPreview(it, list){
+    list = list || dvOrder; let idx = Math.max(0, list.findIndex(x=>x.id===it.id));
+    const ov = document.createElement("div"); ov.className = "modal-overlay";
+    ov.innerHTML = '<button class="dv-nav" style="left:14px" data-n="-1">‹</button><button class="dv-nav" style="right:14px" data-n="1">›</button><div class="modal-box dv-pv"><div class="row-flex between" style="margin-bottom:10px"><b id="pvT"></b><span><button id="pvDl">⬇ Unduh</button> <button id="pvX">✕</button></span></div><div id="pvB"></div></div>';
+    document.body.appendChild(ov);
+    let url = null; const close = ()=>{ dvPvTok++; ov.remove(); if(url) URL.revokeObjectURL(url); document.removeEventListener("keydown", key); };
+    const frame = html=>{ const f = document.createElement("iframe"); f.className = "dv-doc"; f.setAttribute("sandbox",""); f.srcdoc = html; return f; };
+    async function show(){
+      const cur = list[idx], my = ++dvPvTok, body = ov.querySelector("#pvB");
+      if(url){ URL.revokeObjectURL(url); url = null; }
+      ov.querySelector("#pvT").textContent = cur.name+"  ("+(idx+1)+"/"+list.length+")";
+      ov.querySelectorAll(".dv-nav").forEach(b=>b.style.display = list.length>1 ? "" : "none");
+      body.innerHTML = '<div class="hint">Memuat…</div>';
+      const e = dvExt(cur.name), m = cur.mime||"";
+      try{
+        const blob = await dvBlob(cur); if(my!==dvPvTok) return;
+        let el;
+        if(/^image\//.test(m)){ url = URL.createObjectURL(blob); el = document.createElement("img"); el.src = url; }
+        else if(m==="application/pdf" || e==="pdf"){ url = URL.createObjectURL(blob); el = document.createElement("iframe"); el.src = url; }
+        else if(/^text\//.test(m) && e!=="csv" || /^(txt|md|json|log)$/.test(e)){ el = document.createElement("pre"); el.style.cssText = "white-space:pre-wrap;max-height:72vh;overflow:auto;font-size:12.5px"; el.textContent = (await blob.text()).slice(0,200000); }
+        else if(/^(csv|xlsx|xls)$/.test(e) && window.XLSX){
+          const wb = e==="csv" ? XLSX.read(await blob.text(), {type:"string"}) : XLSX.read(await blob.arrayBuffer(), {type:"array"});
+          const css = '<style>body{font:12px sans-serif;margin:8px}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:3px 7px}</style>';
+          el = document.createElement("div");
+          el.innerHTML = (wb.SheetNames.length>1 ? '<select style="margin-bottom:8px">'+wb.SheetNames.map(n=>'<option>'+esc(n)+'</option>').join("")+'</select>' : "")+'<div id="shW"></div>';
+          const put = n=>{ const f = frame(css+XLSX.utils.sheet_to_html(wb.Sheets[n])); f.style.height = "64vh"; const w = el.querySelector("#shW"); w.innerHTML = ""; w.appendChild(f); };
+          const sel = el.querySelector("select"); if(sel) sel.onchange = ()=>put(sel.value); put(wb.SheetNames[0]);
+        }
+        else if(e==="docx" && window.mammoth){ const r = await mammoth.convertToHtml({arrayBuffer: await blob.arrayBuffer()}); el = frame('<style>body{font:14px sans-serif;margin:16px;line-height:1.5}table{border-collapse:collapse}td{border:1px solid #ccc;padding:4px}img{max-width:100%}</style>'+r.value); }
+        else { el = document.createElement("div"); el.innerHTML = '<div class="hint" style="padding:40px;text-align:center">Pratinjau belum tersedia untuk tipe ini. Gunakan tombol Unduh.</div>'; }
+        if(my===dvPvTok){ body.innerHTML = ""; body.appendChild(el); }
+      }catch(err){ if(my===dvPvTok) body.innerHTML = '<div class="hint">Gagal membuka: '+esc(err.message)+'</div>'; }
+    }
+    const step = d=>{ idx = (idx+d+list.length)%list.length; show(); };
+    function key(e){ if(e.key==="Escape") close(); else if(e.key==="ArrowRight" && list.length>1) step(1); else if(e.key==="ArrowLeft" && list.length>1) step(-1); }
+    document.addEventListener("keydown", key);
+    ov.onclick = e=>{ const n = e.target.closest("[data-n]"); if(n) step(+n.dataset.n); else if(e.target===ov) close(); };
+    ov.querySelector("#pvX").onclick = close;
+    ov.querySelector("#pvDl").onclick = ()=>dvDownload([list[idx]]);
+    show();
+  }
+  function dvOpen(it){
+    if(it.kind==="folder"){ dvFolder = it.id; dvQuery = ""; document.getElementById("dvSearch").value = ""; dvSel.clear(); return dvRender(); }
+    dvPreview(it);
+  }
+
+  // ---- menu klik kanan ----
+  const dvMenuEl = document.createElement("div"); dvMenuEl.className = "dv-menu"; document.body.appendChild(dvMenuEl);
+  const dvMenuHide = ()=>{ dvMenuEl.style.display = "none"; };
+  function dvMenuShow(x, y, rows){
+    dvMenuEl._rows = rows;
+    dvMenuEl.innerHTML = rows.map((r,i)=>r ? '<button data-i="'+i+'"'+(r.d?' class="danger"':'')+'>'+r.l+'</button>' : '<hr>').join("");
+    dvMenuEl.style.display = "block";
+    dvMenuEl.style.left = Math.max(6, Math.min(x, innerWidth-dvMenuEl.offsetWidth-8))+"px";
+    dvMenuEl.style.top = Math.max(6, Math.min(y, innerHeight-dvMenuEl.offsetHeight-8))+"px";
+  }
+  dvMenuEl.addEventListener("click", e=>{ const b = e.target.closest("[data-i]"); if(!b) return; const r = dvMenuEl._rows[+b.dataset.i]; dvMenuHide(); r.f(); });
+  document.addEventListener("click", e=>{ if(!dvMenuEl.contains(e.target)) dvMenuHide(); });
+  document.addEventListener("scroll", dvMenuHide, true); window.addEventListener("resize", dvMenuHide);
+  function dvItemMenu(x, y, it){
+    if(!dvSel.has(it.id)){ dvSel = new Set([it.id]); dvLast = it.id; dvRender(); }
+    const S = dvSelItems(), one = S.length===1, files = one && it.kind!=="folder";
+    if(dvTrash) return dvMenuShow(x, y, [{l:"↩ Pulihkan", f:()=>dvRestore(S)}, {l:"🗑 Hapus permanen", d:1, f:()=>dvPermDelete(S)}]);
+    dvMenuShow(x, y, [ one && {l:it.kind==="folder"?"📂 Buka":"👁 Pratinjau", f:()=>dvOpen(it)}, {l:"⬇ Unduh"+(S.length>1||it.kind==="folder"?" (ZIP)":""), f:()=>dvDownload(S)}, null,
+      files && {l:"🔗 Bagikan link…", f:()=>dvShareDlg(it)}, files && {l:"📎 Tautkan ke bug/project…", f:()=>dvLinkDlg(it)}, one && {l:"✎ Ubah nama", f:()=>dvRename(it)},
+      {l:"📂 Pindahkan…", f:async()=>{ const t = await dvPick(S); if(t!==undefined) dvMove(S, t); }}, null, {l:"🗑 Hapus", d:1, f:()=>dvToTrash(S)} ].filter(r=>r!==false));
+  }
+
+  // ---- event ----
+  const dvArea = document.getElementById("dvArea"), dvPanel = document.getElementById("tab-files");
+  const isFileDrag = e=>e.dataTransfer && Array.from(e.dataTransfer.types||[]).includes("Files");
+  let dvDepth = 0;
+  dvPanel.addEventListener("dragenter", e=>{ if(isFileDrag(e) && !dvTrash){ e.preventDefault(); dvDepth++; dvArea.classList.add("dv-drag"); } });
+  dvPanel.addEventListener("dragleave", e=>{ if(isFileDrag(e) && --dvDepth<=0){ dvDepth = 0; dvArea.classList.remove("dv-drag"); } });
+  dvPanel.addEventListener("dragover", e=>{
+    if(!isFileDrag(e) && !dvDragIds) return; e.preventDefault();
+    document.querySelectorAll(".dv-target,.dv-over").forEach(n=>n.classList.remove("dv-target","dv-over"));
+    const t = e.target.closest("[data-drop]"); if(t && !(dvDragIds||[]).includes(t.dataset.id)) t.classList.add(t.matches(".dv-item") ? "dv-target" : "dv-over");
+  });
+  dvPanel.addEventListener("drop", e=>{
+    const t = e.target.closest("[data-drop]"), dest = t ? (t.dataset.drop || null) : dvFolder;
+    document.querySelectorAll(".dv-target,.dv-over").forEach(n=>n.classList.remove("dv-target","dv-over")); dvArea.classList.remove("dv-drag"); dvDepth = 0;
+    if(isFileDrag(e)){ e.preventDefault(); dvUploadFiles(e.dataTransfer.files, dest); }
+    else if(dvDragIds){ e.preventDefault(); const ids = dvDragIds; dvDragIds = null; if(t) dvMove(ids.map(dvById).filter(Boolean), dest); }
+  });
+  ["dragover","drop"].forEach(ev=>window.addEventListener(ev, e=>{ if(isFileDrag(e) && !e.target.closest("#tab-files")) e.preventDefault(); }));
+  dvArea.addEventListener("dragstart", e=>{
+    const t = e.target.closest(".dv-item"); if(!t || dvTrash){ e.preventDefault(); return; }
+    dvDragIds = dvSel.has(t.dataset.id) ? Array.from(dvSel) : [t.dataset.id];
+    dvDragIds.forEach(id=>{ const n = dvArea.querySelector('[data-id="'+id+'"]'); if(n) n.classList.add("dragging"); });
+    e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", dvDragIds.join(","));
+  });
+  dvArea.addEventListener("dragend", ()=>{ dvDragIds = null; document.querySelectorAll(".dragging").forEach(n=>n.classList.remove("dragging")); });
+  dvArea.addEventListener("click", e=>{
+    const t = e.target.closest(".dv-item"); if(!t) return;
+    const it = dvById(t.dataset.id); if(!it) return;
+    if(e.target.closest('[data-a="menu"]')){ const r = e.target.getBoundingClientRect(); e.stopPropagation(); return dvItemMenu(r.left, r.bottom+4, it); }
+    const all = Array.from(dvArea.querySelectorAll(".dv-item")).map(n=>n.dataset.id);
+    if(e.shiftKey && dvLast && all.includes(dvLast)){ const a = all.indexOf(dvLast), b = all.indexOf(it.id); all.slice(Math.min(a,b), Math.max(a,b)+1).forEach(id=>dvSel.add(id)); }
+    else if(e.target.closest("[data-ck]") || e.ctrlKey || e.metaKey || dvSel.size){ dvSel.has(it.id) ? dvSel.delete(it.id) : dvSel.add(it.id); dvLast = it.id; }
+    else if(!dvTrash) return dvOpen(it);
+    else return;
+    dvRender();
+  });
+  dvArea.addEventListener("contextmenu", e=>{
+    e.preventDefault(); const t = e.target.closest(".dv-item");
+    if(t){ const it = dvById(t.dataset.id); if(it) dvItemMenu(e.clientX, e.clientY, it); return; }
+    if(dvTrash) return;
+    dvMenuShow(e.clientX, e.clientY, [{l:"+ Folder baru", f:dvNewFolder}, {l:"↥ Unggah file", f:()=>document.getElementById("dvInput").click()}]);
+  });
+  document.getElementById("dvSelBar").addEventListener("click", async e=>{
+    const b = e.target.closest("[data-b]"); if(!b) return; const S = dvSelItems();
+    if(b.dataset.b==="clear"){ dvSel.clear(); dvRender(); }
+    else if(b.dataset.b==="zip") dvDownload(S);
+    else if(b.dataset.b==="del") dvToTrash(S);
+    else if(b.dataset.b==="restore") dvRestore(S);
+    else if(b.dataset.b==="perm") dvPermDelete(S);
+    else if(b.dataset.b==="move"){ const t = await dvPick(S); if(t!==undefined) dvMove(S, t); }
+  });
+  document.getElementById("dvCrumbs").addEventListener("click", e=>{ const b = e.target.closest("[data-go]"); if(b){ dvFolder = b.dataset.go || null; dvSel.clear(); dvRender(); } });
+  document.getElementById("dvSearch").addEventListener("input", e=>{ dvQuery = e.target.value; dvRender(); });
+  function dvToggleAll(){ const on = dvVisible.length>0 && dvVisible.every(x=>dvSel.has(x.id)); if(on) dvSel.clear(); else dvVisible.forEach(x=>dvSel.add(x.id)); dvRender(); }
+  document.getElementById("dvAll").addEventListener("click", dvToggleAll);
+  document.addEventListener("keydown", e=>{ if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="a" && dvPanel.classList.contains("active") && !/^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement||{}).tagName||"") && !document.querySelector(".modal-overlay")){ e.preventDefault(); dvToggleAll(); } });
+  document.getElementById("dvView").addEventListener("click", ()=>{ dvList = !dvList; dvRender(); });
+  document.getElementById("dvTrashBtn").addEventListener("click", ()=>{ dvTrash = !dvTrash; dvSel.clear(); dvRender(); });
+  document.getElementById("dvUpload").addEventListener("click", ()=>document.getElementById("dvInput").click());
+  document.getElementById("dvInput").addEventListener("change", e=>{ dvUploadFiles(e.target.files, dvFolder); e.target.value = ""; });
+  async function dvNewFolder(){
+    const v = await promptDialog("Nama folder:", "Folder baru", "Buat");
+    if(v) db.collection("driveItems").add({ kind:"folder", name:v, parentId:dvFolder, createdAt:Date.now(), by:auditWho() }).catch(err=>toast("Gagal: "+err.message));
+  }
+  document.getElementById("dvNewFolder").addEventListener("click", dvNewFolder);
+  // tempel screenshot (Ctrl+V) langsung ke folder yang sedang dibuka
+  document.addEventListener("paste", e=>{
+    if(!dvPanel.classList.contains("active") || dvTrash || /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement||{}).tagName||"")) return;
+    const fs = Array.from((e.clipboardData && e.clipboardData.files) || []); if(!fs.length) return;
+    e.preventDefault();
+    const d = new Date(), p = n=>String(n).padStart(2,"0"), ts = d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+"-"+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds());
+    dvUploadFiles(fs.map((f,i)=>/^image\//.test(f.type) && /^image\.\w+$/i.test(f.name) ? new File([f], "screenshot-"+ts+(fs.length>1?"-"+(i+1):"")+"."+(f.type.split("/")[1]||"png").replace("jpeg","jpg"), {type:f.type}) : f), dvFolder);
+  });
+  dvRender();
+
+  // ================= link developer: halaman Bug Report per project (devLinks = daftar, devPages = salinan publik, devImg = screenshot, devUpdates = usulan status dari dev) =================
+  const DEV_ALLOW = ["Open","In Progress","Fixed","Rejected"];
+  let devLinks = [], devUps = [], devTimer = null, devRefresh = null, devBusy = false;
+  const devUrl = id=>location.origin+location.pathname+"?dev="+id;
+  const devExpired = l=>l.expiresAt && Date.now()>l.expiresAt;
+  function devHash(str){ let h = 5381; for(let i=0;i<str.length;i++) h = ((h<<5)+h+str.charCodeAt(i))|0; return String(h); }
+  const devSig = x=>x ? x.length+":"+devHash(x.slice(0,64)+x.slice(-64)) : "";
+  function devBuild(l){
+    const pn = new Map(projects.map(p=>[p.id,p.name])), cut = t=>String(t||"").slice(0,1500), sigs = {};
+    let bugs = entries.filter(e=>(l.projectIds||[]).includes(e.projectId)).map(e=>{
+      if(e.imageData) sigs[e.id+"_x"] = devSig(e.imageData); if(e.expectedImageData) sigs[e.id+"_e"] = devSig(e.expectedImageData);
+      return { i:e.id, p:pn.get(e.projectId)||"-", d:e.date||"", x:cut(e.existing), e:cut(e.expected), s:e.status||"Open", pr:e.priority||"Medium", due:e.dueDate||"", ix:!!e.imageData, ie:!!e.expectedImageData, ds:e.devStatus||"", dn:cut(e.devNote).slice(0,500) };
+    });
+    while(JSON.stringify(bugs).length > 900000 && bugs.length){ const i = bugs.findIndex(b=>b.s==="Fixed"||b.s==="Rejected"); bugs.splice(i>=0 ? i : bugs.length-1, 1); } // batas 1 MB per dokumen
+    return { bugs, sigs, projectNames:(l.projectIds||[]).map(id=>pn.get(id)).filter(Boolean) };
+  }
+  async function devPush(l, force){
+    const { bugs, sigs, projectNames } = devBuild(l), h = devHash(JSON.stringify(bugs)), old = l.imgSig || {};
+    const live = new Set(bugs.map(b=>b.i)), want = {}; Object.keys(sigs).forEach(k=>{ if(live.has(k.slice(0,-2))) want[k] = sigs[k]; });
+    const changed = Object.keys(want).filter(k=>want[k]!==old[k]), gone = Object.keys(old).filter(k=>!(k in want));
+    if(!force && h===l.hash && !changed.length && !gone.length) return;
+    for(const k of changed){ const e = entries.find(x=>x.id===k.slice(0,-2)); await db.collection("devImg").doc(l.id+"_"+k).set({ d: k.endsWith("_x") ? e.imageData : e.expectedImageData }); }
+    for(const k of gone) await db.collection("devImg").doc(l.id+"_"+k).delete();
+    await db.collection("devPages").doc(l.id).set({ name:l.name, expiresAt:l.expiresAt||null, updatedAt:Date.now(), bugs, projectNames });
+    await db.collection("devLinks").doc(l.id).update({ hash:h, imgSig:want, updatedAt:Date.now() });
+  }
+  // usulan status dari developer -> disimpan di bug sebagai devStatus (status resmi TIDAK berubah sampai QA menyetujui)
+  async function devProcess(){
+    if(devBusy || !devUps.length || !devLinks.length || !entries.length) return; devBusy = true;
+    try{
+      for(const u of devUps.slice().sort((a,b)=>(a.at||0)-(b.at||0))){
+        const l = devLinks.find(x=>x.id===u.linkId), e = entries.find(x=>x.id===u.bugId);
+        if(l && !devExpired(l) && e && (l.projectIds||[]).includes(e.projectId) && DEV_ALLOW.includes(u.status) && u.status!==e.status)
+          await db.collection("entries").doc(e.id).update({ devStatus:u.status, devNote:String(u.note||"").slice(0,500), devBy:l.name, devAt:Date.now() });
+        await db.collection("devUpdates").doc(u.id).delete();
+      }
+    }catch(_){}
+    devBusy = false;
+  }
+  // ---- notifikasi usulan developer: badge di Jelajah cepat + daftar di palette + suara ----
+  let devSeen = null, devAudio = null;
+  const devSoundOn = ()=>{ try{ return localStorage.getItem("qa_dev_sound")!=="off"; }catch(_){ return true; } };
+  const devUnlock = ()=>{ try{ if(!devAudio) devAudio = new (window.AudioContext||window.webkitAudioContext)(); if(devAudio.state==="suspended") devAudio.resume(); }catch(_){} };
+  ["click","keydown","touchstart"].forEach(ev=>document.addEventListener(ev, devUnlock, {passive:true}));
+  function devPing(){
+    if(!devSoundOn() || !devAudio) return;
+    try{ const t = devAudio.currentTime; [[880,0],[1175,.16]].forEach(([f,d])=>{ const o = devAudio.createOscillator(), g = devAudio.createGain(); o.type = "sine"; o.frequency.value = f; o.connect(g); g.connect(devAudio.destination);
+      g.gain.setValueAtTime(0.0001,t+d); g.gain.exponentialRampToValueAtTime(0.25,t+d+.02); g.gain.exponentialRampToValueAtTime(0.0001,t+d+.35); o.start(t+d); o.stop(t+d+.4); }); }catch(_){}
+  }
+  function devNotifCommands(){
+    const pn = id=>(projects.find(p=>p.id===id)||{}).name||"-";
+    const list = entries.filter(e=>e.devStatus).sort((a,b)=>(b.devAt||0)-(a.devAt||0)).map(e=>({ notif:true, icon:"⏳", label:pn(e.projectId)+" · "+String(e.existing||"").slice(0,48), note:(e.devBy||"Dev")+": "+(e.status||"Open")+" → "+e.devStatus+" · belum dicek QA", action:()=>{ navigateTo("manage"); devDlg(); } }));
+    return list;
+  }
+  function devBadge(){
+    const pend = entries.filter(e=>e.devStatus), n = pend.length, b = document.getElementById("btnDevLinks"), qb = document.getElementById("qjBadge");
+    if(b) b.textContent = "🔗 Link Developer"+(n ? " ("+n+" menunggu cek)" : "");
+    if(qb){ qb.style.display = n ? "inline-block" : "none"; qb.textContent = n; }
+    const keys = new Set(pend.map(e=>e.id+"|"+e.devAt));
+    if(devSeen){ const fresh = pend.filter(e=>!devSeen.has(e.id+"|"+e.devAt)); if(fresh.length){ devPing(); toast("🔔 "+(fresh[0].devBy||"Developer")+" mengusulkan status "+fresh[0].devStatus+(fresh.length>1?" (+"+(fresh.length-1)+" lainnya)":"")+" — buka Jelajah cepat"); } }
+    if(entries.length || devSeen) devSeen = keys;
+  }
+  function devSchedule(){
+    devBadge(); devProcess(); if(devRefresh) devRefresh();
+    clearTimeout(devTimer);
+    devTimer = setTimeout(()=>{ devLinks.filter(l=>!devExpired(l)).forEach(l=>devPush(l).catch(()=>{})); }, 4000);
+  }
+  db.collection("devLinks").onSnapshot(s=>{ devLinks = s.docs.map(d=>({id:d.id,...d.data()})); devSchedule(); }, ()=>{});
+  db.collection("devUpdates").onSnapshot(s=>{ devUps = s.docs.map(d=>({id:d.id,...d.data()})); devProcess(); }, ()=>{});
+  const devClear = ()=>{ const D = firebase.firestore.FieldValue.delete(); return { devStatus:D, devNote:D, devBy:D, devAt:D }; };
+  function devDlg(){
+    const ov = dvOv('<h3 style="margin:0 0 4px">Link Developer</h3><div class="hint" style="margin-bottom:8px">Halaman Bug Report tanpa login, hanya project yang dipilih. Developer bisa mengusulkan status (berstatus <b>belum dicek QA</b>) dan melihat screenshot.</div><div id="dlPend"></div><div id="dlList"></div><div style="border-top:1px solid var(--border);margin:12px 0 8px"></div><b style="font-size:13px">Buat link baru</b><input type="text" id="dlName" placeholder="Nama developer, mis. Dev Aurora" style="margin:8px 0"><div id="dlPrj" style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:8px"></div><select id="dlExp"><option value="604800000">Berlaku 7 hari</option><option value="2592000000" selected>Berlaku 30 hari</option><option value="7776000000">Berlaku 90 hari</option><option value="0">Tanpa batas waktu</option></select><div class="modal-actions"><button id="dlX">Tutup</button><button class="primary" id="dlMk">Buat link</button></div>');
+    ov.firstChild.style.maxWidth = "620px";
+    ov.querySelector("#dlPrj").innerHTML = projects.map(p=>'<label style="font-size:13px;display:flex;gap:5px;align-items:center"><input type="checkbox" value="'+p.id+'" style="width:auto"> '+esc(p.name)+'</label>').join("") || '<span class="hint">Belum ada project.</span>';
+    const draw = ()=>{
+      const pend = entries.filter(e=>e.devStatus), pn = id=>(projects.find(p=>p.id===id)||{}).name||"-";
+      ov.querySelector("#dlPend").innerHTML = pend.length ? '<b style="font-size:13px">⏳ Menunggu pengecekan QA ('+pend.length+')</b>'+pend.map(e=>'<div class="dv-lnk" data-pe="'+e.id+'" style="flex-wrap:wrap"><span style="flex:1 1 240px"><b>'+esc(pn(e.projectId))+'</b> · '+esc(String(e.existing||"").slice(0,70))+'<br><small>'+esc(e.devBy||"Dev")+': '+esc(e.status||"Open")+' → <b>'+esc(e.devStatus)+'</b>'+(e.devNote?' · “'+esc(e.devNote)+'”':'')+'</small></span><button data-ok class="primary">✓ Terapkan</button><button data-no>✕ Tolak</button></div>').join("")+'<div style="margin-bottom:10px"></div>' : "";
+      ov.querySelector("#dlList").innerHTML = devLinks.length ? devLinks.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(l=>'<div class="dv-lnk" data-id="'+l.id+'" style="flex-wrap:wrap"><span style="flex:1 1 200px" title="'+esc(devUrl(l.id))+'"><b>'+esc(l.name)+'</b> · '+esc((l.projectIds||[]).map(pn).join(", "))+'<br><small style="color:var(--text-dim)">'+(devExpired(l)?'⛔ Kedaluwarsa':l.expiresAt?'Sampai '+esc(new Date(l.expiresAt).toLocaleDateString("id-ID")):'Tanpa batas')+(l.updatedAt?' · update '+esc(new Date(l.updatedAt).toLocaleString("id-ID")):'')+'</small></span><button data-cp>Salin</button><button data-up title="Perbarui sekarang">↻</button><button data-rv class="danger-outline">Cabut</button></div>').join("") : '<div class="hint">Belum ada link.</div>';
+    };
+    devRefresh = draw; draw();
+    const close = ov.close; ov.close = ()=>{ devRefresh = null; close(); };
+    ov.querySelector("#dlX").onclick = ov.close;
+    ov.onclick = async e=>{
+      if(e.target===ov) return ov.close();
+      const pe = e.target.closest("[data-pe]");
+      if(pe){ const en = entries.find(x=>x.id===pe.dataset.pe); if(!en) return;
+        try{
+          if(e.target.closest("[data-ok]")){ await db.collection("entries").doc(en.id).update({ status:en.devStatus, statusChangedDate:todayStr(), ...devClear() }); toast("Status diterapkan."); }
+          else if(e.target.closest("[data-no]")){ await db.collection("entries").doc(en.id).update(devClear()); toast("Usulan ditolak."); }
+        }catch(err){ toast("Gagal: "+err.message); } return; }
+      const row = e.target.closest("[data-id]"); if(!row) return; const l = devLinks.find(x=>x.id===row.dataset.id); if(!l) return;
+      if(e.target.closest("[data-cp]")){ try{ await navigator.clipboard.writeText(devUrl(l.id)); toast("Link disalin."); }catch(_){ window.prompt("Salin link:", devUrl(l.id)); } }
+      else if(e.target.closest("[data-up]")){ try{ await devPush(l, true); toast("Diperbarui."); }catch(err){ toast("Gagal: "+err.message); } }
+      else if(e.target.closest("[data-rv]")){ if(await confirmDialog('Cabut link "'+l.name+'"? Developer tidak bisa membukanya lagi.', "Cabut")){ try{
+        for(const k of Object.keys(l.imgSig||{})) await db.collection("devImg").doc(l.id+"_"+k).delete();
+        await db.collection("devPages").doc(l.id).delete(); await db.collection("devLinks").doc(l.id).delete(); }catch(err){ toast("Gagal: "+err.message); } } }
+    };
+    ov.querySelector("#dlMk").onclick = async ()=>{
+      const name = ov.querySelector("#dlName").value.trim(), ids = Array.from(ov.querySelectorAll("#dlPrj input:checked")).map(x=>x.value), ms = parseInt(ov.querySelector("#dlExp").value,10);
+      if(!name || !ids.length){ toast("Isi nama developer dan pilih minimal satu project."); return; }
+      try{
+        const l = { name, projectIds:ids, expiresAt: ms ? Date.now()+ms : null, createdAt:Date.now(), by:auditWho(), hash:"", imgSig:{} };
+        const ref = await db.collection("devLinks").add(l); await devPush({ ...l, id:ref.id }, true);
+        ov.querySelector("#dlName").value = ""; toast("Link dibuat. Klik Salin.");
+      }catch(err){ toast("Gagal membuat link: "+err.message); }
+    };
+  }
+  document.getElementById("btnDevLinks").addEventListener("click", devDlg);
+
   // ================= enhancement (Firestore: koleksi "enhancements") =================
   const ENH_STATUS = ["Usulan","Dikerjakan","Selesai","Ditolak"];
   const ENH_COLOR = { "Usulan":"#2f80ed", "Dikerjakan":"#e08a1c", "Selesai":"#17a673", "Ditolak":"#6c6f85" };
@@ -4734,6 +5408,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     { label:"Ceklis Scan AI", note:"Pemeriksaan harian", icon:"◎", action:()=>navigateTo("scan") },
     { label:"All Akses", note:"Akses project", icon:"⌘", action:()=>navigateTo("akses") },
     { label:"Knowledge", note:"Informasi produk", icon:"◇", action:()=>navigateTo("knowledge") },
+    { label:"Suara notifikasi", note:"Klik untuk aktif/nonaktif", icon:"🔔", action:()=>{ const on = !devSoundOn(); try{ localStorage.setItem("qa_dev_sound", on ? "on" : "off"); }catch(_){} devUnlock(); if(on) devPing(); toast("Suara notifikasi "+(on?"aktif":"nonaktif")+"."); } },
     { label:"Cari temuan", note:"Filter bug di project", icon:"⌕", action:()=>{ navigateTo("manage"); document.getElementById("bugSearch").focus(); } }
   ];
   function openQuickJump(){
@@ -4743,14 +5418,13 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     overlay.innerHTML = '<div class="command-box" role="dialog" aria-modal="true" aria-label="Jelajah cepat"><div class="command-search"><span>⌕</span><input id="commandInput" type="text" placeholder="Cari halaman atau aksi…" autocomplete="off" aria-label="Cari halaman atau aksi"><kbd>ESC</kbd></div><div class="command-results" id="commandResults"></div></div>';
     document.body.appendChild(overlay);
     const input = overlay.querySelector("#commandInput"), results = overlay.querySelector("#commandResults");
-    let matches = quickCommands, selected = 0;
+    let matches = devNotifCommands().concat(quickCommands), selected = 0;
     const close = ()=>{ overlay.remove(); document.getElementById("quickJump").focus(); };
     const run = index=>{ const command = matches[index]; if(!command) return; overlay.remove(); command.action(); };
     const render = ()=>{
-      matches = quickCommands.filter(c=>(c.label+" "+c.note).toLowerCase().includes(input.value.trim().toLowerCase()));
+      matches = devNotifCommands().concat(quickCommands).filter(c=>(c.label+" "+c.note).toLowerCase().includes(input.value.trim().toLowerCase()));
       selected = Math.min(selected,Math.max(0,matches.length-1));
-      results.innerHTML = '<div class="command-heading">NAVIGASI & AKSI</div>'+
-        (matches.length ? matches.map((c,i)=>'<button class="command-item '+(i===selected?'is-selected':'')+'" type="button" data-command="'+i+'"><span class="nav-icon">'+c.icon+'</span><span>'+c.label+'</span><small>'+c.note+'</small></button>').join("") : '<div class="command-empty">Tidak ada hasil. Coba kata lain.</div>');
+      results.innerHTML = (matches.length ? matches.map((c,i)=>(i===0||matches[i-1].notif!==c.notif ? '<div class="command-heading">'+(c.notif?'🔔 NOTIFIKASI':'NAVIGASI & AKSI')+'</div>' : '')+'<button class="command-item '+(i===selected?'is-selected':'')+'" type="button" data-command="'+i+'"><span class="nav-icon">'+c.icon+'</span><span>'+esc(c.label)+'</span><small>'+esc(c.note)+'</small></button>').join("") : '<div class="command-empty">Tidak ada hasil. Coba kata lain.</div>');
       results.querySelectorAll("[data-command]").forEach(btn=>btn.addEventListener("click", ()=>run(Number(btn.dataset.command))));
     };
     input.addEventListener("input", ()=>{ selected=0; render(); });
