@@ -1303,71 +1303,142 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       .dvp .seg button.on{background:var(--c);color:#fff;border-color:transparent}
       .dvp .imgs{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px}
       .dvp .imgs figure{margin:0}.dvp .imgs figcaption{font-size:11px;font-weight:700;color:var(--text-dim);margin-bottom:4px}
-      .dvp .imgs img{max-width:300px;max-height:220px;border-radius:10px;border:1px solid var(--border);cursor:zoom-in;display:block}
+      .dvp .imgs img{max-width:min(100%,460px);max-height:440px;width:auto;height:auto;object-fit:contain;background:var(--surface-2);border-radius:10px;border:1px solid var(--border);cursor:zoom-in;display:block}
       .dvp .empty{text-align:center;color:var(--text-dim);padding:50px 10px}
-      @media(max-width:700px){.dvp .cols{grid-template-columns:1fr}.dvp h1{font-size:22px}.dvp .imgs img{max-width:100%}}`;
+      @media(max-width:700px){.dvp .cols{grid-template-columns:1fr}.dvp h1{font-size:22px}.dvp .imgs img{max-width:100%}}
+      .dvp .mut{color:var(--text-dim);font-size:12.5px}.dvp .mut button{padding:3px 9px;font-size:12px;margin-left:6px}
+      .dvp .foot{margin-top:12px;padding-top:11px;border-top:1px solid var(--border)}
+      .dvp .foot .sp{flex:1}
+      .dvp button.ghost{background:transparent;color:var(--text-dim);border:1px solid var(--border);border-radius:99px;padding:7px 13px;font-size:12.5px;font-weight:700}
+      .dvp button.ghost:hover{color:var(--text);border-color:var(--text-dim)}
+      .dvp button.dvb{background:transparent;color:var(--c);border:1.5px solid var(--c);border-radius:99px;padding:7px 15px;font-size:12.5px;font-weight:800;transition:background .15s,color .15s}
+      .dvp button.dvb:hover{background:var(--c);color:#fff;filter:none}
+      .dvp .ed2{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;padding:8px 10px;background:var(--surface-2);border-radius:12px}
+      .dvp .ed2 input{flex:1;min-width:150px;border-radius:99px;padding:8px 14px}
+      .dvp .ed2 button{border-radius:99px;padding:8px 16px}
+      .dvp .chipst{display:inline-flex;align-items:center;padding:5px 12px;border-radius:99px;background:var(--c);color:#fff;font-size:12px;font-weight:800;white-space:nowrap}
+      .dv-lb{position:fixed;inset:0;background:rgba(0,0,0,.9);display:flex;flex-direction:column;z-index:9999}
+      .dv-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px;background:rgba(20,20,30,.85)}
+      .dv-bar button,.dv-bar .dv-dl{background:rgba(255,255,255,.12);color:#fff;border:0;border-radius:99px;min-width:38px;height:38px;padding:0 14px;font-size:14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+      .dv-bar button:hover,.dv-bar .dv-dl:hover{background:rgba(255,255,255,.22);filter:none}
+      .dv-pct{color:#fff;font-size:12.5px;font-weight:700;min-width:44px;text-align:center}
+      .dv-scroll{flex:1;overflow:auto;display:flex;padding:14px;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y pinch-zoom}
+      .dv-scroll img{margin:auto;border-radius:8px;display:block;flex:none;cursor:zoom-in;width:auto;height:auto;max-width:100%;max-height:100%;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+`;
     document.head.appendChild(st);
-    const COL = {"Open":"#e0363c","In Progress":"#e08a1c","Fixed":"#17a673","Rejected":"#6c6f85","Update":"#2f80ed"}, ALLOW = ["Open","In Progress","Fixed","Rejected"];
-    const PCOL = {"Critical":"#e0363c","High":"#e08a1c","Medium":"#4f6ef7","Low":"#6c6f85"}, PRANK = {"Critical":0,"High":1,"Medium":2,"Low":3};
-    const PK = "devpend_"+id; let pend = {}; try{ pend = JSON.parse(localStorage.getItem(PK)||"{}"); }catch(_){}
-    const savePend = ()=>{ try{ localStorage.setItem(PK, JSON.stringify(pend)); }catch(_){} };
-    let data = null, flt = "", qq = "", fp = "", fpr = "", srt = "new", built = false, editId = null, edSt = ""; const openImg = new Set(), imgCache = {};
-    function pst(b){ const q = pend[b.i]; if(!q) return null; if(b.ds===q.status || b.s===q.status || Date.now()-q.at>1728e5){ delete pend[b.i]; savePend(); return null; } return q; }
-    async function loadImg(b){
-      const box = document.getElementById("im_"+b.i); if(!box) return;
-      if(!imgCache[b.i]){ box.textContent = "Memuat gambar…"; const o = {}; for(const k of ["x","e"]) if(b["i"+k]){ try{ const d = await db.collection("devImg").doc(id+"_"+b.i+"_"+k).get(); if(d.exists) o[k] = d.data().d; }catch(_){} } imgCache[b.i] = o; }
-      const o = imgCache[b.i], b2 = document.getElementById("im_"+b.i); if(!b2) return;
-      b2.innerHTML = '<div class="imgs">'+(["x","e"].map(k=>o[k] ? '<figure><figcaption>'+(k==="x"?"Existing":"Expected")+'</figcaption><img data-lb src="'+o[k]+'"></figure>' : "").join("") || '<span style="color:var(--text-dim);font-size:12.5px">Gambar belum tersedia (menunggu sinkron QA).</span>')+'</div>';
+  const COL = {"Open":"#e0363c","In Progress":"#e08a1c","Fixed":"#17a673","Rejected":"#6c6f85","Update":"#2f80ed"};
+  // Dev hanya boleh mengusulkan 2 status ini, dan hanya untuk bug yang masih Open / In Progress.
+  const ALLOW = ["In Progress","Fixed"];
+  const PCOL = {"Critical":"#e0363c","High":"#e08a1c","Medium":"#4f6ef7","Low":"#6c6f85"}, PRANK = {"Critical":0,"High":1,"Medium":2,"Low":3};
+  const PK = "devpend_"+id; let pend = {}; try{ pend = JSON.parse(localStorage.getItem(PK)||"{}"); }catch(_){}
+  const savePend = ()=>{ try{ localStorage.setItem(PK, JSON.stringify(pend)); }catch(_){} };
+  let data = null, flt = "", qq = "", fp = "", fpr = "", srt = "new", built = false, editId = null, edSt = "Fixed";
+  const openImg = new Set();
+
+  function pst(b){ const q = pend[b.i]; if(!q) return null; if(b.ds===q.status || b.s===q.status || Date.now()-q.at>1728e5){ delete pend[b.i]; savePend(); return null; } return q; }
+
+  // ---------- gambar: cache per gambar, timeout 15 dtk, bisa coba lagi (tidak pernah menggantung) ----------
+  const imgP = {}, imgVal = {};
+  function getImg(bid, k){
+    const key = bid+"_"+k;
+    if(!(key in imgP)){
+      imgP[key] = Promise.race([
+        db.collection("devImg").doc(id+"_"+key).get().then(d=>{ const v = d.exists ? d.data().d : null; imgVal[key] = v; return v; }),
+        new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")), 15000))
+      ]).catch(()=>{ delete imgP[key]; return undefined; });
     }
-    function rows(){
-      const all = data.bugs||[], today = new Date().toLocaleDateString("sv-SE"), cnt = {}; all.forEach(b=>cnt[b.s] = (cnt[b.s]||0)+1);
-      const done = (cnt.Fixed||0)+(cnt.Rejected||0), pct = all.length ? Math.round(done/all.length*100) : 0, wait = all.filter(b=>b.ds||pst(b)).length;
-      const tiles = [["","Semua","#6d5ef5",all.length]].concat(["Open","In Progress","Fixed","Rejected","Update"].filter(k=>cnt[k]).map(k=>[k,k,COL[k],cnt[k]]));
-      document.getElementById("dvStats").innerHTML = tiles.map(t=>'<button class="stat'+(flt===t[0]?' on':'')+'" data-f="'+t[0]+'" style="--c:'+t[2]+'"><b>'+t[3]+'</b><span>'+t[1]+'</span></button>').join("");
-      document.getElementById("dvProg").innerHTML = '<span>Selesai '+pct+'%</span><i><u style="width:'+pct+'%"></u></i><span>'+done+'/'+all.length+(wait?' · ⏳ '+wait+' menunggu cek QA':'')+'</span>';
-      let list = all.filter(b=>(!flt||b.s===flt) && (!fp||b.p===fp) && (!fpr||b.pr===fpr) && (!qq||(b.x+" "+b.e+" "+b.p).toLowerCase().includes(qq)));
-      if(srt==="prio") list = list.slice().sort((a,b)=>(PRANK[a.pr]??9)-(PRANK[b.pr]??9)); else if(srt==="due") list = list.slice().sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999"));
-      document.getElementById("dvRows").innerHTML = list.length ? list.map((b,n)=>{
-        const q = pst(b), ds = b.ds || (q && q.status), dn = b.ds ? b.dn : (q && q.note), open = b.s==="Open"||b.s==="In Progress", late = b.due && b.due<today && open;
-        const wait = ds ? '<div class="wait"><b>⏳ Dev mengusulkan: '+E(ds)+'</b> · '+(b.ds?'belum dicek QA':'terkirim, menunggu QA')+(dn?'<div style="margin-top:3px">“'+E(dn)+'”</div>':'')+'</div>' : "";
-        const cur = ds||b.s, ed = editId===b.i ? '<div class="ed"><div class="seg">'+ALLOW.map(a=>'<button data-st="'+a+'" class="'+(a===edSt?'on':'')+'" style="--c:'+COL[a]+'">'+a+'</button>').join("")+'</div><input type="text" id="edNt" maxlength="500" placeholder="Catatan untuk QA (opsional)"><div class="foot"><button class="primary" data-send="'+b.i+'">Kirim ke QA</button><button data-cancel>Batal</button><span style="font-size:11.5px;color:var(--text-dim)">Status resmi menunggu pengecekan QA.</span></div></div>' : "";
-        return '<div class="bug" style="--c:'+(COL[b.s]||"#6c6f85")+'"><div class="meta"><span class="tag n">#'+(n+1)+'</span>'+((data.projectNames||[]).length>1?'<span class="tag">📁 '+E(b.p)+'</span>':'')+'<span class="tag">📅 '+E(b.d)+'</span>'+(b.due?'<span class="tag" style="'+(late?'background:#e0363c;color:#fff':'')+'">⏰ '+E(b.due)+(late?' · terlambat':'')+'</span>':'')+'<span class="sp"></span><span class="pill" style="background:'+(PCOL[b.pr]||"#6c6f85")+'">'+E(b.pr)+'</span><span class="pill" style="background:'+(COL[b.s]||"#6c6f85")+'">'+E(b.s)+'</span></div>'+
-          '<div class="cols"><div class="col"><small>Existing</small>'+E(b.x||"-")+'</div><div class="col"><small>Expected</small>'+E(b.e||"-")+'</div></div>'+
-          '<div id="im_'+b.i+'"></div>'+wait+ed+
-          (editId===b.i ? '' : '<div class="foot">'+((b.ix||b.ie)?'<button data-im="'+b.i+'">🖼 '+(openImg.has(b.i)?'Sembunyikan':'Lihat')+' screenshot</button>':'')+'<button data-ed="'+b.i+'" data-cur="'+E(cur)+'">✎ Ubah status</button></div>')+'</div>';
-      }).join("") : '<div class="empty">Tidak ada bug yang cocok.</div>';
-      list.forEach(b=>{ if(openImg.has(b.i)) loadImg(b); });
+    return imgP[key];
+  }
+  function imgHtml(b, res, ks){
+    const figs = []; let failed = false;
+    ks.forEach((k,n)=>{ const v = res[n]; if(v) figs.push('<figure><figcaption>'+(k==="x"?"Existing":"Expected")+'</figcaption><img data-lb data-cap="bug-'+(b.i||"").slice(0,6)+'-'+(k==="x"?"existing":"expected")+'" alt="" src="'+v+'"></figure>'); else if(v===undefined) failed = true; });
+    if(figs.length) return '<div class="imgs">'+figs.join("")+'</div>'+(failed?'<div class="mut" style="margin-top:6px">Sebagian gambar gagal dimuat. <button data-retry="'+b.i+'">Coba lagi</button></div>':"");
+    return failed ? '<div class="mut" style="margin-top:8px">Gambar gagal dimuat. <button data-retry="'+b.i+'">Coba lagi</button></div>'
+                  : '<div class="mut" style="margin-top:8px">Gambar belum tersedia (menunggu sinkron QA).</div>';
+  }
+  async function loadImg(b){
+    const box = document.getElementById("im_"+b.i); if(!box) return;
+    const ks = ["x","e"].filter(k=>b["i"+k]);
+    if(ks.every(k=>(b.i+"_"+k) in imgVal)){ box.innerHTML = imgHtml(b, ks.map(k=>imgVal[b.i+"_"+k]), ks); return; }
+    box.innerHTML = '<div class="mut" style="margin-top:8px">Memuat gambar…</div>';
+    const res = await Promise.all(ks.map(k=>getImg(b.i,k)));
+    const b2 = document.getElementById("im_"+b.i); if(!b2 || !openImg.has(b.i)) return;
+    b2.innerHTML = imgHtml(b, res, ks);
+  }
+  function lightbox(src, cap){
+      const m = /^data:image\/(\w+)/.exec(src), ext = m ? (m[1]==="jpeg" ? "jpg" : m[1]) : "png", fname = "screenshot-"+String(cap||"gambar").toLowerCase().replace(/[^a-z0-9]+/g,"-")+"."+ext;
+      const ov = document.createElement("div"); ov.className = "dv-lb";
+      ov.innerHTML = '<div class="dv-bar"><button type="button" data-z="-" aria-label="Perkecil">−</button><span class="dv-pct">Pas</span><button type="button" data-z="+" aria-label="Perbesar">+</button><button type="button" data-z="0">Pas layar</button><button type="button" data-z="1">Ukuran asli</button><a class="dv-dl" download="'+fname+'" href="'+src+'">⬇ Unduh</a><span style="flex:1"></span><button type="button" data-z="x" aria-label="Tutup">✕</button></div><div class="dv-scroll"><img alt="" src="'+src+'"></div>';
+      const sc = ov.querySelector(".dv-scroll"), im = ov.querySelector("img"), pct = ov.querySelector(".dv-pct"); let z = 1, fw = 0;
+      // Ukuran dasar ("Pas") = seluruh gambar muat di layar (tinggi & lebar), tanpa diperbesar melebihi ukuran aslinya -> ss HP portrait tampil utuh & tajam.
+      const fit = ()=>{ const nw = im.naturalWidth, nh = im.naturalHeight; if(!nw||!nh) return; const k = Math.min((sc.clientWidth-28)/nw, (sc.clientHeight-28)/nh, 1); fw = Math.max(40, nw*k); apply(); };
+      const apply = ()=>{ if(!fw) return; im.style.maxWidth = "none"; im.style.maxHeight = "none"; im.style.width = Math.round(fw*z)+"px"; im.style.height = "auto"; pct.textContent = z===1 ? "Pas" : Math.round(z*100)+"%"; };
+      const setZ = v=>{ z = Math.min(8, Math.max(.25, v)); apply(); };
+      im.onload = fit; window.addEventListener("resize", fit);
+      const close = ()=>{ ov.remove(); document.removeEventListener("keydown", onKey); window.removeEventListener("resize", fit); };
+      const onKey = e=>{ if(e.key==="Escape") close(); else if(e.key==="+"||e.key==="=") setZ(z+.25); else if(e.key==="-") setZ(z-.25); };
+      ov.querySelector(".dv-bar").onclick = e=>{ const t = e.target.closest("[data-z]"); if(!t) return; const k = t.dataset.z; if(k==="x") close(); else if(k==="+") setZ(z+.25); else if(k==="-") setZ(z-.25); else if(k==="1") setZ(fw ? im.naturalWidth/fw : 1); else setZ(1); };
+      sc.addEventListener("wheel", e=>{ if(e.ctrlKey||e.metaKey){ e.preventDefault(); setZ(z + (e.deltaY<0?.15:-.15)); } }, {passive:false});
+      im.ondblclick = ()=>setZ(z===1 ? 2 : 1);
+      document.addEventListener("keydown", onKey); document.body.appendChild(ov);
     }
-    function build(){
-      built = true; const pn = data.projectNames||[];
-      W.innerHTML = '<div class="hd"><div><h1><span style="background:var(--accent-grad);-webkit-background-clip:text;background-clip:text;color:transparent">Bug Report</span></h1><div class="sub">'+E(pn.join(" · "))+'<br>Diperbarui '+E(new Date(data.updatedAt).toLocaleString("id-ID"))+'</div></div><span class="who">👤 '+E(data.name)+'</span></div>'+
-        '<div class="note">Kamu bisa mengusulkan perubahan status. Usulan berstatus <b>belum dicek QA</b> sampai QA menyetujuinya.</div>'+
-        '<div class="stats" id="dvStats"></div><div class="prog" id="dvProg"></div>'+
-        '<div class="tools"><input type="text" id="dvQ" placeholder="🔍 Cari bug…">'+(pn.length>1?'<select id="dvP"><option value="">Semua project</option>'+pn.map(x=>'<option>'+E(x)+'</option>').join("")+'</select>':'')+'<select id="dvPr"><option value="">Semua prioritas</option><option>Critical</option><option>High</option><option>Medium</option><option>Low</option></select><select id="dvS"><option value="new">Urut: Terbaru</option><option value="prio">Urut: Prioritas</option><option value="due">Urut: Due terdekat</option></select></div><div id="dvRows"></div>';
-      const on = (i,f)=>{ const el = document.getElementById(i); if(el) el.onchange = el.oninput = f; };
-      on("dvQ", e=>{ qq = e.target.value.trim().toLowerCase(); rows(); }); on("dvP", e=>{ fp = e.target.value; rows(); }); on("dvPr", e=>{ fpr = e.target.value; rows(); }); on("dvS", e=>{ srt = e.target.value; rows(); });
-      document.getElementById("dvStats").onclick = e=>{ const b = e.target.closest("[data-f]"); if(b){ flt = b.dataset.f; rows(); } };
-      document.getElementById("dvRows").onclick = async e=>{
-        const t = e.target;
-        if(t.matches("[data-lb]")){ const ov = document.createElement("div"); ov.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.88);display:grid;place-items:center;z-index:9999;cursor:zoom-out;padding:20px"; ov.innerHTML = '<img src="'+t.src+'" style="max-width:100%;max-height:100%;border-radius:8px">'; ov.onclick = ()=>ov.remove(); document.body.appendChild(ov); return; }
-        const im = t.closest("[data-im]"), ed = t.closest("[data-ed]"), sd = t.closest("[data-send]"), sg = t.closest("[data-st]");
-        if(im){ openImg.has(im.dataset.im) ? openImg.delete(im.dataset.im) : openImg.add(im.dataset.im); rows(); }
-        else if(ed){ editId = ed.dataset.ed; edSt = ALLOW.includes(ed.dataset.cur) ? ed.dataset.cur : "In Progress"; rows(); }
-        else if(t.closest("[data-cancel]")){ editId = null; rows(); }
-        else if(sg){ edSt = sg.dataset.st; sg.parentNode.querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===sg)); }
-        else if(sd){
-          const nt = document.getElementById("edNt").value.trim().slice(0,500), bid = sd.dataset.send;
-          try{ await db.collection("devUpdates").add({ linkId:id, bugId:bid, status:edSt, note:nt, by:data.name, at:Date.now() }); pend[bid] = { status:edSt, note:nt, at:Date.now() }; savePend(); editId = null; rows(); }
-          catch(err){ alert("Gagal mengirim: "+err.message); }
-        }
-      };
-    }
-    db.collection("devPages").doc(id).onSnapshot(d=>{
-      if(!d.exists){ W.textContent = "Link tidak ditemukan atau sudah dicabut."; built = false; return; }
-      const nd = d.data();
-      if(nd.expiresAt && Date.now()>nd.expiresAt){ W.textContent = "Link ini sudah kedaluwarsa."; built = false; return; }
-      data = nd; if(!built) build(); if(!editId) rows();
-    }, e=>{ W.textContent = "Tidak bisa membuka link: "+e.message; });
+
+  function rows(){
+    const all = data.bugs||[], today = new Date().toLocaleDateString("sv-SE"), cnt = {}; all.forEach(b=>cnt[b.s] = (cnt[b.s]||0)+1);
+    const done = (cnt.Fixed||0)+(cnt.Rejected||0), pct = all.length ? Math.round(done/all.length*100) : 0, wait = all.filter(b=>b.ds||pst(b)).length;
+    const tiles = [["","Semua","#6d5ef5",all.length]].concat(["Open","In Progress","Fixed","Rejected","Update"].filter(k=>cnt[k]).map(k=>[k,k,COL[k],cnt[k]]));
+    document.getElementById("dvStats").innerHTML = tiles.map(t=>'<button class="stat'+(flt===t[0]?' on':'')+'" data-f="'+t[0]+'" style="--c:'+t[2]+'"><b>'+t[3]+'</b><span>'+t[1]+'</span></button>').join("");
+    document.getElementById("dvProg").innerHTML = '<span>Selesai '+pct+'%</span><i><u style="width:'+pct+'%"></u></i><span>'+done+'/'+all.length+(wait?' · ⏳ '+wait+' menunggu cek QA':'')+'</span>';
+    let list = all.filter(b=>(!flt||b.s===flt) && (!fp||b.p===fp) && (!fpr||b.pr===fpr) && (!qq||((b.x||"")+" "+(b.e||"")+" "+(b.p||"")).toLowerCase().includes(qq)));
+    if(srt==="prio") list = list.slice().sort((a,b)=>(PRANK[a.pr]??9)-(PRANK[b.pr]??9)); else if(srt==="due") list = list.slice().sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999"));
+    document.getElementById("dvRows").innerHTML = list.length ? list.map((b,n)=>{
+      const q = pst(b), ds = b.ds || (q && q.status), dn = b.ds ? b.dn : (q && q.note), open = b.s==="Open"||b.s==="In Progress", late = b.due && b.due<today && open;
+      const wait = ds ? '<div class="wait"><b>⏳ Dev mengusulkan: '+E(ds)+'</b> · '+(b.ds?'belum dicek QA':'terkirim, menunggu QA')+(dn?'<div style="margin-top:3px">“'+E(dn)+'”</div>':'')+'</div>' : "";
+      const ed = (editId===b.i && open) ? '<div class="ed2"><span class="chipst" style="--c:'+COL[edSt]+'">'+(edSt==="Fixed"?"✓ ":"▶ ")+E(edSt)+'</span><input type="text" id="edNt" maxlength="500" placeholder="Catatan untuk QA (opsional)"><button class="primary" data-send="'+b.i+'">Kirim</button><button class="ghost" data-cancel aria-label="Batal">✕</button></div>' : "";
+      const pick = (open && editId!==b.i) ? '<span class="sp"></span><button class="dvb" style="--c:'+COL["In Progress"]+'" data-pick="In Progress" data-bid="'+b.i+'">▶ Dikerjakan</button><button class="dvb" style="--c:'+COL["Fixed"]+'" data-pick="Fixed" data-bid="'+b.i+'">✓ Selesai (Fixed)</button>' : "";
+      const btns = ((b.ix||b.ie)?'<button class="ghost" data-im="'+b.i+'">🖼 '+(openImg.has(b.i)?'Sembunyikan':'Lihat')+' screenshot</button>':'')+pick;
+      return '<div class="bug" style="--c:'+(COL[b.s]||"#6c6f85")+'"><div class="meta"><span class="tag n">#'+(n+1)+'</span>'+((data.projectNames||[]).length>1?'<span class="tag">📁 '+E(b.p)+'</span>':'')+'<span class="tag">📅 '+E(b.d)+'</span>'+(b.due?'<span class="tag" style="'+(late?'background:#e0363c;color:#fff':'')+'">⏰ '+E(b.due)+(late?' · terlambat':'')+'</span>':'')+'<span class="sp"></span><span class="pill" style="background:'+(PCOL[b.pr]||"#6c6f85")+'">'+E(b.pr)+'</span><span class="pill" style="background:'+(COL[b.s]||"#6c6f85")+'">'+E(b.s)+'</span></div>'+
+        '<div class="cols"><div class="col"><small>Existing</small>'+E(b.x||"-")+'</div><div class="col"><small>Expected</small>'+E(b.e||"-")+'</div></div>'+
+        '<div id="im_'+b.i+'"></div>'+wait+ed+
+        (btns ? '<div class="foot">'+btns+'</div>' : '')+'</div>';
+    }).join("") : '<div class="empty">Tidak ada bug yang cocok.</div>';
+    list.forEach(b=>{ if(openImg.has(b.i)) loadImg(b); });
+  }
+
+  function build(){
+    built = true; const pn = data.projectNames||[];
+    W.innerHTML = '<div class="hd"><div><h1><span style="background:var(--accent-grad);-webkit-background-clip:text;background-clip:text;color:transparent">Bug Report</span></h1><div class="sub">'+E(pn.join(" · "))+'<br>Diperbarui '+E(new Date(data.updatedAt).toLocaleString("id-ID"))+'</div></div><span class="who">👤 '+E(data.name)+'</span></div>'+
+      '<div class="note">Kamu bisa menandai bug yang masih Open sebagai <b>Dikerjakan</b> atau <b>Selesai (Fixed)</b>. Usulan berstatus <b>belum dicek QA</b> sampai QA menyetujuinya.</div>'+
+      '<div class="stats" id="dvStats"></div><div class="prog" id="dvProg"></div>'+
+      '<div class="tools"><input type="text" id="dvQ" placeholder="🔍 Cari bug…">'+(pn.length>1?'<select id="dvP"><option value="">Semua project</option>'+pn.map(x=>'<option>'+E(x)+'</option>').join("")+'</select>':'')+'<select id="dvPr"><option value="">Semua prioritas</option><option>Critical</option><option>High</option><option>Medium</option><option>Low</option></select><select id="dvS"><option value="new">Urut: Terbaru</option><option value="prio">Urut: Prioritas</option><option value="due">Urut: Due terdekat</option></select></div><div id="dvRows"></div>';
+    const on = (i,f)=>{ const el = document.getElementById(i); if(el) el.onchange = el.oninput = f; };
+    on("dvQ", e=>{ qq = e.target.value.trim().toLowerCase(); rows(); }); on("dvP", e=>{ fp = e.target.value; rows(); }); on("dvPr", e=>{ fpr = e.target.value; rows(); }); on("dvS", e=>{ srt = e.target.value; rows(); });
+    document.getElementById("dvStats").onclick = e=>{ const b = e.target.closest("[data-f]"); if(b){ flt = b.dataset.f; rows(); } };
+    document.getElementById("dvRows").onkeydown = e=>{ if(e.key==="Enter" && e.target.id==="edNt"){ const b = e.target.closest(".bug").querySelector("[data-send]"); if(b) b.click(); } };
+    document.getElementById("dvRows").onclick = async e=>{
+      const t = e.target;
+      if(t.matches("[data-lb]")){ lightbox(t.src, t.dataset.cap); return; }
+      const rt = t.closest("[data-retry]"), im = t.closest("[data-im]"), pk = t.closest("[data-pick]"), sd = t.closest("[data-send]");
+      if(rt){ const b = (data.bugs||[]).find(x=>x.i===rt.dataset.retry); if(b) loadImg(b); }
+      else if(im){ openImg.has(im.dataset.im) ? openImg.delete(im.dataset.im) : openImg.add(im.dataset.im); rows(); }
+      else if(pk){ editId = pk.dataset.bid; edSt = pk.dataset.pick; rows(); const i = document.getElementById("edNt"); if(i) i.focus(); }
+      else if(t.closest("[data-cancel]")){ editId = null; rows(); }
+      else if(sd){
+        if(!ALLOW.includes(edSt)) return;
+        sd.disabled = true;
+        const nt = document.getElementById("edNt").value.trim().slice(0,500), bid = sd.dataset.send;
+        try{ await db.collection("devUpdates").add({ linkId:id, bugId:bid, status:edSt, note:nt, by:data.name, at:Date.now() }); pend[bid] = { status:edSt, note:nt, at:Date.now() }; savePend(); editId = null; rows(); }
+        catch(err){ sd.disabled = false; alert("Gagal mengirim: "+err.message); }
+      }
+    };
+  }
+
+  db.collection("devPages").doc(id).onSnapshot(d=>{
+    if(!d.exists){ W.textContent = "Link tidak ditemukan atau sudah dicabut."; built = false; return; }
+    const nd = d.data();
+    if(nd.expiresAt && Date.now()>nd.expiresAt){ W.textContent = "Link ini sudah kedaluwarsa."; built = false; return; }
+    data = nd; if(!built) build(); if(!editId) rows();
+  }, e=>{ W.textContent = "Tidak bisa membuka link: "+e.message; });
   }
   async function dvShareView(sid){
     document.body.innerHTML = '<div style="max-width:440px;margin:12vh auto;padding:24px;text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow)" id="shBox">Memuat…</div>';
@@ -4068,7 +4139,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   dvRender();
 
   // ================= link developer: halaman Bug Report per project (devLinks = daftar, devPages = salinan publik, devImg = screenshot, devUpdates = usulan status dari dev) =================
-  const DEV_ALLOW = ["Open","In Progress","Fixed","Rejected"];
+  const DEV_ALLOW = ["In Progress","Fixed"]; // dev hanya boleh mengusulkan ini, dan hanya untuk bug yang masih Open / In Progress
   let devLinks = [], devUps = [], devTimer = null, devRefresh = null, devBusy = false;
   const devUrl = id=>location.origin+location.pathname+"?dev="+id;
   const devExpired = l=>l.expiresAt && Date.now()>l.expiresAt;
@@ -4083,12 +4154,30 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     while(JSON.stringify(bugs).length > 900000 && bugs.length){ const i = bugs.findIndex(b=>b.s==="Fixed"||b.s==="Rejected"); bugs.splice(i>=0 ? i : bugs.length-1, 1); } // batas 1 MB per dokumen
     return { bugs, sigs, projectNames:(l.projectIds||[]).map(id=>pn.get(id)).filter(Boolean) };
   }
+  // Firestore membatasi 1 dokumen ~1 MB: gambar besar (foto/screenshot HP) dikecilkan dulu supaya tidak gagal tersimpan.
+  function devShrink(src, max = 700000){
+    return new Promise(res=>{
+      if(!src || src.length <= max) return res(src);
+      const im = new Image();
+      im.onload = ()=>{
+        let w = im.naturalWidth, h = im.naturalHeight, side = 1600, q = .82, o = src;
+        for(let n=0; n<6; n++){
+          const s = Math.min(1, side/Math.max(w,h)), c = document.createElement("canvas"); c.width = Math.max(1,Math.round(w*s)); c.height = Math.max(1,Math.round(h*s));
+          const cx = c.getContext("2d"); cx.fillStyle = "#fff"; cx.fillRect(0,0,c.width,c.height); cx.drawImage(im,0,0,c.width,c.height);
+          o = c.toDataURL("image/jpeg", q); if(o.length <= max) break; side = Math.round(side*.75); q = Math.max(.5, q-.07);
+        }
+        res(o.length <= 950000 ? o : "");
+      };
+      im.onerror = ()=>res("");
+      im.src = src;
+    });
+  }
   async function devPush(l, force){
     const { bugs, sigs, projectNames } = devBuild(l), h = devHash(JSON.stringify(bugs)), old = l.imgSig || {};
     const live = new Set(bugs.map(b=>b.i)), want = {}; Object.keys(sigs).forEach(k=>{ if(live.has(k.slice(0,-2))) want[k] = sigs[k]; });
     const changed = Object.keys(want).filter(k=>want[k]!==old[k]), gone = Object.keys(old).filter(k=>!(k in want));
     if(!force && h===l.hash && !changed.length && !gone.length) return;
-    for(const k of changed){ const e = entries.find(x=>x.id===k.slice(0,-2)); await db.collection("devImg").doc(l.id+"_"+k).set({ d: k.endsWith("_x") ? e.imageData : e.expectedImageData }); }
+    for(const k of changed){ const e = entries.find(x=>x.id===k.slice(0,-2)); try{ const raw = k.endsWith("_x") ? e.imageData : e.expectedImageData; await db.collection("devImg").doc(l.id+"_"+k).set({ d: await devShrink(raw) }); }catch(_){} } // satu gambar gagal tidak boleh menggagalkan seluruh sinkron
     for(const k of gone) await db.collection("devImg").doc(l.id+"_"+k).delete();
     await db.collection("devPages").doc(l.id).set({ name:l.name, expiresAt:l.expiresAt||null, updatedAt:Date.now(), bugs, projectNames });
     await db.collection("devLinks").doc(l.id).update({ hash:h, imgSig:want, updatedAt:Date.now() });
@@ -4099,7 +4188,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     try{
       for(const u of devUps.slice().sort((a,b)=>(a.at||0)-(b.at||0))){
         const l = devLinks.find(x=>x.id===u.linkId), e = entries.find(x=>x.id===u.bugId);
-        if(l && !devExpired(l) && e && (l.projectIds||[]).includes(e.projectId) && DEV_ALLOW.includes(u.status) && u.status!==e.status)
+        if(l && !devExpired(l) && e && (l.projectIds||[]).includes(e.projectId) && DEV_ALLOW.includes(u.status) && (e.status==="Open"||e.status==="In Progress") && u.status!==e.status)
           await db.collection("entries").doc(e.id).update({ devStatus:u.status, devNote:String(u.note||"").slice(0,500), devBy:l.name, devAt:Date.now() });
         await db.collection("devUpdates").doc(u.id).delete();
       }
