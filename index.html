@@ -846,6 +846,69 @@
   .ext-opt input:checked + span { background:var(--accent); color:var(--accent-text); border-color:var(--accent); }
   .ext-opt input:focus-visible + span { outline:2px solid var(--accent); outline-offset:2px; }
   .ext-tip { font-size:12px; color:var(--text-dim); line-height:1.55; margin-top:14px; padding:10px 12px; border-radius:10px; background:var(--surface-2); }
+  .bd-overlay { align-items:center; padding:16px; }
+  .bd-modal { max-width:1020px !important; width:100%; padding:0 !important; display:flex !important; flex-direction:column; max-height:min(92vh,920px); overflow:hidden !important; border-radius:20px !important; }
+  .bd-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:16px 20px 14px; border-bottom:1px solid var(--border); background:var(--surface); }
+  .bd-kicker { font-size:10.5px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:var(--text-dim); margin-bottom:8px; }
+  .bd-chips { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  .bd-warn { font-size:11px; font-weight:800; padding:3px 10px; border-radius:20px; background:color-mix(in srgb,var(--danger) 14%,transparent); color:var(--danger); }
+  .bd-x { flex:none; width:34px; height:34px; border-radius:50%; padding:0; display:inline-flex; align-items:center; justify-content:center; font-size:15px; line-height:1; }
+  .bd-body { flex:1; overflow:auto; padding:18px 20px; background:var(--surface-2); }
+  .bd-grid { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:16px; align-items:start; }
+  .bd-side { position:sticky; top:0; }
+  .bd-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px; }
+  .bd-card + .bd-card { margin-top:14px; }
+  .bd-card-h { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:800; margin-bottom:10px; }
+  .bd-card-h small { font-weight:600; color:var(--text-dim); font-size:11.5px; }
+  .bd-dot { width:9px; height:9px; border-radius:50%; flex:none; }
+  .bd-dot.ex { background:var(--danger); } .bd-dot.ok { background:var(--ok); } .bd-dot.set { background:var(--accent); }
+  .bd-shot { position:relative; width:100%; margin-bottom:10px; border-radius:12px; overflow:hidden; border:1px solid var(--border); background:var(--surface-2); cursor:zoom-in; }
+  .bd-shot img { display:block; max-width:100%; max-height:340px; width:auto; margin:0 auto; object-fit:contain; }
+  .bd-zoom { position:absolute; right:8px; bottom:8px; font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; background:rgba(20,18,40,.72); color:#fff; pointer-events:none; }
+  .bd-noimg { padding:16px; text-align:center; color:var(--text-dim); font-size:12.5px; border:1.5px dashed var(--border); border-radius:12px; margin-bottom:10px; }
+  .bd-modal textarea { min-height:110px; width:100%; resize:vertical; }
+  .bd-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .bd-field { margin-bottom:16px; } .bd-field:last-child { margin-bottom:0; }
+  .modal-box.bd-modal label.bd-lbl { display:block; margin:0 0 6px; }
+  .bd-seg { display:flex; flex-wrap:wrap; gap:6px; }
+  .bd-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 11px; border-radius:20px; border:1px solid var(--border); background:var(--surface-2); font-size:12.5px; font-weight:700; cursor:pointer; color:var(--text); box-shadow:none; }
+  .bd-pill i { width:8px; height:8px; border-radius:50%; flex:none; }
+  .bd-pill:hover { border-color:var(--accent); }
+  .bd-pill.on { border-color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,var(--surface)); color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset; }
+  .bd-quick { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+  .bd-quick button { padding:3px 10px; font-size:11.5px; border-radius:20px; }
+  .bd-foot { display:flex; align-items:center; gap:10px; padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px)); border-top:1px solid var(--border); background:var(--surface); }
+  .bd-foot-r { margin-left:auto; display:flex; gap:8px; }
+  .bd-dirty { font-size:12px; color:var(--warn); font-weight:700; }
+  .bd-hint { font-size:11.5px; color:var(--text-dim); margin-top:6px; line-height:1.45; }
+  @media (max-width:760px) {
+    .bd-overlay { padding:0; align-items:flex-end; }
+    .bd-modal { max-height:96vh; border-radius:20px 20px 0 0 !important; }
+    .bd-grid { grid-template-columns:minmax(0,1fr); }
+    .bd-side { position:static; }
+    .bd-head, .bd-body, .bd-foot { padding-left:14px; padding-right:14px; }
+    .bd-foot { flex-wrap:wrap; }
+    .bd-dirty { order:3; width:100%; }
+    .bd-foot-r { margin-left:auto; }
+  }
+  .cv-drop { border:2px dashed var(--border); border-radius:18px; padding:48px 20px; text-align:center; background:var(--surface); cursor:pointer; transition:.15s; }
+  .cv-drop:hover, .cv-drop.over, .cv-drop:focus-visible { border-color:var(--accent); background:color-mix(in srgb,var(--accent) 7%,var(--surface)); outline:none; }
+  .cv-drop .big { font-size:46px; line-height:1; }
+  .cv-drop b { display:block; font-size:16px; margin:10px 0 4px; }
+  .cv-drop small { color:var(--text-dim); font-size:12.5px; line-height:1.6; display:block; }
+  .cv-grid { display:grid; grid-template-columns:370px minmax(0,1fr); gap:16px; align-items:start; }
+  @media (max-width:980px) { .cv-grid { grid-template-columns:minmax(0,1fr); } }
+  .cv-opts { position:sticky; top:14px; max-height:calc(100vh - 28px); overflow:auto; }
+  @media (max-width:980px) { .cv-opts { position:static; max-height:none; } }
+  .cv-file { display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--surface-2); border-radius:12px; }
+  .cv-file .nm { font-weight:800; font-size:13px; word-break:break-all; }
+  .cv-file small { color:var(--text-dim); font-size:11.5px; display:block; }
+  .cv-frame { width:100%; height:80vh; border:1px solid var(--border); border-radius:12px; background:var(--surface-2); display:block; }
+  .cv-chk { display:flex; align-items:center; gap:8px; font-size:13px; margin:7px 0; cursor:pointer; }
+  .cv-chk input { width:auto; }
+  .cv-two { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .cv-opts .ext-field-l { margin-top:14px; }
+  .cv-opts .ext-field-l:first-child { margin-top:0; }
   .dev-detail-link { cursor:pointer; }
   .dev-detail-link:hover b:first-child { color:var(--accent); text-decoration:underline; }
   .dev-pend-banner { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:10px 12px; margin-bottom:10px; border-radius:10px; border:1px solid var(--warn); background:color-mix(in srgb,var(--warn) 12%,var(--surface)); font-size:12.5px; }
@@ -1045,6 +1108,7 @@
     <button class="tab-btn" data-tab="akses"><span class="nav-icon">⌘</span><span>All Akses</span></button>
     <button class="tab-btn" data-tab="knowledge"><span class="nav-icon">◇</span><span>Knowledge</span></button>
     <button class="tab-btn" data-tab="files"><span class="nav-icon">▣</span><span>Dokumen</span></button>
+    <button class="tab-btn" data-tab="convert"><span class="nav-icon">⇄</span><span>Konversi PDF</span></button>
     <button class="tab-btn" data-tab="audit"><span class="nav-icon">☰</span><span>Riwayat</span></button>
     <button class="tab-btn" data-tab="users"><span class="nav-icon">◎</span><span>Pengguna</span></button>
     <div class="nav-section-label nav-section-secondary">EKSTERNAL</div>
@@ -1342,6 +1406,48 @@
         <div class="ext-sec-h"><h3>Link dokumen</h3><span class="row-flex" style="gap:8px;"><span class="ext-count" id="extDocCount">0</span><button id="extSharesRefresh" type="button" title="Muat ulang">↻ Muat ulang</button><button class="primary" id="extNewDoc" type="button">＋ Buat link dokumen</button></span></div>
         <div class="ext-sec-sub">Link yang dibagikan dari tab Dokumen. Penerima bisa meninjau file dulu, lalu mengunduhnya. Untuk membuat link baru: Dokumen → klik kanan file → Bagikan link.</div>
         <div id="extShares"><div class="hint">Memuat…</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-convert">
+    <div class="ext-hero">
+      <div><h2>Konversi ke PDF</h2><p>Ubah file Excel atau CSV menjadi PDF rapi bergaya aplikasi (ungu), lengkap dengan ringkasan, kelompok, dan status berwarna. Semua diproses di browser Anda, file tidak diunggah ke server.</p></div>
+    </div>
+    <div id="cvDrop" class="cv-drop" tabindex="0" role="button" aria-label="Pilih file Excel atau CSV">
+      <div class="big">📊</div><b>Tarik file ke sini, atau klik untuk memilih</b>
+      <small>Format .xlsx, .xls, .csv · maksimal 10 MB<br>Judul, baris header, kolom status, dan kelompok dideteksi otomatis, dan bisa Anda atur sendiri.</small>
+    </div>
+    <input type="file" id="cvFile" accept=".xlsx,.xls,.csv" hidden>
+    <div id="cvWork" style="display:none;">
+      <div class="cv-grid">
+        <div class="card cv-opts">
+          <div class="cv-file"><span style="font-size:24px">📗</span><div style="flex:1;min-width:0"><div class="nm" id="cvFileName">-</div><small id="cvFileMeta"></small></div><button type="button" id="cvReplace">Ganti</button></div>
+          <div id="cvSheetWrap" style="display:none;"><label class="ext-field-l" for="cvSheet">Sheet</label><select id="cvSheet"></select></div>
+          <label class="ext-field-l" for="cvLabel">Label atas</label><input type="text" id="cvLabel" placeholder="mis. CHECKLIST API">
+          <label class="ext-field-l" for="cvTitle">Judul</label><input type="text" id="cvTitle">
+          <label class="ext-field-l" for="cvSub">Subjudul</label><input type="text" id="cvSub" placeholder="Opsional">
+          <div class="cv-two">
+            <div><label class="ext-field-l" for="cvHdr">Baris header</label><input type="number" id="cvHdr" min="1"></div>
+            <div><label class="ext-field-l" for="cvOrient">Orientasi</label><select id="cvOrient"><option value="auto">Otomatis</option><option value="landscape">Landscape</option><option value="portrait">Portrait</option></select></div>
+          </div>
+          <span class="ext-field-l">Kolom yang ditampilkan</span>
+          <div class="ext-prjs" id="cvCols"></div>
+          <div class="cv-two">
+            <div><label class="ext-field-l" for="cvGroup">Kelompokkan per</label><select id="cvGroup"></select></div>
+            <div><label class="ext-field-l" for="cvStatus">Kolom status</label><select id="cvStatus"></select></div>
+          </div>
+          <span class="ext-field-l">Tampilan</span>
+          <label class="cv-chk"><input type="checkbox" id="cvSummary" checked> Ringkasan dan progres di halaman pertama</label>
+          <label class="cv-chk"><input type="checkbox" id="cvHighlight" checked> Sorot baris yang belum selesai</label>
+          <label class="cv-chk"><input type="checkbox" id="cvZebra" checked> Baris belang-belang</label>
+          <div class="row-flex" style="gap:8px;margin-top:14px;"><button type="button" id="cvAuto">↺ Atur ulang otomatis</button></div>
+        </div>
+        <div class="card">
+          <div class="ext-sec-h"><h3>Pratinjau PDF</h3><span class="row-flex" style="gap:8px;"><span class="ext-count" id="cvInfo"></span><button type="button" class="primary" id="cvDl">⬇ Unduh PDF</button></span></div>
+          <iframe class="cv-frame" id="cvFrame" title="Pratinjau PDF"></iframe>
+          <div class="ext-sub" style="margin:10px 0 0;">Pratinjau tidak tampil di browser Anda? Klik <b>Unduh PDF</b>. Hasil unduhan sama persis.</div>
+        </div>
       </div>
     </div>
   </div>
@@ -2446,110 +2552,143 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     const e = entries.find(x=>x.id===id);
     if(!e) return;
     const proj = projects.find(p=>p.id===e.projectId);
+    const PRIO_COL = { Critical:"#e0363c", High:"#e08a1c", Medium:"#6d5ef5", Low:"#6c6f85" };
+    const curPrio = e.priority || "Medium";
+    const overdue = !!(e.dueDate && e.dueDate < todayStr() && UNRESOLVED_STATUSES.includes(e.status));
+    const segHtml = (opts, cur, colorOf)=>opts.map(o=>'<button type="button" class="bd-pill'+(cur===o?' on':'')+'" data-v="'+esc(o)+'" aria-pressed="'+(cur===o)+'"><i style="background:'+colorOf(o)+'"></i>'+esc(o)+'</button>').join("");
+    const shotHtml = (url, label, domId)=>url ? '<div class="bd-shot" id="'+domId+'" title="Klik untuk memperbesar"><img src="'+url+'" alt="'+label+'"><span class="bd-zoom">🔍 Perbesar</span></div>' : '<div class="bd-noimg" id="'+domId+'">Belum ada '+label.toLowerCase()+'</div>';
     const overlay = document.createElement("div");
-    overlay.className = "modal-overlay";
+    overlay.className = "modal-overlay bd-overlay";
     overlay.innerHTML =
-      '<div class="modal-box">'+
-        '<div class="row-flex" style="margin-bottom:10px; gap:6px;">'+
-          (proj ? '<span class="chip">'+esc(proj.name)+'</span>' : '')+
-          '<span class="badge '+e.status.replace(" ","-")+'" id="mStatusBadge">'+e.status+'</span>'+
-          '<span class="badge-priority '+(e.priority||"Medium")+'" id="mPriorityBadge">'+(e.priority||"Medium")+'</span>'+
+      '<div class="modal-box bd-modal" role="dialog" aria-modal="true" aria-label="Detail bug">'+
+        '<div class="bd-head"><div>'+
+          '<div class="bd-kicker">Detail bug · dicatat '+esc(fmtDate(e.date))+'</div>'+
+          '<div class="bd-chips">'+
+            (proj ? '<span class="chip">'+esc(proj.name)+'</span>' : (isOtherId(e.projectId) ? '<span class="chip">'+esc(e.projectId.slice(OTHER_PREFIX.length))+'</span>' : ''))+
+            '<span class="badge '+e.status.replace(" ","-")+'" id="mStatusBadge">'+esc(e.status)+'</span>'+
+            '<span class="badge-priority '+curPrio+'" id="mPriorityBadge">'+curPrio+'</span>'+
+            (overdue ? '<span class="bd-warn">⏰ Lewat due date</span>' : '')+
+          '</div></div>'+
+          '<button type="button" class="bd-x" id="mX" aria-label="Tutup" title="Tutup (Esc)">✕</button>'+
         '</div>'+
-        (e.devStatus ? '<div class="dev-pend-banner"><span>⏳ <b>'+esc(e.devBy||"Dev")+'</b> mengusulkan <b>'+esc(e.status||"Open")+' → '+esc(e.devStatus)+'</b>'+(e.devNote?' · “'+esc(e.devNote)+'”':'')+' <small>(belum dicek QA)</small></span><span class="row-flex" style="gap:6px;"><button class="primary" id="mDevOk" type="button">✓ Terapkan</button><button id="mDevNo" type="button">✕ Tolak</button></span></div>' : '')+
-        '<label>Gambar Existing</label>'+
-        (e.imageData ? '<img class="preview" id="mExistingImg" src="'+e.imageData+'">' : '<div class="hint" id="mExistingImg">Tanpa gambar existing</div>')+
-        '<label>Existing</label><textarea id="mExisting">'+esc(e.existing)+'</textarea>'+
-        '<div id="mExpImgWrap">'+(e.expectedImageData ? '<img class="preview" id="mExpectedImg" src="'+e.expectedImageData+'">' : '')+'</div>'+
-        '<label>Expected</label><textarea id="mExpected">'+esc(e.expected)+'</textarea>'+
-        '<div class="row-flex" style="margin-top:4px;">'+
-          '<button id="mAddExpImg">'+(e.expectedImageData?'Ganti gambar expected':'+ Tambah gambar expected')+'</button>'+
-          (e.expectedImageData ? '<button class="danger-outline" id="mRemoveExpImg">Hapus gambar expected</button>' : '')+
+        '<div class="bd-body">'+
+          (e.devStatus ? '<div class="dev-pend-banner"><span>⏳ <b>'+esc(e.devBy||"Dev")+'</b> mengusulkan <b>'+esc(e.status||"Open")+' → '+esc(e.devStatus)+'</b>'+(e.devNote?' · “'+esc(e.devNote)+'”':'')+' <small>(belum dicek QA)</small></span><span class="row-flex" style="gap:6px;"><button class="primary" id="mDevOk" type="button">✓ Terapkan</button><button id="mDevNo" type="button">✕ Tolak</button></span></div>' : '')+
+          '<div class="bd-grid">'+
+            '<div class="bd-main">'+
+              '<section class="bd-card"><div class="bd-card-h"><span class="bd-dot ex"></span>Existing <small>kondisi saat ini</small></div>'+
+                shotHtml(e.imageData, "Gambar existing", "mExistingImg")+
+                '<textarea id="mExisting" placeholder="Jelaskan kondisi saat ini…">'+esc(e.existing)+'</textarea>'+
+              '</section>'+
+              '<section class="bd-card"><div class="bd-card-h"><span class="bd-dot ok"></span>Expected <small>kondisi yang diharapkan</small></div>'+
+                '<div id="mExpImgWrap">'+shotHtml(e.expectedImageData, "Gambar expected", "mExpShot")+'</div>'+
+                '<textarea id="mExpected" placeholder="Jelaskan kondisi yang diharapkan…">'+esc(e.expected)+'</textarea>'+
+                '<div class="bd-row"><button type="button" id="mAddExpImg">'+(e.expectedImageData?'Ganti gambar expected':'+ Tambah gambar expected')+'</button>'+
+                  (e.expectedImageData ? '<button type="button" class="danger-outline" id="mRemoveExpImg">Hapus gambar expected</button>' : '')+'</div>'+
+              '</section>'+
+            '</div>'+
+            '<aside class="bd-side"><section class="bd-card"><div class="bd-card-h"><span class="bd-dot set"></span>Pengaturan</div>'+
+              '<div class="bd-field"><label class="bd-lbl" for="mProject">Project</label><select id="mProject">'+projects.map(p=>'<option value="'+esc(p.id)+'" '+(e.projectId===p.id?'selected':'')+'>'+esc(p.name)+'</option>').join('')+(isOtherId(e.projectId) ? '<option value="'+esc(e.projectId)+'" selected>'+esc(e.projectId.slice(OTHER_PREFIX.length))+' (lainnya)</option>' : '')+'</select>'+
+                '<div class="bd-hint" id="mProjectHint" style="display:none;">Bug akan dipindahkan ke project ini saat disimpan.</div></div>'+
+              '<div class="bd-field"><span class="bd-lbl" style="display:block;margin-bottom:6px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);">Status</span><div class="bd-seg" id="mStatusSeg">'+segHtml(STATUS_OPTS, e.status, s=>STATUS_COLOR[s])+'</div>'+
+                '<select id="mStatus" hidden>'+STATUS_OPTS.map(s=>'<option value="'+s+'" '+(e.status===s?'selected':'')+'>'+s+'</option>').join('')+'</select></div>'+
+              '<div class="bd-field"><span class="bd-lbl" style="display:block;margin-bottom:6px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);">Priority</span><div class="bd-seg" id="mPrioSeg">'+segHtml(PRIORITY_OPTS, curPrio, s=>PRIO_COL[s])+'</div>'+
+                '<select id="mPriority" hidden>'+PRIORITY_OPTS.map(p=>'<option value="'+p+'" '+(curPrio===p?'selected':'')+'>'+p+'</option>').join('')+'</select></div>'+
+              '<div class="bd-field"><label class="bd-lbl" for="mDueDate">Due date</label><input type="date" id="mDueDate" value="'+(e.dueDate||"")+'">'+
+                '<div class="bd-quick"><button type="button" data-due="today">Hari ini</button><button type="button" data-due="tomorrow">Besok</button><button type="button" data-due="plus3">+3 hari</button><button type="button" data-due="clear">Kosongkan</button></div></div>'+
+              '<div class="bd-field"><label class="bd-lbl" for="mDate">Tanggal temuan</label><div class="date-stepper"><button type="button" class="step" id="mDatePrev" title="Mundur 1 hari">‹</button><input type="date" id="mDate" value="'+e.date+'"><button type="button" class="step" id="mDateNext" title="Maju 1 hari">›</button></div>'+
+                (e.statusChangedDate ? '<div class="bd-hint">Status terakhir berubah: '+esc(fmtDate(e.statusChangedDate))+'</div>' : '')+'</div>'+
+            '</section></aside>'+
+          '</div>'+
         '</div>'+
-        '<label>Project</label><select id="mProject">'+projects.map(p=>'<option value="'+esc(p.id)+'" '+(e.projectId===p.id?'selected':'')+'>'+esc(p.name)+'</option>').join('')+(isOtherId(e.projectId) ? '<option value="'+esc(e.projectId)+'" selected>'+esc(e.projectId.slice(OTHER_PREFIX.length))+' (lainnya)</option>' : '')+'</select>'+
-        '<div class="hint" id="mProjectHint" style="display:none;">Bug akan dipindahkan ke project ini saat disimpan.</div>'+
-        '<label>Status</label><select id="mStatus">'+STATUS_OPTS.map(s=>'<option value="'+s+'" '+(e.status===s?'selected':'')+'>'+s+'</option>').join('')+'</select>'+
-        '<label>Priority</label><select id="mPriority">'+PRIORITY_OPTS.map(p=>'<option value="'+p+'" '+((e.priority||"Medium")===p?'selected':'')+'>'+p+'</option>').join('')+'</select>'+
-        '<label>Due Date</label><input type="date" id="mDueDate" value="'+(e.dueDate||"")+'">'+
-        '<label>Tanggal</label><div class="date-stepper"><button type="button" class="step" id="mDatePrev" title="Mundur 1 hari">‹</button><input type="date" id="mDate" value="'+e.date+'"><button type="button" class="step" id="mDateNext" title="Maju 1 hari">›</button></div>'+
-        '<div class="modal-actions">'+
-          '<button class="danger-outline" id="mDelete">Hapus</button>'+
-          '<button id="mCancel">Tutup</button>'+
-          '<button class="primary" id="mSave">Simpan</button>'+
+        '<div class="bd-foot">'+
+          '<button type="button" class="danger-outline" id="mDelete">🗑 Hapus</button>'+
+          '<span class="bd-dirty" id="mDirty" style="display:none;">● Perubahan belum disimpan</span>'+
+          '<span class="bd-foot-r"><button type="button" id="mCancel">Tutup</button><button type="button" class="primary" id="mSave" title="Simpan (Ctrl/⌘ + Enter)">Simpan</button></span>'+
         '</div>'+
       '</div>';
     document.body.appendChild(overlay);
-    const existingImgEl = overlay.querySelector("#mExistingImg");
-    if(existingImgEl && existingImgEl.tagName === "IMG") existingImgEl.addEventListener("click", ()=>showLightbox(e.imageData));
-    const mStatusSel = overlay.querySelector("#mStatus"), mStatusBadge = overlay.querySelector("#mStatusBadge");
-    mStatusSel.addEventListener("change", ()=>{ mStatusBadge.className = "badge "+mStatusSel.value.replace(" ","-"); mStatusBadge.textContent = mStatusSel.value; });
-    const mPrioSel = overlay.querySelector("#mPriority"), mPrioBadge = overlay.querySelector("#mPriorityBadge");
-    mPrioSel.addEventListener("change", ()=>{ mPrioBadge.className = "badge-priority "+mPrioSel.value; mPrioBadge.textContent = mPrioSel.value; });
-    const mProjSel = overlay.querySelector("#mProject"), mProjHint = overlay.querySelector("#mProjectHint");
-    mProjSel.addEventListener("change", ()=>{ mProjHint.style.display = mProjSel.value!==e.projectId ? "" : "none"; });
-    const mDateInput = overlay.querySelector("#mDate");
-    overlay.querySelector("#mDatePrev").onclick = ()=>{ mDateInput.value = addDays(mDateInput.value, -1); };
-    overlay.querySelector("#mDateNext").onclick = ()=>{ mDateInput.value = addDays(mDateInput.value, 1); };
-    let pendingExpectedImage; // undefined = no change; null = remove; string = replace
-    const expImgWrap = overlay.querySelector("#mExpImgWrap");
-    const addExpBtn = overlay.querySelector("#mAddExpImg");
-    let removeExpBtn = overlay.querySelector("#mRemoveExpImg");
-    function bindRemoveExpBtn(){
-      if(removeExpBtn) removeExpBtn.onclick = ()=>{ pendingExpectedImage = null; refreshExpUI(null); };
+    const $m = q=>overlay.querySelector(q);
+    let pendingExpectedImage; // undefined = tidak berubah; null = hapus; string = ganti
+    const snap = ()=>JSON.stringify([$m("#mExisting").value, $m("#mExpected").value, $m("#mStatus").value, $m("#mPriority").value, $m("#mDueDate").value, $m("#mDate").value, $m("#mProject").value, pendingExpectedImage===undefined ? 0 : 1]);
+    let base = "";
+    const refreshDirty = ()=>{ $m("#mDirty").style.display = snap()!==base ? "" : "none"; };
+    function onKey(ev){
+      if(document.body.lastElementChild !== overlay) return; // ada dialog lain di atasnya
+      if(ev.key==="Escape"){ ev.preventDefault(); tryClose(); }
+      else if((ev.metaKey||ev.ctrlKey) && ev.key==="Enter"){ ev.preventDefault(); $m("#mSave").click(); }
     }
+    const close = ()=>{ overlay.remove(); document.removeEventListener("keydown", onKey); };
+    const tryClose = async ()=>{ if(snap()!==base && !(await confirmDialog("Perubahan belum disimpan. Tutup tanpa menyimpan?", "Tutup"))) return; close(); };
+    document.addEventListener("keydown", onKey);
+
+    // gambar existing -> perbesar
+    const exShot = $m("#mExistingImg"); if(exShot && e.imageData) exShot.onclick = ()=>showLightbox(e.imageData);
+    // textarea auto-tinggi
+    const grow = ta=>{ ta.style.height = "auto"; ta.style.height = Math.min(Math.max(ta.scrollHeight+2,110), Math.round(window.innerHeight*0.4))+"px"; };
+    overlay.querySelectorAll("textarea").forEach(ta=>{ grow(ta); ta.addEventListener("input", ()=>grow(ta)); });
+    // status & priority (pill -> select tersembunyi)
+    const mStatusSel = $m("#mStatus"), mPrioSel = $m("#mPriority"), mStatusBadge = $m("#mStatusBadge"), mPrioBadge = $m("#mPriorityBadge");
+    mStatusSel.addEventListener("change", ()=>{ mStatusBadge.className = "badge "+mStatusSel.value.replace(" ","-"); mStatusBadge.textContent = mStatusSel.value; });
+    mPrioSel.addEventListener("change", ()=>{ mPrioBadge.className = "badge-priority "+mPrioSel.value; mPrioBadge.textContent = mPrioSel.value; });
+    const bindSeg = (segSel, selEl)=>{ const seg = $m(segSel); seg.addEventListener("click", ev=>{ const b = ev.target.closest("[data-v]"); if(!b) return;
+      selEl.value = b.dataset.v; seg.querySelectorAll("[data-v]").forEach(x=>{ x.classList.toggle("on", x===b); x.setAttribute("aria-pressed", x===b); });
+      selEl.dispatchEvent(new Event("change", { bubbles:true })); }); };
+    bindSeg("#mStatusSeg", mStatusSel); bindSeg("#mPrioSeg", mPrioSel);
+    // project
+    const mProjSel = $m("#mProject"), mProjHint = $m("#mProjectHint");
+    mProjSel.addEventListener("change", ()=>{ mProjHint.style.display = mProjSel.value!==e.projectId ? "" : "none"; });
+    // tanggal & due date
+    const mDateInput = $m("#mDate"), mDueInput = $m("#mDueDate");
+    $m("#mDatePrev").onclick = ()=>{ mDateInput.value = addDays(mDateInput.value, -1); refreshDirty(); };
+    $m("#mDateNext").onclick = ()=>{ mDateInput.value = addDays(mDateInput.value, 1); refreshDirty(); };
+    overlay.querySelectorAll("[data-due]").forEach(b=>b.onclick = ()=>{
+      const k = b.dataset.due; mDueInput.value = k==="today" ? todayStr() : k==="tomorrow" ? addDays(todayStr(),1) : k==="plus3" ? addDays(todayStr(),3) : ""; refreshDirty();
+    });
+    // gambar expected
+    const expImgWrap = $m("#mExpImgWrap"), addExpBtn = $m("#mAddExpImg");
+    let removeExpBtn = $m("#mRemoveExpImg");
+    const bindExpShot = url=>{ const sh = expImgWrap.querySelector("#mExpShot"); if(sh && url) sh.onclick = ()=>showLightbox(url); };
+    function bindRemoveExpBtn(){ if(removeExpBtn) removeExpBtn.onclick = ()=>{ pendingExpectedImage = null; refreshExpUI(null); refreshDirty(); }; }
     function refreshExpUI(dataUrl){
-      expImgWrap.innerHTML = dataUrl ? '<img class="preview" id="mExpectedImg" src="'+dataUrl+'">' : '';
-      if(dataUrl) expImgWrap.querySelector("#mExpectedImg").addEventListener("click", ()=>showLightbox(dataUrl));
+      expImgWrap.innerHTML = shotHtml(dataUrl, "Gambar expected", "mExpShot"); bindExpShot(dataUrl);
       addExpBtn.textContent = dataUrl ? "Ganti gambar expected" : "+ Tambah gambar expected";
       if(dataUrl){
-        if(!removeExpBtn){
-          removeExpBtn = document.createElement("button");
-          removeExpBtn.className = "danger-outline";
-          removeExpBtn.textContent = "Hapus gambar expected";
-          addExpBtn.insertAdjacentElement("afterend", removeExpBtn);
-        }
+        if(!removeExpBtn){ removeExpBtn = document.createElement("button"); removeExpBtn.type = "button"; removeExpBtn.className = "danger-outline"; removeExpBtn.textContent = "Hapus gambar expected"; addExpBtn.insertAdjacentElement("afterend", removeExpBtn); }
         bindRemoveExpBtn();
-      } else if(removeExpBtn){
-        removeExpBtn.remove();
-        removeExpBtn = null;
-      }
+      } else if(removeExpBtn){ removeExpBtn.remove(); removeExpBtn = null; }
     }
-    bindRemoveExpBtn();
-    if(e.expectedImageData){
-      const img = overlay.querySelector("#mExpectedImg");
-      if(img) img.addEventListener("click", ()=>showLightbox(e.expectedImageData));
-    }
-    addExpBtn.onclick = ()=>{
-      pickImageFor(dataUrl=>{
-        pendingExpectedImage = dataUrl;
-        refreshExpUI(dataUrl);
-        toast("Gambar expected siap — klik Simpan.");
-      });
-    };
-    const devOkBtn = overlay.querySelector("#mDevOk"), devNoBtn = overlay.querySelector("#mDevNo");
-    if(devOkBtn) devOkBtn.onclick = async ()=>{ try{ await db.collection("entries").doc(id).update({ status:e.devStatus, statusChangedDate:todayStr(), ...devClear() }); toast("Status diterapkan."); overlay.remove(); }catch(err){ toast("Gagal: "+err.message); } };
-    if(devNoBtn) devNoBtn.onclick = async ()=>{ try{ await db.collection("entries").doc(id).update(devClear()); toast("Usulan ditolak."); overlay.remove(); }catch(err){ toast("Gagal: "+err.message); } };
-    overlay.onclick = ev=>{ if(ev.target===overlay) overlay.remove(); };
-    overlay.querySelector("#mCancel").onclick = ()=>overlay.remove();
-    overlay.querySelector("#mSave").onclick = async ()=>{
+    bindRemoveExpBtn(); bindExpShot(e.expectedImageData);
+    addExpBtn.onclick = ()=>{ pickImageFor(dataUrl=>{ pendingExpectedImage = dataUrl; refreshExpUI(dataUrl); refreshDirty(); toast("Gambar expected siap — klik Simpan."); }); };
+    // usulan developer
+    const devOkBtn = $m("#mDevOk"), devNoBtn = $m("#mDevNo");
+    if(devOkBtn) devOkBtn.onclick = async ()=>{ try{ await db.collection("entries").doc(id).update({ status:e.devStatus, statusChangedDate:todayStr(), ...devClear() }); toast("Status diterapkan."); close(); }catch(err){ toast("Gagal: "+err.message); } };
+    if(devNoBtn) devNoBtn.onclick = async ()=>{ try{ await db.collection("entries").doc(id).update(devClear()); toast("Usulan ditolak."); close(); }catch(err){ toast("Gagal: "+err.message); } };
+    // tutup / simpan / hapus
+    overlay.onclick = ev=>{ if(ev.target===overlay) tryClose(); };
+    $m("#mCancel").onclick = tryClose; $m("#mX").onclick = tryClose;
+    overlay.addEventListener("input", refreshDirty); overlay.addEventListener("change", refreshDirty);
+    $m("#mSave").onclick = async ()=>{
+      const btn = $m("#mSave"); btn.disabled = true; btn.textContent = "Menyimpan…";
       const patch = {
-        existing: overlay.querySelector("#mExisting").value,
-        expected: overlay.querySelector("#mExpected").value,
-        status: overlay.querySelector("#mStatus").value,
-        priority: overlay.querySelector("#mPriority").value,
-        dueDate: overlay.querySelector("#mDueDate").value || "",
-        date: overlay.querySelector("#mDate").value || e.date
+        existing: $m("#mExisting").value,
+        expected: $m("#mExpected").value,
+        status: mStatusSel.value,
+        priority: mPrioSel.value,
+        dueDate: mDueInput.value || "",
+        date: mDateInput.value || e.date
       };
       if(pendingExpectedImage !== undefined) patch.expectedImageData = pendingExpectedImage;
       const newProj = mProjSel.value, moved = newProj && newProj !== e.projectId;
       if(moved) patch.projectId = newProj;
       await updateEntry(id, patch);
-      overlay.remove();
+      close();
       if(moved){ const np = projects.find(x=>x.id===newProj); toast("Bug dipindahkan ke project "+(np ? np.name : String(newProj).replace(OTHER_PREFIX,""))+"."); }
     };
-    overlay.querySelector("#mDelete").onclick = async ()=>{
+    $m("#mDelete").onclick = async ()=>{
       const ok = await confirmDialog("Hapus bug ini?");
-      if(ok){ overlay.remove(); deleteEntry(id); }
+      if(ok){ close(); deleteEntry(id); }
     };
+    base = snap();
   }
 
   // ================= drag & drop staging =================
@@ -5898,6 +6037,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     { label:"All Akses", note:"Akses project", icon:"⌘", action:()=>navigateTo("akses") },
     { label:"Knowledge", note:"Informasi produk", icon:"◇", action:()=>navigateTo("knowledge") },
     { label:"Akses Eksternal", note:"Link developer & dokumen", icon:"🔗", action:()=>navigateTo("ext") },
+    { label:"Konversi PDF", note:"Ubah Excel / CSV jadi PDF", icon:"⇄", action:()=>navigateTo("convert") },
     { label:"Panduan Pemakaian", note:"Cara memakai semua fitur", icon:"?", action:()=>navigateTo("guide") },
     { label:"Suara notifikasi", note:"Klik untuk aktif/nonaktif", icon:"🔔", action:()=>{ const on = !devSoundOn(); try{ localStorage.setItem("qa_dev_sound", on ? "on" : "off"); }catch(_){} devUnlock(); if(on) devPing(); toast("Suara notifikasi "+(on?"aktif":"nonaktif")+"."); } },
     { label:"Notifikasi browser", note:"Saat tab lain dibuka (klik untuk aktifkan)", icon:"🪧", action:()=>{
@@ -5943,6 +6083,250 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       e.preventDefault(); navigateTo("manage"); document.getElementById("bugSearch").focus();
     }
   });
+
+  // ================= konversi XLSX / CSV -> PDF =================
+  function cvNorm(v){ let t = String(v==null?"":v).replace(/\r/g,"").trim(); if(/^-?\d+\.0+$/.test(t)) t = t.replace(/\.0+$/,""); return t; }
+  function cvKind(v){
+    const t = String(v||"").trim().toLowerCase();
+    if(!t) return "other";
+    if(/^(done|selesai|fixed|closed|pass|passed|ok|berhasil|sukses|success|lulus|resolved|complete|completed|valid|yes|ya)$/.test(t)) return "ok";
+    if(/^(fail|failed|gagal|rejected|ditolak|blocked|error|invalid)$/.test(t)) return "bad";
+    if(/^(not yet|belum|belum selesai|belum diuji|open|todo|to do|pending|no|tidak|baru|new)$/.test(t)) return "warn";
+    if(/^(in progress|progress|proses|sedang|dikerjakan|wip|ongoing|review|update)$/.test(t)) return "info";
+    return "other";
+  }
+  function cvAnalyzeRows(rows, hdrIn){
+    const nn = r=>r.reduce((a,x)=>a+(x!==""?1:0),0);
+    let hdr = hdrIn;
+    if(hdr==null){
+      const maxN = Math.max(1, ...rows.slice(0,40).map(nn)), thr = Math.max(2, Math.ceil(maxN*0.6));
+      hdr = 0;
+      for(let i=0;i<Math.min(rows.length,40);i++){
+        if(nn(rows[i])<thr) continue;
+        let j = i+1; while(j<rows.length && nn(rows[j])===0) j++;
+        if(j>=rows.length || nn(rows[j])>=thr){ hdr = i; break; }
+      }
+    }
+    hdr = Math.max(0, Math.min(hdr, rows.length-1));
+    const titles = rows.slice(0,hdr).map(r=>r.filter(x=>x!=="").join("  ")).filter(Boolean);
+    let ncol = 0;
+    rows.forEach((r,i)=>{ if(i<hdr) return; for(let c=r.length-1;c>=0;c--){ if(r[c]!==""){ ncol = Math.max(ncol,c+1); break; } } });
+    const names = Array.from({length:ncol},(_,c)=>(rows[hdr]||[])[c] || ("Kolom "+(c+1)));
+    const data = rows.slice(hdr+1).filter(r=>nn(r)>0).map(r=>Array.from({length:ncol},(_,c)=>r[c]!==undefined ? r[c] : ""));
+    const isSec = r=>ncol>=3 && nn(r)===1;
+    const dv = c=>{ const m = new Map(); data.forEach(r=>{ if(r[c]!=="" && !isSec(r)) m.set(r[c], (m.get(r[c])||0)+1); }); return m; };
+    let status = -1, best = 1;
+    for(let c=0;c<ncol;c++){
+      const m = dv(c); if(m.size<1 || m.size>8) continue;
+      const known = [...m.keys()].filter(v=>cvKind(v)!=="other").length;
+      const sc = (known/m.size>=0.5 ? 2 : 0) + (/status|hasil|result|state/i.test(names[c]) ? 3 : 0);
+      if(sc>best){ best = sc; status = c; }
+    }
+    let group = -1;
+    for(let c=0;c<ncol;c++){
+      if(c===status) continue; const m = dv(c);
+      if(m.size>=2 && m.size<=15 && data.length/m.size>=1.5 && /area|kategori|category|modul|module|section|grup|group|project|kelompok|jenis|tipe|type/i.test(names[c])){ group = c; break; }
+    }
+    return { hdr, titles, ncol, names, data, status, group, isSec };
+  }
+  function cvBuildDoc(st, o){
+    if(!window.jspdf) throw new Error("Library PDF gagal dimuat.");
+    const { jsPDF } = window.jspdf, C = PDF_C;
+    const cols = []; for(let i=0;i<st.ncol;i++) if(o.show[i]) cols.push(i);
+    const orient = o.orient==="auto" ? (cols.length>=5 ? "landscape" : "portrait") : o.orient;
+    const doc = new jsPDF({ unit:"mm", format:"a4", orientation:orient });
+    const pageW = doc.internal.pageSize.getWidth();
+    const mx = orient==="landscape" ? 12 : 14, availW = pageW - mx*2;
+    const KC = { ok:[[225,246,237],[14,120,84],C.ok], warn:[[253,240,222],[176,98,8],C.warn], bad:[[252,226,227],[190,40,46],C.bad], info:[[233,230,253],[70,57,200],C.accent], other:[[236,237,242],[90,93,115],C.gray] };
+    const dataRows = st.data;
+    const rowsOnly = dataRows.filter(r=>!st.isSec(r));
+    const n = rowsOnly.length;
+    // banner
+    let y = pdfBanner(doc, o.label || "DOKUMEN", o.title || "Dokumen", o.sub, pageW) + 8;
+    // ringkasan
+    if(o.summary){
+      const cards = [["Total data", n, C.accent]];
+      let okN = 0, hasSt = false;
+      if(o.status>=0){
+        const cnt = new Map();
+        rowsOnly.forEach(r=>{ const v = r[o.status]; if(v!==""){ hasSt = true; cnt.set(v,(cnt.get(v)||0)+1); if(cvKind(v)==="ok") okN++; } });
+        [...cnt.entries()].sort((a,b)=>b[1]-a[1]).slice(0,2).forEach(([v,c])=>cards.push([v, c, KC[cvKind(v)][2]]));
+        if(okN>0) cards.push(["Progres selesai", Math.round(okN/Math.max(1,[...cnt.values()].reduce((a,b)=>a+b,0))*100)+"%", C.accent2]);
+      } else {
+        cards.push(["Kolom", cols.length, C.accent2]);
+        if(o.group>=0){ const g = new Set(rowsOnly.map(r=>r[o.group]||"(kosong)")); cards.push(["Kelompok", g.size, C.ok]); }
+      }
+      y = pdfStatRow(doc, mx, y, availW, cards) + 3;
+      if(hasSt && okN>0){
+        const tot = rowsOnly.filter(r=>r[o.status]!=="").length, pct = okN/Math.max(1,tot);
+        doc.setFillColor(...C.line); doc.roundedRect(mx, y, availW, 3, 1.5, 1.5, "F");
+        doc.setFillColor(...C.accent); doc.roundedRect(mx, y, Math.max(3, availW*pct), 3, 1.5, 1.5, "F");
+        y += 9;
+      } else y += 4;
+    }
+    // lebar kolom
+    const weights = cols.map(i=>{
+      let w = st.cw && st.cw[i] ? st.cw[i] : 0;
+      if(!w){ const lens = dataRows.map(r=>String(r[i]).length).sort((a,b)=>a-b); const p = lens.length ? lens[Math.floor(lens.length*0.9)] : 8; w = Math.max(String(st.names[i]).length+2, Math.min(p,45)); }
+      return Math.max(4, Math.min(w,60));
+    });
+    const sumW = weights.reduce((a,b)=>a+b,0);
+    const isNo = i=>/^(no\.?|#|nomor)$/i.test(String(st.names[i]).trim());
+    const mins = cols.map(i=> i===o.status ? 24 : (isNo(i) ? 10 : 14));
+    let mm = weights.map(w=>availW*w/sumW), fixed = cols.map(()=>false);
+    for(let it=0; it<4; it++){
+      mm = mm.map((w,k)=>{ if(w<mins[k]){ fixed[k] = true; return mins[k]; } return w; });
+      const used = mm.reduce((a,w,k)=>a+(fixed[k]?w:0),0), free = mm.reduce((a,w,k)=>a+(fixed[k]?0:w),0);
+      const scale = free>0 ? (availW-used)/free : 1;
+      mm = mm.map((w,k)=>fixed[k] ? w : w*scale);
+    }
+    const columnStyles = {};
+    cols.forEach((i,k)=>{ columnStyles[k] = { cellWidth: mm[k] }; if(isNo(i) || i===o.status) columnStyles[k].halign = "center"; });
+    const statusPos = o.status>=0 ? cols.indexOf(o.status) : -1;
+    // isi tabel
+    const head = [cols.map(i=>pdfText(st.names[i]))];
+    const body = [], meta = [];
+    const banner = (text, info)=>{ body.push([{ content:pdfText(text), colSpan:cols.length, styles:{ fillColor:C.chip, textColor:C.chipText, fontStyle:"bold", fontSize:9.2, halign:"left", cellPadding:{ top:3, bottom:3, left:3, right:30 } } }]); meta.push({ type:"group", info:info||"" }); };
+    const addRow = (r, k)=>{
+      const sv = o.status>=0 ? r[o.status] : "", kind = sv ? cvKind(sv) : "";
+      const fill = (o.highlight && (kind==="warn" || kind==="bad")) ? (kind==="bad" ? C.badSoft : C.warnSoft) : (o.zebra && k%2===1 ? [248,248,252] : null);
+      body.push(cols.map(i=>{ const cell = { content: i===o.status ? "" : pdfText(r[i]) }; if(fill) cell.styles = { fillColor:fill }; return cell; }));
+      meta.push({ type:"data", st:sv, kind });
+    };
+    if(o.group>=0){
+      const order = [], map = new Map();
+      rowsOnly.forEach(r=>{ const g = r[o.group] || "(kosong)"; if(!map.has(g)){ map.set(g,[]); order.push(g); } map.get(g).push(r); });
+      order.forEach(g=>{
+        const rs = map.get(g); let info = rs.length+" baris";
+        if(o.status>=0){ const okc = rs.filter(r=>cvKind(r[o.status])==="ok").length; info = okc+"/"+rs.length+" selesai"; }
+        banner(g, info); rs.forEach((r,k)=>addRow(r,k));
+      });
+    } else {
+      let k = 0;
+      dataRows.forEach(r=>{ if(st.isSec(r)){ banner(r.find(x=>x!==""), ""); k = 0; } else addRow(r, k++); });
+    }
+    doc.autoTable({
+      startY:y, margin:{ left:mx, right:mx, top:14, bottom:17 }, tableWidth:availW,
+      head, body, theme:"grid",
+      styles:{ font:"helvetica", fontSize:8.6, textColor:C.body, cellPadding:{ top:2.6, bottom:2.6, left:2.6, right:2.6 }, overflow:"linebreak", valign:"middle", lineColor:C.line, lineWidth:0.25 },
+      headStyles:{ fillColor:C.accent, textColor:[255,255,255], fontStyle:"bold", fontSize:8.6, halign:"left" },
+      columnStyles,
+      didDrawPage:d=>{ if(d.pageNumber>1){ doc.setFillColor(...C.accent); doc.rect(0, 0, pageW, 3, "F"); } },
+      didDrawCell:d=>{
+        if(d.section!=="body") return;
+        const m = meta[d.row.index]; if(!m) return;
+        if(m.type==="group" && m.info){
+          doc.setFont("helvetica","bold"); doc.setFontSize(8.2); doc.setTextColor(...C.chipText);
+          doc.text(pdfText(m.info), d.cell.x + d.cell.width - 3, d.cell.y + d.cell.height/2, { align:"right", baseline:"middle" });
+          doc.setTextColor(0,0,0); return;
+        }
+        if(m.type==="data" && d.column.index===statusPos && m.st){
+          const col = KC[m.kind||"other"] || KC.other, label = pdfText(m.st);
+          doc.setFont("helvetica","bold"); doc.setFontSize(7.6);
+          const w = Math.min(d.cell.width-3, doc.getTextWidth(label)+8), h = 5.6;
+          doc.setFillColor(...col[0]); doc.roundedRect(d.cell.x + (d.cell.width-w)/2, d.cell.y + d.cell.height/2 - h/2, w, h, 2.8, 2.8, "F");
+          doc.setTextColor(...col[1]); doc.text(label, d.cell.x + d.cell.width/2, d.cell.y + d.cell.height/2, { align:"center", baseline:"middle" });
+          doc.setTextColor(0,0,0);
+        }
+      }
+    });
+    pdfFooter(doc, o.title || "Dokumen", mx);
+    return doc;
+  }
+  (function convertInit(){
+    const $c = id=>document.getElementById(id);
+    const cv = { wb:null, name:"", sheet:"", rows:[], off:0, cw:[], an:null, doc:null, url:null, timer:null };
+    const drop = $c("cvDrop"), fileIn = $c("cvFile"), work = $c("cvWork");
+    const showDrop = on=>{ drop.style.display = on ? "" : "none"; work.style.display = on ? "none" : ""; };
+    function refresh(){
+      clearTimeout(cv.timer);
+      if(!cv.an) return;
+      const o = getOpts();
+      if(!o.show.some(Boolean)){ toast("Pilih minimal satu kolom."); return; }
+      try{
+        const doc = cvBuildDoc({ names:cv.an.names, data:cv.an.data, ncol:cv.an.ncol, cw:cv.cw, isSec:cv.an.isSec }, o);
+        cv.doc = doc;
+        if(cv.url) URL.revokeObjectURL(cv.url);
+        cv.url = URL.createObjectURL(doc.output("blob"));
+        $c("cvFrame").src = cv.url + "#view=FitH";
+        $c("cvInfo").textContent = doc.getNumberOfPages()+" halaman · "+cv.an.data.length+" baris";
+      }catch(err){ console.error(err); toast("Gagal membuat PDF: "+err.message); }
+    }
+    const schedule = ms=>{ clearTimeout(cv.timer); cv.timer = setTimeout(refresh, ms==null ? 400 : ms); };
+    function getOpts(){
+      const an = cv.an, box = $c("cvCols");
+      const show = Array.from({length:an.ncol}, (_,i)=>{ const el = box.querySelector('[data-col="'+i+'"]'); return !!(el && el.checked); });
+      return { title:$c("cvTitle").value.trim(), sub:$c("cvSub").value.trim(), label:$c("cvLabel").value.trim(), orient:$c("cvOrient").value, show,
+        group:parseInt($c("cvGroup").value,10), status:parseInt($c("cvStatus").value,10), summary:$c("cvSummary").checked, highlight:$c("cvHighlight").checked, zebra:$c("cvZebra").checked };
+    }
+    function fill(hdr, fresh){
+      const an = cvAnalyzeRows(cv.rows, hdr); cv.an = an;
+      $c("cvHdr").value = an.hdr + 1 + cv.off;
+      if(fresh){
+        $c("cvTitle").value = an.titles[0] || cv.name.replace(/\.[^.]+$/,"");
+        $c("cvSub").value = an.titles.slice(1).join("   |   ");
+        $c("cvLabel").value = String(cv.sheet || "Dokumen").toUpperCase().slice(0,40);
+      }
+      const opt = (v,t)=>'<option value="'+v+'">'+esc(t)+'</option>';
+      $c("cvStatus").innerHTML = opt(-1,"Tanpa kolom status")+an.names.map((n,i)=>opt(i,n)).join("");
+      $c("cvGroup").innerHTML = opt(-1,"Tanpa pengelompokan")+an.names.map((n,i)=>opt(i,n)).join("");
+      $c("cvStatus").value = String(an.status); $c("cvGroup").value = String(an.group);
+      $c("cvCols").innerHTML = an.names.map((n,i)=>'<label class="ext-opt"><input type="checkbox" data-col="'+i+'"'+(i===an.group ? '' : ' checked')+'><span>'+esc(n)+'</span></label>').join("");
+      $c("cvHighlight").checked = an.status>=0;
+      $c("cvFileName").textContent = cv.name;
+      $c("cvFileMeta").textContent = an.data.length+" baris · "+an.ncol+" kolom"+(cv.wb.SheetNames.length>1 ? " · sheet: "+cv.sheet : "");
+      showDrop(false); schedule(0);
+    }
+    function useSheet(name){
+      const ws = cv.wb.Sheets[name]; if(!ws || !ws["!ref"]) return false;
+      const rng = XLSX.utils.decode_range(ws["!ref"]);
+      const rows = XLSX.utils.sheet_to_json(ws, { header:1, raw:false, defval:"", blankrows:true }).map(r=>r.map(cvNorm));
+      if(!rows.some(r=>r.some(x=>x!==""))) return false;
+      cv.off = rng.s.r; cv.sheet = name; cv.rows = rows;
+      cv.cw = (ws["!cols"]||[]).map(c=>c ? (c.wch || (c.wpx ? c.wpx/7 : 0)) : 0).slice(rng.s.c);
+      fill(null, true); return true;
+    }
+    async function loadFile(f){
+      if(!f) return;
+      if(!/\.(xlsx|xls|csv)$/i.test(f.name)){ toast("Format belum didukung. Pakai .xlsx, .xls, atau .csv."); return; }
+      if(f.size > 10*1048576){ toast("File terlalu besar (maks. 10 MB)."); return; }
+      if(!window.XLSX){ toast("Library Excel gagal dimuat."); return; }
+      try{
+        const wb = /\.csv$/i.test(f.name) ? XLSX.read(await f.text(), { type:"string" }) : XLSX.read(await f.arrayBuffer(), { type:"array" });
+        cv.wb = wb; cv.name = f.name;
+        $c("cvSheet").innerHTML = wb.SheetNames.map(n=>'<option>'+esc(n)+'</option>').join("");
+        $c("cvSheetWrap").style.display = wb.SheetNames.length>1 ? "" : "none";
+        const first = wb.SheetNames.find(n=>useSheet(n));
+        if(!first){ toast("File ini tidak berisi data."); return; }
+        $c("cvSheet").value = first;
+      }catch(err){ console.error(err); toast("Gagal membaca file: "+err.message); }
+    }
+    drop.addEventListener("click", ()=>fileIn.click());
+    drop.addEventListener("keydown", e=>{ if(e.key==="Enter" || e.key===" "){ e.preventDefault(); fileIn.click(); } });
+    ["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.add("over"); }));
+    ["dragleave","drop"].forEach(ev=>drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.remove("over"); }));
+    drop.addEventListener("drop", e=>loadFile(e.dataTransfer.files && e.dataTransfer.files[0]));
+    fileIn.addEventListener("change", ()=>{ loadFile(fileIn.files[0]); fileIn.value = ""; });
+    $c("cvReplace").addEventListener("click", ()=>fileIn.click());
+    $c("cvSheet").addEventListener("change", e=>{ e.stopPropagation(); useSheet($c("cvSheet").value); });
+    $c("cvHdr").addEventListener("change", e=>{ e.stopPropagation(); const n = parseInt($c("cvHdr").value,10); if(n>0) fill(n-1-cv.off, false); });
+    $c("cvAuto").addEventListener("click", ()=>{ if(cv.rows.length) fill(null, true); });
+    let prevGroup = -1;
+    $c("cvGroup").addEventListener("focus", ()=>{ prevGroup = parseInt($c("cvGroup").value,10); });
+    $c("cvGroup").addEventListener("change", ()=>{
+      const g = parseInt($c("cvGroup").value,10), box = $c("cvCols");
+      const a = box.querySelector('[data-col="'+prevGroup+'"]'); if(a && prevGroup>=0) a.checked = true;
+      const b = box.querySelector('[data-col="'+g+'"]'); if(b && g>=0) b.checked = false;
+      prevGroup = g;
+    });
+    work.addEventListener("input", ()=>schedule());
+    work.addEventListener("change", ()=>schedule());
+    $c("cvDl").addEventListener("click", ()=>{
+      refresh(); if(!cv.doc) return;
+      const fn = (cv.name.replace(/\.[^.]+$/,"") || "dokumen").replace(/[^\w\-]+/g,"_").replace(/_+/g,"_")+".pdf";
+      toast(pdfDownload(cv.doc, fn) ? "PDF berhasil dibuat." : "Gagal membuat PDF.");
+    });
+  })();
 
   // ================= panduan pemakaian =================
   const GUIDE = [
@@ -6002,6 +6386,10 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       sum:"Penyimpanan file bersama ala Drive.",
       steps:["Klik **↥ Unggah** atau seret file dari komputer. Maksimal 5 MB per file.","Tempel screenshot dengan **Ctrl+V** (atau ⌘+V) saat tab Dokumen terbuka.","**+ Folder** membuat folder. Klik folder untuk membuka, dan gunakan jalur di atas untuk kembali.","Klik file untuk **pratinjau** (gambar, PDF, teks, CSV/Excel, Word). Gunakan panah ‹ › untuk pindah antar file.","**Klik kanan** file untuk menu: bagikan link, tautkan ke bug atau project, ubah nama, pindahkan, hapus.","Pilih banyak file dengan Ctrl/Shift+klik atau centang. **☰ / ▦** mengganti tampilan daftar dan grid."],
       tips:["Item yang dihapus masuk **🗑 Sampah** dan bisa dipulihkan selama 30 hari sebelum terhapus permanen."] },
+    { id:"convert", icon:"⇄", title:"Konversi PDF (Excel / CSV)", tab:"convert",
+      sum:"Mengubah file spreadsheet menjadi PDF rapi bergaya aplikasi. Diproses di browser, file tidak dikirim ke server.",
+      steps:["Buka tab **Konversi PDF**, lalu tarik file .xlsx, .xls, atau .csv ke kotak (atau klik untuk memilih).","Aplikasi mendeteksi **judul**, **baris header**, **kolom status**, dan **kolom pengelompokan** secara otomatis. Pratinjau PDF langsung tampil di sebelah kanan.","Atur sesuai selera: ubah label atas, judul, subjudul, orientasi, dan **kolom yang ditampilkan** (klik chip untuk menyembunyikan).","Pilih **Kelompokkan per** untuk memecah tabel jadi bagian-bagian berwarna lengkap dengan hitungan selesai. Pilih **Kolom status** untuk pill berwarna, kartu ringkasan, dan bar progres.","Kalau file punya banyak sheet, pilih sheet-nya di bagian atas. Klik **⬇ Unduh PDF** kalau sudah pas."],
+      tips:["Status seperti DONE, Selesai, Fixed, Pass dibaca sebagai selesai (hijau). NOT YET, Belum, Open, Pending dibaca sebagai belum (oranye). Fail, Gagal, Ditolak berwarna merah.","Kalau deteksi otomatis keliru, ubah angka **Baris header** atau klik **Atur ulang otomatis**.","Teks di luar huruf Latin (misalnya emoji atau aksara non-Latin) tidak bisa dicetak di PDF dan akan dihilangkan."] },
     { id:"ext", icon:"🔗", title:"Akses Eksternal: link developer dan dokumen", tab:"ext",
       sum:"Semua link untuk orang di luar tim, dengan Create, Read, Update, dan Delete lengkap.",
       steps:["**Buat link developer:** isi nama, pilih project (chip), pilih masa berlaku, lalu **Buat link**. Klik **Salin link** dan kirim ke developer.","Developer membuka link tanpa login dan hanya melihat project yang Anda pilih. Mereka bisa mengusulkan status **In Progress** atau **Fixed** untuk bug yang masih Open atau In Progress, dan melihat screenshot.","Usulan muncul di kotak kuning **Menunggu pengecekan QA**. Klik barisnya untuk melihat detail bug, lalu **Terapkan** atau **Tolak**.","**↗ Buka** menampilkan halaman persis seperti yang dilihat penerima. **✎ Edit** mengubah nama, project, dan masa berlaku tanpa mengganti alamat link. **↻** menyegarkan isi halaman developer. **Cabut** menghapus link.","Di sub-tab **Dokumen**: **＋ Buat link dokumen** memilih file dari tab Dokumen dan masa berlakunya. Penerima membuka link, **meninjau file dulu**, lalu bisa mengunduh.","Link dokumen juga bisa **Edit** (ubah masa berlaku), **Buka**, **Salin**, dan **Cabut**."],
@@ -6024,7 +6412,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     const gEsc = t=>esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>");
     const toc = document.getElementById("gdToc"), body = document.getElementById("gdBody"), q = document.getElementById("gdSearch");
     const hay = g=>(g.title+" "+g.sum+" "+g.steps.join(" ")+" "+(g.tips||[]).join(" ")+" "+(g.keys||[]).map(k=>k.join(" ")).join(" ")).toLowerCase();
-    const TAB_NAME = { dash:"Dashboard", manage:"Kelola Bug", enh:"Enhancement", mom:"Catatan Meeting", daily:"Laporan Harian", scan:"Ceklis Scan AI", akses:"All Akses", knowledge:"Knowledge", files:"Dokumen", ext:"Akses Eksternal", audit:"Riwayat" };
+    const TAB_NAME = { dash:"Dashboard", manage:"Kelola Bug", enh:"Enhancement", mom:"Catatan Meeting", daily:"Laporan Harian", scan:"Ceklis Scan AI", akses:"All Akses", knowledge:"Knowledge", files:"Dokumen", ext:"Akses Eksternal", convert:"Konversi PDF", audit:"Riwayat" };
     function draw(){
       const term = q.value.trim().toLowerCase(), list = GUIDE.filter(g=>!term || hay(g).includes(term));
       toc.innerHTML = list.map(g=>'<button type="button" data-gd="'+g.id+'"><span>'+g.icon+'</span><span>'+esc(g.title.split(":")[0])+'</span></button>').join("");
