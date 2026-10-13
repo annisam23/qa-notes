@@ -753,6 +753,99 @@
   .tab-btn .nav-badge { margin-left:auto; background:var(--danger); color:#fff; font-size:10.5px; font-weight:800; padding:1px 7px; border-radius:20px; line-height:1.5; }
   .ext-sub { font-size:12.5px; color:var(--text-dim); margin:4px 0 14px; }
   .ext-block-title { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 0 4px; }
+  .card-item { position:relative; }
+  .bulk-check { position:absolute; top:6px; left:6px; z-index:2; width:22px; height:22px; border-radius:7px; border:2px solid var(--accent); background:var(--surface); color:#fff; font-size:14px; font-weight:800; display:flex; align-items:center; justify-content:center; line-height:1; }
+  .card-item.bulk-sel { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent); background:color-mix(in srgb,var(--accent) 8%,var(--surface)); }
+  .card-item.bulk-sel .bulk-check { background:var(--accent); }
+  tr.bulk-sel td { background:color-mix(in srgb,var(--accent) 9%,var(--surface)); }
+  .bulk-bar { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(16px + env(safe-area-inset-bottom,0px)); z-index:900; display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap; max-width:calc(100% - 24px); padding:10px 12px; background:var(--surface); border:1px solid var(--accent); border-radius:16px; box-shadow:var(--shadow-lift); }
+  .bulk-bar select { width:auto; min-width:170px; max-width:240px; }
+  .bulk-count { font-size:13px; padding:0 4px; white-space:nowrap; }
+  body.bulk-on .toast { bottom:calc(92px + env(safe-area-inset-bottom,0px)); }
+  body.bulk-on .wrap { padding-bottom:120px; }
+  .ext-hero { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
+  .ext-hero h2 { margin:0; font-size:22px; font-weight:800; letter-spacing:-.01em; }
+  .ext-hero p { margin:4px 0 0; font-size:13px; color:var(--text-dim); max-width:520px; line-height:1.5; }
+  .ext-stats { display:flex; gap:10px; flex-wrap:wrap; }
+  .ext-stat { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:10px 16px; min-width:128px; box-shadow:var(--shadow); }
+  .ext-stat b { display:block; font-size:22px; line-height:1.15; font-weight:800; }
+  .ext-stat span { font-size:11.5px; color:var(--text-dim); font-weight:600; }
+  .ext-stat.warn b { color:var(--warn); }
+  .ext-seg { margin-bottom:16px; display:inline-flex; }
+  .ext-grid { display:grid; grid-template-columns:minmax(0,1.6fr) minmax(300px,1fr); gap:16px; align-items:start; }
+  @media (max-width:980px) { .ext-grid { grid-template-columns:minmax(0,1fr); } }
+  .ext-sec-h { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 0 12px; }
+  .ext-sec-h h3 { margin:0; font-size:15px; }
+  .ext-sec-sub { font-size:12.5px; color:var(--text-dim); margin:-6px 0 12px; line-height:1.5; }
+  .ext-count { font-size:11px; font-weight:800; padding:2px 9px; border-radius:20px; background:var(--surface-2); color:var(--text-dim); }
+  .ext-pend { border:1px solid color-mix(in srgb,var(--warn) 45%,var(--border)); background:color-mix(in srgb,var(--warn) 8%,var(--surface)); border-radius:14px; padding:14px; margin-bottom:16px; }
+  .ext-pend .ext-sec-h { margin-bottom:2px; }
+  .ext-pend-item { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding:10px 12px; margin-top:8px; background:var(--surface); border:1px solid var(--border); border-radius:12px; }
+  .ext-pend-main { flex:1 1 260px; min-width:0; cursor:pointer; }
+  .ext-pend-main:hover .ext-ttl { color:var(--accent); }
+  .ext-ttl { font-size:13px; font-weight:700; line-height:1.4; word-break:break-word; }
+  .ext-meta { font-size:12px; color:var(--text-dim); margin-top:3px; line-height:1.55; }
+  .ext-acts { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .ext-link { display:flex; align-items:center; gap:14px; padding:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface); margin-bottom:10px; transition:.15s; flex-wrap:wrap; }
+  .ext-link:last-child { margin-bottom:0; }
+  .ext-link:hover { border-color:var(--accent); box-shadow:var(--shadow); }
+  .ext-link.is-off { opacity:.65; }
+  .ext-av, .ext-ico { flex:none; width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; }
+  .ext-av { background:var(--accent-grad); color:#fff; font-weight:800; font-size:17px; }
+  .ext-ico { background:var(--surface-2); font-size:21px; }
+  .ext-main { flex:1 1 220px; min-width:0; }
+  .ext-name { font-size:14px; font-weight:800; word-break:break-word; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .ext-pill { font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:20px; white-space:nowrap; }
+  .ext-pill.ok { background:color-mix(in srgb,var(--ok) 16%,transparent); color:var(--ok); }
+  .ext-pill.off { background:color-mix(in srgb,var(--danger) 14%,transparent); color:var(--danger); }
+  .ext-pill.inf { background:var(--surface-2); color:var(--text-dim); }
+  .ext-chips { display:flex; gap:5px; flex-wrap:wrap; margin-top:6px; }
+  .ext-pj { font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px; background:color-mix(in srgb,var(--accent) 12%,var(--surface)); color:var(--accent); }
+  .ext-empty { text-align:center; padding:30px 12px; color:var(--text-dim); font-size:13px; border:1.5px dashed var(--border); border-radius:14px; line-height:1.5; }
+  .ext-empty b { display:block; font-size:28px; margin-bottom:4px; }
+  .ext-form { position:sticky; top:14px; }
+  .ext-field-l { display:block; font-size:11px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--text-dim); margin:14px 0 6px; }
+  #dlPrj, .ext-prjs { display:flex; flex-wrap:wrap; gap:7px; }
+  .modal-box label.ext-opt { display:inline-block; margin:0; text-transform:none; letter-spacing:0; font-size:inherit; color:inherit; font-weight:inherit; }
+  .ext-pick { display:flex; align-items:center; gap:10px; padding:8px 10px; border:1px solid var(--border); border-radius:10px; margin-bottom:6px; cursor:pointer; font-size:13px; }
+  .ext-pick:hover { border-color:var(--accent); }
+  .ext-pick.on { border-color:var(--accent); background:color-mix(in srgb,var(--accent) 10%,var(--surface)); }
+  .ext-pick small { margin-left:auto; color:var(--text-dim); white-space:nowrap; }
+  .gd-hero { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
+  .gd-hero h2 { margin:0; font-size:22px; font-weight:800; letter-spacing:-.01em; }
+  .gd-hero p { margin:4px 0 0; font-size:13px; color:var(--text-dim); }
+  .gd-search { display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:0 12px; width:min(380px,100%); box-shadow:var(--shadow); }
+  .gd-search span { color:var(--accent); font-size:20px; line-height:1; }
+  .gd-search input { border:0; background:transparent; box-shadow:none!important; padding:10px 0; flex:1; min-width:0; }
+  .gd-layout { display:grid; grid-template-columns:230px minmax(0,1fr); gap:18px; align-items:start; }
+  .gd-toc { position:sticky; top:14px; display:flex; flex-direction:column; gap:2px; max-height:calc(100vh - 40px); overflow:auto; padding:8px; background:var(--surface); border:1px solid var(--border); border-radius:14px; }
+  .gd-toc button { display:flex; align-items:center; gap:9px; text-align:left; border:0; background:transparent; padding:8px 10px; border-radius:9px; font-size:13px; font-weight:600; color:var(--text-dim); cursor:pointer; box-shadow:none; }
+  .gd-toc button:hover { background:var(--surface-2); color:var(--text); }
+  .gd-toc button.on { background:color-mix(in srgb,var(--accent) 12%,var(--surface)); color:var(--accent); }
+  .gd-sec { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px 20px; margin-bottom:14px; box-shadow:var(--shadow); scroll-margin-top:16px; }
+  .gd-sec-h { display:flex; align-items:center; gap:12px; margin-bottom:6px; flex-wrap:wrap; }
+  .gd-ic { width:40px; height:40px; border-radius:12px; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-size:20px; flex:none; }
+  .gd-sec-h h3 { margin:0; font-size:17px; flex:1; min-width:0; }
+  .gd-sum { font-size:13.5px; color:var(--text-dim); line-height:1.6; margin:0 0 6px; }
+  .gd-sub { font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--text-dim); margin:14px 0 6px; }
+  .gd-steps { counter-reset:g; list-style:none; margin:0; padding:0; }
+  .gd-steps li { position:relative; padding:6px 0 6px 38px; font-size:13.5px; line-height:1.6; counter-increment:g; }
+  .gd-steps li::before { content:counter(g); position:absolute; left:0; top:6px; width:26px; height:26px; border-radius:50%; background:color-mix(in srgb,var(--accent) 14%,var(--surface)); color:var(--accent); font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; }
+  .gd-tips { margin-top:12px; padding:11px 14px; border-radius:12px; background:color-mix(in srgb,var(--warn) 9%,var(--surface)); border:1px solid color-mix(in srgb,var(--warn) 35%,var(--border)); font-size:13px; line-height:1.6; }
+  .gd-tips ul { margin:4px 0 0 18px; padding:0; }
+  .gd-keys { width:100%; border-collapse:collapse; font-size:13px; }
+  .gd-keys td { padding:8px 6px; border-bottom:1px solid var(--border); vertical-align:top; }
+  .gd-keys td:first-child { white-space:nowrap; width:1%; padding-right:16px; }
+  .gd-keys kbd { font:600 11.5px inherit; background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:2px 7px; }
+  @media (max-width:900px) { .gd-layout { grid-template-columns:minmax(0,1fr); } .gd-toc { position:static; flex-direction:row; overflow-x:auto; max-height:none; } .gd-toc button { white-space:nowrap; } }
+
+  .ext-opt { cursor:pointer; position:relative; }
+  .ext-opt input { position:absolute; opacity:0; pointer-events:none; }
+  .ext-opt span { display:inline-block; padding:6px 12px; border-radius:20px; border:1px solid var(--border); background:var(--surface-2); font-size:12.5px; font-weight:600; transition:.12s; }
+  .ext-opt:hover span { border-color:var(--accent); }
+  .ext-opt input:checked + span { background:var(--accent); color:var(--accent-text); border-color:var(--accent); }
+  .ext-opt input:focus-visible + span { outline:2px solid var(--accent); outline-offset:2px; }
+  .ext-tip { font-size:12px; color:var(--text-dim); line-height:1.55; margin-top:14px; padding:10px 12px; border-radius:10px; background:var(--surface-2); }
   .dev-detail-link { cursor:pointer; }
   .dev-detail-link:hover b:first-child { color:var(--accent); text-decoration:underline; }
   .dev-pend-banner { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:10px 12px; margin-bottom:10px; border-radius:10px; border:1px solid var(--warn); background:color-mix(in srgb,var(--warn) 12%,var(--surface)); font-size:12.5px; }
@@ -956,6 +1049,8 @@
     <button class="tab-btn" data-tab="users"><span class="nav-icon">◎</span><span>Pengguna</span></button>
     <div class="nav-section-label nav-section-secondary">EKSTERNAL</div>
     <button class="tab-btn" data-tab="ext"><span class="nav-icon">🔗</span><span>Akses Eksternal</span><span class="nav-badge" id="extBadge" style="display:none"></span></button>
+    <div class="nav-section-label nav-section-secondary">BANTUAN</div>
+    <button class="tab-btn" data-tab="guide"><span class="nav-icon">?</span><span>Panduan Pemakaian</span></button>
     <div class="sidebar-footer"><div class="sidebar-footer-icon">✦</div><strong>Bekerja lebih fokus.</strong><p>Setiap detail QA, tertata di satu tempat.</p></div>
   </div>
 
@@ -1028,7 +1123,6 @@
 
       <div class="row-flex" style="margin-top:14px;">
         <button id="btnManualRow">+ Tambah bug manual (tanpa gambar)</button>
-        <button id="btnAutoPrioAll" title="Terapkan prioritas & due date otomatis ke bug lama yang belum diatur manual">⚡ Prioritas otomatis (bug lama)</button>
       </div>
     </div>
 
@@ -1039,6 +1133,7 @@
           <label class="row-flex" style="font-size:12.5px; color:var(--text-dim); font-weight:600;">
             <input type="checkbox" id="showAllDates" style="width:auto;"> semua tanggal
           </label>
+          <button id="btnBulk" type="button" title="Pilih beberapa bug lalu pindahkan sekaligus ke project lain">☑ Pilih beberapa</button>
           <div class="view-toggle">
             <button id="btnViewBoard" class="active">Papan</button>
             <button id="btnViewTable">Tabel</button>
@@ -1205,29 +1300,58 @@
   <div class="dv-up" id="dvUp"></div>
 
   <div class="tab-panel" id="tab-ext">
-    <div class="card">
-      <h3 style="margin:0;">Akses Eksternal</h3>
-      <div class="ext-sub">Semua link untuk orang di luar tim (developer, klien, dsb.) ada di sini. Link bisa dicabut kapan saja.</div>
+    <div class="ext-hero">
+      <div><h2>Akses Eksternal</h2><p>Kelola link untuk developer dan pihak di luar tim. Semua link bisa dicabut kapan saja.</p></div>
+      <div class="ext-stats">
+        <div class="ext-stat"><b id="extStatDev">0</b><span>Link developer aktif</span></div>
+        <div class="ext-stat warn"><b id="extStatPend">0</b><span>Menunggu cek QA</span></div>
+        <div class="ext-stat"><b id="extStatDoc">–</b><span>Link dokumen aktif</span></div>
+      </div>
+    </div>
+    <div class="view-toggle ext-seg" role="tablist">
+      <button type="button" class="active" data-ext-sub="dev">🔗 Developer</button>
+      <button type="button" data-ext-sub="doc">📎 Dokumen</button>
+    </div>
 
-      <div class="ext-block-title"><b style="font-size:14px;">🔗 Link Developer</b></div>
-      <div class="hint" style="margin-bottom:8px;">Halaman Bug Report tanpa login, hanya project yang dipilih. Developer bisa mengusulkan status (berstatus <b>belum dicek QA</b>) dan melihat screenshot.</div>
-      <div id="dlPend"></div>
-      <div id="dlList"></div>
-      <div style="border-top:1px solid var(--border);margin:12px 0 8px"></div>
-      <b style="font-size:13px">Buat link baru</b>
-      <input type="text" id="dlName" placeholder="Nama developer, mis. Dev Aurora" style="margin:8px 0">
-      <div id="dlPrj" style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:8px"></div>
-      <div class="row-flex" style="gap:8px;flex-wrap:wrap;">
-        <select id="dlExp" style="width:auto;min-width:170px;"><option value="604800000">Berlaku 7 hari</option><option value="2592000000" selected>Berlaku 30 hari</option><option value="7776000000">Berlaku 90 hari</option><option value="0">Tanpa batas waktu</option></select>
-        <button class="primary" id="dlMk">Buat link</button>
+    <div id="extSubDev">
+      <div class="ext-grid">
+        <div>
+          <div id="dlPend"></div>
+          <div class="card">
+            <div class="ext-sec-h"><h3>Link developer</h3><span class="ext-count" id="dlCount">0</span></div>
+            <div class="ext-sec-sub">Halaman Bug Report tanpa login, hanya untuk project yang dipilih. Developer bisa mengusulkan status dan melihat screenshot.</div>
+            <div id="dlList"></div>
+          </div>
+        </div>
+        <div class="card ext-form">
+          <div class="ext-sec-h"><h3>Buat link baru</h3></div>
+          <label class="ext-field-l" for="dlName" style="margin-top:0;">Nama developer</label>
+          <input type="text" id="dlName" placeholder="mis. Dev Aurora">
+          <span class="ext-field-l">Project yang bisa dilihat</span>
+          <div id="dlPrj"></div>
+          <label class="ext-field-l" for="dlExp">Masa berlaku</label>
+          <select id="dlExp"><option value="604800000">7 hari</option><option value="2592000000" selected>30 hari</option><option value="7776000000">90 hari</option><option value="0">Tanpa batas waktu</option></select>
+          <button class="primary" id="dlMk" style="width:100%;margin-top:16px;">Buat link</button>
+          <div class="ext-tip">💡 Developer hanya mengusulkan status. Perubahan baru berlaku setelah Anda menekan <b>Terapkan</b>.</div>
+        </div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="ext-block-title"><b style="font-size:14px;">📎 Link Dokumen</b><button id="extSharesRefresh" type="button" title="Muat ulang">↻</button></div>
-      <div class="hint" style="margin-bottom:8px;">Link unduh file yang dibagikan dari tab Dokumen. Untuk membuat link baru: Dokumen → klik kanan file → Bagikan link.</div>
-      <div id="extShares"><div class="hint">Memuat…</div></div>
+    <div id="extSubDoc" style="display:none;">
+      <div class="card">
+        <div class="ext-sec-h"><h3>Link dokumen</h3><span class="row-flex" style="gap:8px;"><span class="ext-count" id="extDocCount">0</span><button id="extSharesRefresh" type="button" title="Muat ulang">↻ Muat ulang</button><button class="primary" id="extNewDoc" type="button">＋ Buat link dokumen</button></span></div>
+        <div class="ext-sec-sub">Link yang dibagikan dari tab Dokumen. Penerima bisa meninjau file dulu, lalu mengunduhnya. Untuk membuat link baru: Dokumen → klik kanan file → Bagikan link.</div>
+        <div id="extShares"><div class="hint">Memuat…</div></div>
+      </div>
     </div>
+  </div>
+
+  <div class="tab-panel" id="tab-guide">
+    <div class="gd-hero">
+      <div><h2>Panduan Pemakaian</h2><p>Cara memakai setiap fitur di QA Workspace, langkah demi langkah.</p></div>
+      <label class="gd-search"><span>⌕</span><input type="text" id="gdSearch" placeholder="Cari panduan, mis. pindah project, link developer" aria-label="Cari panduan"></label>
+    </div>
+    <div class="gd-layout"><nav class="gd-toc" id="gdToc" aria-label="Daftar panduan"></nav><div id="gdBody"></div></div>
   </div>
 
   <div class="tab-panel" id="tab-mom">
@@ -1238,7 +1362,6 @@
           <select id="momProject" style="width:auto; min-width:160px;"><option value="">Semua Project</option></select>
           <input type="text" id="momSearch" placeholder="Cari…" style="width:170px;">
           <button class="primary" id="momAdd">+ Catatan Meeting</button>
-          <button id="momPresetAurora" title="Isi catatan meeting Aurora x Mediflash - SSA (8 Okt 2026)">📥 MoM Aurora x Mediflash (8 Okt)</button>
           <button id="momExport">⬇ Export PDF</button>
         </div>
       </div>
@@ -1249,6 +1372,14 @@
 
 </div>
 
+<div id="bulkBar" class="bulk-bar" style="display:none" role="region" aria-label="Pindahkan banyak bug">
+  <span class="bulk-count"><b id="bulkCount">0</b> dipilih</span>
+  <button type="button" id="bulkAll">Pilih semua yang tampil</button>
+  <button type="button" id="bulkNone">Kosongkan</button>
+  <select id="bulkTarget" aria-label="Project tujuan"></select>
+  <button type="button" class="primary" id="bulkMove" disabled>Pindahkan</button>
+  <button type="button" class="command-close" id="bulkExit" aria-label="Keluar dari mode pilih" title="Keluar dari mode pilih">✕</button>
+</div>
 <div id="toast" class="toast"></div>
 
 <!-- Data awal akses sengaja dikosongkan: kredensial tidak boleh tertanam di HTML. -->
@@ -1477,20 +1608,77 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   }, e=>{ W.textContent = "Tidak bisa membuka link: "+e.message; });
   }
   async function dvShareView(sid){
-    document.body.innerHTML = '<div style="max-width:440px;margin:12vh auto;padding:24px;text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow)" id="shBox">Memuat…</div>';
-    const box = document.getElementById("shBox");
+    const E = t=>String(t==null?"":t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+    document.body.innerHTML = '<style>'+
+      '.shv{min-height:100vh;display:flex;flex-direction:column}'+
+      '.shv-top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 18px;background:var(--surface);border-bottom:1px solid var(--border);box-shadow:var(--shadow)}'+
+      '.shv-ic{flex:none;width:42px;height:42px;border-radius:12px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:22px}'+
+      '.shv-tt{flex:1 1 220px;min-width:0}.shv-name{font-weight:800;font-size:15px;word-break:break-word;line-height:1.3}.shv-meta{font-size:12px;color:var(--text-dim);margin-top:2px}'+
+      '.shv-stage{flex:1;padding:18px 16px 28px;display:flex;justify-content:center;align-items:flex-start}'+
+      '.shv-paper{width:100%;max-width:1040px;min-height:62vh;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;display:flex;align-items:center;justify-content:center;flex-direction:column}'+
+      '.shv-paper iframe{width:100%;height:80vh;border:0;background:#fff;display:block}'+
+      '.shv-paper img,.shv-paper video{max-width:100%;max-height:80vh;display:block}'+
+      '.shv-paper audio{width:min(520px,90%);margin:40px 0}'+
+      '.shv-paper pre{align-self:stretch;margin:0;padding:18px;white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.55;max-height:80vh;overflow:auto}'+
+      '.shv-note{padding:48px 20px;text-align:center;color:var(--text-dim);font-size:13.5px}.shv-note .big{font-size:56px;margin-bottom:8px}'+
+      '.shv-sheet{align-self:stretch;padding:10px 12px 0}.shv-sheet select{width:auto;margin-bottom:8px}'+
+      '.shv-msg{margin:14vh auto;max-width:420px;padding:28px 24px;text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);font-size:14px}'+
+      '.shv-foot{text-align:center;font-size:11.5px;color:var(--text-dim);padding:0 0 18px}'+
+      '@media (max-width:600px){.shv-top{padding:10px 12px}.shv-stage{padding:12px 8px 20px}.shv-paper iframe{height:74vh}}'+
+      '</style><div class="shv" id="shRoot"><div class="shv-msg">Memuat…</div></div>';
+    const root = document.getElementById("shRoot");
+    const msg = t=>{ root.innerHTML = '<div class="shv-msg">'+E(t)+'</div>'; };
     try{
       const d = await db.collection("driveShares").doc(sid).get();
-      if(!d.exists){ box.textContent = "Link tidak ditemukan atau sudah dicabut."; return; }
+      if(!d.exists){ msg("Link tidak ditemukan atau sudah dicabut."); return; }
       const s = d.data();
-      if(s.expiresAt && Date.now() > s.expiresAt){ box.textContent = "Link ini sudah kedaluwarsa."; return; }
-      box.innerHTML = '<div style="font-size:42px">📄</div><h2 style="margin:8px 0;word-break:break-all"></h2><p style="color:var(--text-dim);font-size:13px"></p><button class="primary" id="shDl">⬇ Unduh</button>';
-      box.querySelector("h2").textContent = s.name;
-      box.querySelector("p").textContent = (s.size ? (s.size/1024).toFixed(0)+" KB · " : "") + (s.expiresAt ? "Berlaku sampai "+new Date(s.expiresAt).toLocaleString("id-ID") : "Tanpa batas waktu");
-      box.querySelector("#shDl").onclick = async ()=>{
-        try{ dvSave(await dvFetchBlob(s.fid, s.chunks, s.mime), s.name); }catch(e){ box.querySelector("p").textContent = "Gagal mengunduh: "+e.message; }
+      if(s.expiresAt && Date.now() > s.expiresAt){ msg("Link ini sudah kedaluwarsa."); return; }
+      const name = s.name || "file", ext = (name.split(".").pop()||"").toLowerCase(), mime = s.mime || "";
+      const icon = /^image\//.test(mime) ? "🖼️" : (mime==="application/pdf"||ext==="pdf") ? "📕" : /^video\//.test(mime) ? "🎬" : /^audio\//.test(mime) ? "🎵" :
+        /^(doc|docx)$/.test(ext) ? "📘" : /^(xls|xlsx|csv)$/.test(ext) ? "📗" : /^(ppt|pptx)$/.test(ext) ? "📙" : /^(zip|rar|7z)$/.test(ext) ? "🗜️" : "📄";
+      document.title = name+" — QA Workspace";
+      root.innerHTML = '<div class="shv-top"><div class="shv-ic">'+icon+'</div><div class="shv-tt"><div class="shv-name">'+E(name)+'</div><div class="shv-meta">'+
+        E((s.size ? (s.size>=1048576 ? (s.size/1048576).toFixed(1)+" MB" : (s.size/1024).toFixed(0)+" KB")+" · " : "")+(s.expiresAt ? "Berlaku sampai "+new Date(s.expiresAt).toLocaleString("id-ID") : "Tanpa batas waktu"))+
+        '</div></div><button class="primary" id="shDl">⬇ Unduh</button></div>'+
+        '<div class="shv-stage"><div class="shv-paper" id="shPaper"><div class="shv-note"><div class="big">'+icon+'</div>Menyiapkan pratinjau…</div></div></div>'+
+        '<div class="shv-foot">Dibagikan lewat QA Workspace · Seleris</div>';
+      const paper = root.querySelector("#shPaper"), dlBtn = root.querySelector("#shDl");
+      let blob = null, url = null;
+      const getBlob = async ()=> blob || (blob = await dvFetchBlob(s.fid, s.chunks, s.mime));
+      dlBtn.onclick = async ()=>{
+        const old = dlBtn.textContent; dlBtn.disabled = true; dlBtn.textContent = "Mengunduh…";
+        try{ dvSave(await getBlob(), name); }catch(e){ alert("Gagal mengunduh: "+e.message); }
+        dlBtn.disabled = false; dlBtn.textContent = old;
       };
-    }catch(e){ box.textContent = "Tidak bisa membuka link: "+e.message; }
+      const note = (big, text, withDl)=>{ paper.innerHTML = '<div class="shv-note"><div class="big">'+big+'</div>'+E(text)+(withDl ? '<div style="margin-top:14px"><button class="primary" id="shDl2">⬇ Unduh file</button></div>' : '')+'</div>'; const b = paper.querySelector("#shDl2"); if(b) b.onclick = ()=>dlBtn.click(); };
+      const frame = html=>{ const f = document.createElement("iframe"); f.setAttribute("sandbox",""); f.srcdoc = html; return f; };
+      const put = el=>{ paper.innerHTML = ""; paper.appendChild(el); };
+      try{
+        const isImg = /^image\//.test(mime), isPdf = mime==="application/pdf" || ext==="pdf", isVid = /^video\//.test(mime), isAud = /^audio\//.test(mime);
+        const isTxt = (/^text\//.test(mime) && ext!=="csv") || /^(txt|md|json|log|xml|yml|yaml)$/.test(ext);
+        const isSheet = /^(csv|xlsx|xls)$/.test(ext) && window.XLSX, isDoc = ext==="docx" && window.mammoth;
+        if(!(isImg||isPdf||isVid||isAud||isTxt||isSheet||isDoc)){ note(icon, "Pratinjau belum tersedia untuk tipe file ini. Silakan unduh untuk membukanya.", true); return; }
+        const b = await getBlob();
+        if(isImg){ url = URL.createObjectURL(b); const el = document.createElement("img"); el.src = url; el.alt = name; put(el); }
+        else if(isPdf){ url = URL.createObjectURL(b); const el = document.createElement("iframe"); el.src = url; put(el); }
+        else if(isVid){ url = URL.createObjectURL(b); const el = document.createElement("video"); el.src = url; el.controls = true; put(el); }
+        else if(isAud){ url = URL.createObjectURL(b); const el = document.createElement("audio"); el.src = url; el.controls = true; put(el); }
+        else if(isTxt){ const el = document.createElement("pre"); el.textContent = (await b.text()).slice(0,300000); put(el); }
+        else if(isSheet){
+          const wb = ext==="csv" ? XLSX.read(await b.text(), {type:"string"}) : XLSX.read(await b.arrayBuffer(), {type:"array"});
+          const css = '<style>body{font:12px sans-serif;margin:8px;color:#111}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:3px 7px}</style>';
+          const wrap = document.createElement("div"); wrap.className = "shv-sheet"; wrap.style.width = "100%";
+          wrap.innerHTML = (wb.SheetNames.length>1 ? '<select>'+wb.SheetNames.map(n=>'<option>'+E(n)+'</option>').join("")+'</select>' : "")+'<div id="shW"></div>';
+          const draw = n=>{ const f = frame(css+XLSX.utils.sheet_to_html(wb.Sheets[n])); f.style.height = "72vh"; const w = wrap.querySelector("#shW"); w.innerHTML = ""; w.appendChild(f); };
+          const sel = wrap.querySelector("select"); if(sel) sel.onchange = ()=>draw(sel.value);
+          put(wrap); draw(wb.SheetNames[0]);
+        }
+        else if(isDoc){
+          const r = await mammoth.convertToHtml({arrayBuffer: await b.arrayBuffer()});
+          put(frame('<style>body{font:14px/1.6 sans-serif;margin:24px auto;max-width:760px;padding:0 16px;color:#111}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}img{max-width:100%}</style>'+r.value));
+        }
+      }catch(e){ note("⚠️", "Pratinjau gagal dimuat ("+e.message+"). Anda tetap bisa mengunduh file ini.", true); }
+    }catch(e){ msg("Tidak bisa membuka link: "+e.message); }
   }
   const AUDIT_MOD = { entries:"Bug", enhancements:"Enhancement", meetings:"Catatan Meeting", projects:"Project", accessProjects:"All Akses", knowledgeProducts:"Knowledge", driveItems:"Dokumen" };
   const AUDIT_SAFE = ["status","priority","dueDate"];
@@ -1788,6 +1976,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   }
   function currentProject(){ return projects.find(p=>p.id===selectedProjectId) || null; }
   // ---- project "Lainnya" (teks bebas) ----
+  const bulkSel = new Set(); let bulkMode = false, bulkProj = null;
   const OTHER = "__other__", OTHER_PREFIX = "other:";
   const OTHER_OPT = '<option value="__other__">Lainnya (ketik sendiri)…</option>';
   const projOtherInputHtml = id=>'<input type="text" id="'+id+'" placeholder="Ketik nama project / topik bebas" style="display:none; margin-top:6px;">';
@@ -1954,12 +2143,14 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
 
   function renderManagePanel(){
     const proj = currentProject();
+    { const pid = proj ? proj.id : null; if(pid !== bulkProj){ bulkSel.clear(); bulkProj = pid; } }
     document.getElementById("curProjTitle").textContent = proj ? proj.name : "Pilih project";
     document.getElementById("btnExportProj").disabled = !proj;
     if(!proj){
       document.getElementById("bugResultCount").textContent = "0 temuan";
       document.getElementById("boardWrap").innerHTML = '<div class="empty-state">Pilih atau tambahkan project di atas.</div>';
       document.getElementById("tableWrap").innerHTML = "";
+      bulkRefresh();
       return;
     }
     const list = filteredEntries();
@@ -1978,7 +2169,62 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     }
     renderBoard();
     renderTable();
+    bulkRefresh();
   }
+
+  // ---- pilih banyak bug lalu pindahkan ke project lain ----
+  function bulkPaint(){
+    document.querySelectorAll("#boardWrap .card-item").forEach(c=>{
+      const on = bulkSel.has(c.dataset.open); c.classList.toggle("bulk-sel", on);
+      const ck = c.querySelector(".bulk-check"); if(ck) ck.textContent = on ? "✓" : "";
+    });
+    document.querySelectorAll("#tableWrap tr[data-id]").forEach(tr=>{
+      const on = bulkSel.has(tr.dataset.id); tr.classList.toggle("bulk-sel", on);
+      const cb = tr.querySelector("[data-bulk-row]"); if(cb) cb.checked = on;
+    });
+  }
+  function bulkRefresh(){
+    const proj = currentProject();
+    [...bulkSel].forEach(id=>{ const e = entries.find(x=>x.id===id); if(!e || !proj || e.projectId!==proj.id) bulkSel.delete(id); });
+    const active = bulkMode && !!proj;
+    document.body.classList.toggle("bulk-on", active);
+    document.getElementById("bulkBar").style.display = active ? "" : "none";
+    const bb = document.getElementById("btnBulk");
+    bb.classList.toggle("primary", bulkMode); bb.textContent = bulkMode ? "✓ Mode pilih aktif" : "☑ Pilih beberapa";
+    if(active){
+      const sel = document.getElementById("bulkTarget"), cur = sel.value, sig = proj.id+"|"+projects.map(p=>p.id+":"+p.name).join(",");
+      if(sel.dataset.sig !== sig){
+        sel.innerHTML = '<option value="">Pindah ke project…</option>'+projects.filter(p=>p.id!==proj.id).map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join("");
+        sel.dataset.sig = sig; if(cur && cur!==proj.id) sel.value = cur;
+      }
+      document.getElementById("bulkCount").textContent = bulkSel.size;
+      document.getElementById("bulkMove").disabled = !(bulkSel.size && sel.value);
+    }
+    bulkPaint();
+  }
+  function bulkToggle(id){ if(bulkSel.has(id)) bulkSel.delete(id); else bulkSel.add(id); bulkRefresh(); }
+  function setBulkMode(on){ bulkMode = on; if(!on) bulkSel.clear(); renderManagePanel(); }
+  async function bulkMove(){
+    const ids = [...bulkSel].filter(id=>entries.some(e=>e.id===id)), tgt = document.getElementById("bulkTarget").value, tp = projects.find(p=>p.id===tgt);
+    if(!ids.length || !tp) return;
+    if(!(await confirmDialog("Pindahkan "+ids.length+" bug ke project \""+tp.name+"\"?", "Pindahkan"))) return;
+    try{
+      for(let i=0;i<ids.length;i+=400){
+        const batch = db.batch();
+        ids.slice(i,i+400).forEach(id=>batch.update(db.collection("entries").doc(id), { projectId:tgt }));
+        await batch.commit();
+      }
+      toast(ids.length+" bug dipindahkan ke "+tp.name+".");
+      document.getElementById("bulkTarget").value = "";
+      setBulkMode(false);
+    }catch(err){ toast("Gagal memindahkan: "+err.message); }
+  }
+  document.getElementById("btnBulk").addEventListener("click", ()=>setBulkMode(!bulkMode));
+  document.getElementById("bulkExit").addEventListener("click", ()=>setBulkMode(false));
+  document.getElementById("bulkNone").addEventListener("click", ()=>{ bulkSel.clear(); bulkRefresh(); });
+  document.getElementById("bulkAll").addEventListener("click", ()=>{ filteredEntries().forEach(e=>bulkSel.add(e.id)); bulkRefresh(); });
+  document.getElementById("bulkTarget").addEventListener("change", bulkRefresh);
+  document.getElementById("bulkMove").addEventListener("click", bulkMove);
 
   function renderBoard(){
     const wrap = document.getElementById("boardWrap");
@@ -1991,7 +2237,8 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         html += '<div class="board-empty">Tidak ada</div>';
       } else {
         for(const e of items){
-          html += '<div class="card-item" draggable="true" data-open="'+e.id+'">';
+          const bsel = bulkMode && bulkSel.has(e.id);
+          html += '<div class="card-item'+(bsel?' bulk-sel':'')+'" draggable="'+(bulkMode?'false':'true')+'" data-open="'+e.id+'">'+(bulkMode ? '<span class="bulk-check">'+(bsel?'✓':'')+'</span>' : '');
           html += e.imageData ? '<img src="'+e.imageData+'">' : '<div class="imgless">tanpa gambar</div>';
           html += '<div class="exc">'+esc(e.existing || "(belum diisi)")+'</div>';
           html += '<span class="badge '+e.status.replace(" ","-")+'" style="margin-right:4px;">'+e.status+'</span><span class="badge-priority '+(e.priority||"Medium")+'">'+(e.priority||"Medium")+'</span>';
@@ -2011,7 +2258,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     html += '</div>';
     wrap.innerHTML = html;
     wrap.querySelectorAll("[data-open]").forEach(card=>{
-      card.addEventListener("click", ()=> openEntryModal(card.dataset.open));
+      card.addEventListener("click", ()=>{ if(bulkMode) bulkToggle(card.dataset.open); else openEntryModal(card.dataset.open); });
     });
     // Klik titik status kecil -> ganti status langsung tanpa buka detail.
     wrap.querySelectorAll("[data-quick-status]").forEach(btn=>{
@@ -2055,9 +2302,9 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       return;
     }
     hint.style.display = "block";
-    let html = '<table><thead><tr><th style="width:74px;">Gambar</th><th>Existing</th><th>Expected</th><th style="width:74px;">Gambar Expected</th><th style="width:110px;">Priority</th><th style="width:110px;">Due Date</th><th style="width:120px;">Status</th><th style="width:90px;">Tanggal</th><th style="width:36px;"></th></tr></thead><tbody>';
+    let html = '<table><thead><tr>'+(bulkMode ? '<th style="width:34px;"></th>' : '')+'<th style="width:74px;">Gambar</th><th>Existing</th><th>Expected</th><th style="width:74px;">Gambar Expected</th><th style="width:110px;">Priority</th><th style="width:110px;">Due Date</th><th style="width:120px;">Status</th><th style="width:90px;">Tanggal</th><th style="width:36px;"></th></tr></thead><tbody>';
     for(const e of list){
-      html += '<tr data-id="'+e.id+'" class="clickable-row">';
+      html += '<tr data-id="'+e.id+'" class="clickable-row'+(bulkMode && bulkSel.has(e.id) ? ' bulk-sel' : '')+'">'+(bulkMode ? '<td><input type="checkbox" data-bulk-row style="width:auto;" '+(bulkSel.has(e.id)?'checked':'')+' aria-label="Pilih bug"></td>' : '');
       html += '<td>'+(e.imageData ? '<img class="thumb" data-img="'+e.imageData+'" src="'+e.imageData+'">' : '<div class="thumb empty">-</div>')+'</td>';
       html += '<td><textarea data-f="existing" placeholder="Kondisi saat ini...">'+esc(e.existing)+'</textarea></td>';
       html += '<td><textarea data-f="expected" placeholder="Kondisi yang diharapkan...">'+esc(e.expected)+'</textarea></td>';
@@ -2113,9 +2360,10 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     wrap.querySelectorAll("tr.clickable-row").forEach(tr=>{
       tr.addEventListener("click", e=>{
         if(e.target.closest("textarea, select, input, button, .thumb, .thumb-add")) return;
-        openEntryModal(tr.dataset.id);
+        if(bulkMode) bulkToggle(tr.dataset.id); else openEntryModal(tr.dataset.id);
       });
     });
+    wrap.querySelectorAll("[data-bulk-row]").forEach(cb=>cb.addEventListener("change", ()=>bulkToggle(cb.closest("tr").dataset.id)));
   }
 
   document.getElementById("btnViewBoard").addEventListener("click", ()=>{
@@ -2187,35 +2435,6 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       toast("Bug manual ditambahkan.");
     }catch(e){ toast("Gagal menambah bug."); }
   }
-  // Terapkan prioritas otomatis ke bug lama (semua project). Bug yang prioritasnya
-  // pernah diubah manual (prioManual) dilewati; bug Fixed/Rejected tidak disentuh.
-  async function applyAutoPriorityAll(){
-    const todo = [];
-    entries.forEach(e=>{
-      if(e.prioManual || e.status==="Fixed" || e.status==="Rejected") return;
-      const ap = autoPriority((e.existing||"")+" "+(e.expected||""));
-      if(!ap) return;
-      const patch = {};
-      if(ap !== (e.priority||"Medium")) patch.priority = ap;
-      if(!e.dueDate || e.dueAuto===true){
-        const nd = autoDue(e.date, ap);
-        if(nd !== e.dueDate){ patch.dueDate = nd; patch.dueAuto = true; }
-      }
-      if(Object.keys(patch).length) todo.push({ id:e.id, patch });
-    });
-    if(!todo.length){ toast("Tidak ada bug lama yang perlu diubah."); return; }
-    const nPrio = todo.filter(t=>t.patch.priority).length;
-    if(!confirm("Terapkan prioritas otomatis?\n\n"+nPrio+" bug berubah prioritas, "+todo.length+" bug diperbarui (termasuk due date).\nBug yang prioritasnya pernah diatur manual & bug Fixed/Rejected dilewati.")) return;
-    try{
-      for(let i=0;i<todo.length;i+=400){
-        const batch = db.batch();
-        todo.slice(i,i+400).forEach(t=>batch.update(db.collection("entries").doc(t.id), t.patch));
-        await batch.commit();
-      }
-      toast("Selesai: "+todo.length+" bug diperbarui.");
-    }catch(err){ toast("Gagal menerapkan prioritas otomatis."); }
-  }
-  document.getElementById("btnAutoPrioAll").addEventListener("click", applyAutoPriorityAll);
   document.getElementById("btnManualRow").addEventListener("click", addManualEntry);
   document.getElementById("quickDate").addEventListener("change", renderManagePanel);
   document.getElementById("showAllDates").addEventListener("change", renderManagePanel);
@@ -4306,14 +4525,25 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   const extPanel = document.getElementById("tab-ext");
   const $ext = sel=>extPanel.querySelector(sel);
   function devDlg(){ navigateTo("ext"); }
+  const extFileIcon = n=>{ const e = (String(n).split(".").pop()||"").toLowerCase(); return /^(png|jpe?g|gif|webp|svg)$/.test(e) ? "🖼️" : e==="pdf" ? "📕" : /^(docx?|rtf)$/.test(e) ? "📘" : /^(xlsx?|csv)$/.test(e) ? "📗" : /^(pptx?)$/.test(e) ? "📙" : /^(mp4|mov|webm)$/.test(e) ? "🎬" : /^(mp3|wav|m4a)$/.test(e) ? "🎵" : /^(zip|rar|7z)$/.test(e) ? "🗜️" : "📄"; };
   function devDraw(){
     const pend = entries.filter(e=>e.devStatus), pn = id=>(projects.find(p=>p.id===id)||{}).name||"-";
-    $ext("#dlPend").innerHTML = pend.length ? '<b style="font-size:13px">⏳ Menunggu pengecekan QA ('+pend.length+')</b>'+pend.map(e=>'<div class="dv-lnk" data-pe="'+e.id+'" style="flex-wrap:wrap"><span class="dev-detail-link" data-detail title="Lihat detail bug" style="flex:1 1 240px"><b>'+esc(pn(e.projectId))+'</b> · '+esc(String(e.existing||"").slice(0,70))+'<br><small>'+esc(e.devBy||"Dev")+': '+esc(e.status||"Open")+' → <b>'+esc(e.devStatus)+'</b>'+(e.devNote?' · “'+esc(e.devNote)+'”':'')+'</small></span><button data-ok class="primary">✓ Terapkan</button><button data-no>✕ Tolak</button></div>').join("")+'<div style="margin-bottom:10px"></div>' : "";
-    $ext("#dlList").innerHTML = devLinks.length ? devLinks.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(l=>'<div class="dv-lnk" data-id="'+l.id+'" style="flex-wrap:wrap"><span style="flex:1 1 200px" title="'+esc(devUrl(l.id))+'"><b>'+esc(l.name)+'</b> · '+esc((l.projectIds||[]).map(pn).join(", "))+'<br><small style="color:var(--text-dim)">'+(devExpired(l)?'⛔ Kedaluwarsa':l.expiresAt?'Sampai '+esc(new Date(l.expiresAt).toLocaleDateString("id-ID")):'Tanpa batas')+(l.updatedAt?' · update '+esc(new Date(l.updatedAt).toLocaleString("id-ID")):'')+'</small></span><button data-cp>Salin</button><button data-up title="Perbarui sekarang">↻</button><button data-rv class="danger-outline">Cabut</button></div>').join("") : '<div class="hint">Belum ada link.</div>';
+    const live = devLinks.filter(l=>!devExpired(l)).length;
+    $ext("#extStatDev").textContent = live; $ext("#extStatPend").textContent = pend.length; $ext("#dlCount").textContent = devLinks.length;
+    const bd = s=>'<span class="badge '+String(s).replace(" ","-")+'">'+esc(s)+'</span>';
+    $ext("#dlPend").innerHTML = pend.length ? '<div class="ext-pend"><div class="ext-sec-h"><h3>⏳ Menunggu pengecekan QA</h3><span class="ext-count">'+pend.length+'</span></div>'+
+      pend.map(e=>'<div class="ext-pend-item" data-pe="'+e.id+'"><div class="ext-pend-main" data-detail title="Lihat detail bug"><div class="ext-ttl"><span class="ext-pj">'+esc(pn(e.projectId))+'</span> '+esc(String(e.existing||"").slice(0,90))+'</div><div class="ext-meta">'+esc(e.devBy||"Dev")+' mengusulkan '+bd(e.status||"Open")+' → '+bd(e.devStatus)+(e.devNote?' · “'+esc(e.devNote)+'”':'')+'</div></div><div class="ext-acts"><button data-ok class="primary">✓ Terapkan</button><button data-no>✕ Tolak</button></div></div>').join("")+'</div>' : "";
+    $ext("#dlList").innerHTML = devLinks.length ? devLinks.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(l=>{
+      const off = devExpired(l);
+      return '<div class="ext-link'+(off?' is-off':'')+'" data-id="'+l.id+'"><div class="ext-av">'+esc(String(l.name||"?").trim().charAt(0).toUpperCase()||"?")+'</div><div class="ext-main"><div class="ext-name">'+esc(l.name)+'<span class="ext-pill '+(off?'off':'ok')+'">'+(off?'Kedaluwarsa':'Aktif')+'</span></div>'+
+        '<div class="ext-chips">'+((l.projectIds||[]).map(id=>'<span class="ext-pj">'+esc(pn(id))+'</span>').join("")||'<span class="ext-meta">Tanpa project</span>')+'</div>'+
+        '<div class="ext-meta">'+(l.expiresAt?'Berlaku sampai '+esc(new Date(l.expiresAt).toLocaleDateString("id-ID")):'Tanpa batas waktu')+(l.updatedAt?' · diperbarui '+esc(new Date(l.updatedAt).toLocaleString("id-ID")):'')+'</div></div>'+
+        '<div class="ext-acts"><button class="primary" data-cp title="'+esc(devUrl(l.id))+'">Salin link</button><button data-op title="Buka seperti yang dilihat developer">↗ Buka</button><button data-ed>✎ Edit</button><button data-up title="Perbarui sekarang">↻</button><button data-rv class="danger-outline">Cabut</button></div></div>'; }).join("")
+      : '<div class="ext-empty"><b>🔗</b>Belum ada link developer.<br>Buat yang pertama lewat form di samping.</div>';
     const box = $ext("#dlPrj"), sig = projects.map(p=>p.id+":"+p.name).join("|");
     if(box.dataset.sig !== sig){
       const keep = new Set(Array.from(box.querySelectorAll("input:checked")).map(x=>x.value));
-      box.innerHTML = projects.map(p=>'<label style="font-size:13px;display:flex;gap:5px;align-items:center"><input type="checkbox" value="'+p.id+'" style="width:auto"> '+esc(p.name)+'</label>').join("") || '<span class="hint">Belum ada project.</span>';
+      box.innerHTML = projects.map(p=>'<label class="ext-opt"><input type="checkbox" value="'+esc(p.id)+'"><span>'+esc(p.name)+'</span></label>').join("") || '<span class="hint">Belum ada project.</span>';
       box.dataset.sig = sig;
       box.querySelectorAll("input").forEach(i=>{ if(keep.has(i.value)) i.checked = true; });
     }
@@ -4332,6 +4562,8 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   $ext("#dlList").addEventListener("click", async e=>{
     const row = e.target.closest("[data-id]"); if(!row) return; const l = devLinks.find(x=>x.id===row.dataset.id); if(!l) return;
     if(e.target.closest("[data-cp]")){ try{ await navigator.clipboard.writeText(devUrl(l.id)); toast("Link disalin."); }catch(_){ window.prompt("Salin link:", devUrl(l.id)); } }
+    else if(e.target.closest("[data-ed]")) extEditDev(l);
+    else if(e.target.closest("[data-op]")) window.open(devUrl(l.id), "_blank", "noopener");
     else if(e.target.closest("[data-up]")){ try{ await devPush(l, true); toast("Diperbarui."); }catch(err){ toast("Gagal: "+err.message); } }
     else if(e.target.closest("[data-rv]")){ if(await confirmDialog('Cabut link "'+l.name+'"? Developer tidak bisa membukanya lagi.', "Cabut")){ try{
       for(const k of Object.keys(l.imgSig||{})) await db.collection("devImg").doc(l.id+"_"+k).delete();
@@ -4347,23 +4579,98 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     }catch(err){ toast("Gagal membuat link: "+err.message); }
   };
 
+  // ---- edit / buat link (CRUD lengkap) ----
+  let extShareRows = [];
+  const extExpOpts = (cur, withHour)=>'<option value="keep">Tetap ('+(cur ? "sampai "+new Date(cur).toLocaleDateString("id-ID") : "tanpa batas")+')</option>'+
+    (withHour ? '<option value="3600000">Ubah: 1 jam dari sekarang</option><option value="86400000">Ubah: 1 hari dari sekarang</option>' : '')+
+    '<option value="604800000">Ubah: 7 hari dari sekarang</option><option value="2592000000">Ubah: 30 hari dari sekarang</option><option value="7776000000">Ubah: 90 hari dari sekarang</option><option value="0">Ubah: tanpa batas waktu</option>';
+  const extExpVal = (v, cur)=> v==="keep" ? (cur||null) : (parseInt(v,10) ? Date.now()+parseInt(v,10) : null);
+  function extEditDev(l){
+    const sel = new Set(l.projectIds||[]);
+    const ov = dvOv('<h3 style="margin:0 0 4px">Edit link developer</h3><div class="hint" style="margin-bottom:6px">Alamat link tidak berubah. Developer langsung melihat perubahan project setelah disimpan.</div>'+
+      '<label>Nama developer</label><input type="text" id="edName" value="'+esc(l.name)+'">'+
+      '<label>Project yang bisa dilihat</label><div class="ext-prjs" id="edPrj">'+(projects.map(p=>'<label class="ext-opt"><input type="checkbox" value="'+esc(p.id)+'"'+(sel.has(p.id)?' checked':'')+'><span>'+esc(p.name)+'</span></label>').join("") || '<span class="hint">Belum ada project.</span>')+'</div>'+
+      '<label>Masa berlaku</label><select id="edExp">'+extExpOpts(l.expiresAt)+'</select>'+
+      '<div class="modal-actions"><button id="edX">Batal</button><button class="primary" id="edOk">Simpan</button></div>');
+    ov.querySelector("#edX").onclick = ov.close;
+    ov.querySelector("#edOk").onclick = async ()=>{
+      const name = ov.querySelector("#edName").value.trim(), ids = Array.from(ov.querySelectorAll("#edPrj input:checked")).map(x=>x.value), expiresAt = extExpVal(ov.querySelector("#edExp").value, l.expiresAt);
+      if(!name || !ids.length){ toast("Isi nama dan pilih minimal satu project."); return; }
+      try{
+        await db.collection("devLinks").doc(l.id).update({ name, projectIds:ids, expiresAt });
+        await devPush({ ...l, name, projectIds:ids, expiresAt }, true);
+        ov.close(); toast("Link developer diperbarui.");
+      }catch(err){ toast("Gagal: "+err.message); }
+    };
+  }
+  function extEditShare(id){
+    const x = extShareRows.find(r=>r.id===id); if(!x) return;
+    const ov = dvOv('<h3 style="margin:0 0 4px">Edit link dokumen</h3><div class="hint" style="margin-bottom:6px">'+esc(x.name||"(file)")+'</div>'+
+      '<label>Masa berlaku</label><select id="esExp">'+extExpOpts(x.expiresAt, true)+'</select>'+
+      '<div class="modal-actions"><button id="esX">Batal</button><button class="primary" id="esOk">Simpan</button></div>');
+    ov.querySelector("#esX").onclick = ov.close;
+    ov.querySelector("#esOk").onclick = async ()=>{
+      try{ await db.collection("driveShares").doc(id).update({ expiresAt: extExpVal(ov.querySelector("#esExp").value, x.expiresAt) }); ov.close(); toast("Link dokumen diperbarui."); extLoadShares(); }
+      catch(err){ toast("Gagal: "+err.message); }
+    };
+  }
+  function extNewDocLink(){
+    const files = dvItems.filter(x=>x.kind!=="folder" && !x.trashedAt).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+    const ov = dvOv('<h3 style="margin:0 0 10px">Buat link dokumen</h3><input type="text" id="ndQ" placeholder="Cari file di tab Dokumen…" style="margin-bottom:8px"><div id="ndList" style="max-height:260px;overflow:auto"></div>'+
+      '<label>Masa berlaku</label><select id="ndExp"><option value="3600000">1 jam</option><option value="86400000" selected>1 hari</option><option value="604800000">7 hari</option><option value="2592000000">30 hari</option><option value="0">Tanpa batas waktu</option></select>'+
+      '<div class="modal-actions"><button id="ndX">Batal</button><button class="primary" id="ndOk" disabled>Buat link</button></div>');
+    let pick = null;
+    const sz = n=>n>=1048576 ? (n/1048576).toFixed(1)+" MB" : Math.max(1,Math.round(n/1024))+" KB";
+    const draw = ()=>{
+      const q = ov.querySelector("#ndQ").value.trim().toLowerCase(), list = files.filter(f=>!q || String(f.name).toLowerCase().includes(q)).slice(0,80);
+      ov.querySelector("#ndList").innerHTML = list.length ? list.map(f=>'<div class="ext-pick'+(pick===f.id?' on':'')+'" data-fid="'+esc(f.id)+'"><span>'+extFileIcon(f.name)+'</span><span style="word-break:break-all">'+esc(f.name)+'</span><small>'+esc(f.size ? sz(f.size) : "")+'</small></div>').join("") : '<div class="hint">'+(files.length ? "Tidak ada file yang cocok." : "Belum ada file di tab Dokumen. Unggah dulu di sana.")+'</div>';
+      ov.querySelector("#ndOk").disabled = !pick;
+    };
+    ov.querySelector("#ndQ").oninput = draw;
+    ov.querySelector("#ndList").onclick = e=>{ const r = e.target.closest("[data-fid]"); if(!r) return; pick = r.dataset.fid; draw(); };
+    ov.querySelector("#ndX").onclick = ov.close;
+    ov.querySelector("#ndOk").onclick = async ()=>{
+      const it = files.find(f=>f.id===pick); if(!it) return; const ms = parseInt(ov.querySelector("#ndExp").value,10);
+      try{
+        await db.collection("driveShares").add({ fid:it.id, name:it.name, mime:it.mime||"", size:it.size||0, chunks:it.chunks||0, createdAt:Date.now(), expiresAt: ms ? Date.now()+ms : null, by:auditWho() });
+        ov.close(); toast("Link dokumen dibuat. Klik Salin link."); extLoadShares();
+      }catch(err){ toast("Gagal: "+err.message); }
+    };
+    draw();
+  }
+  $ext("#extNewDoc").onclick = extNewDocLink;
+
   // link dokumen yang dibagikan dari tab Dokumen
   async function extLoadShares(){
     const box = $ext("#extShares"); box.innerHTML = '<div class="hint">Memuat…</div>';
     try{
       const snap = await db.collection("driveShares").get();
       const rows = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-      box.innerHTML = rows.length ? rows.map(x=>{ const exp = x.expiresAt && Date.now()>x.expiresAt;
-        return '<div class="dv-lnk" data-id="'+esc(x.id)+'" style="flex-wrap:wrap"><span style="flex:1 1 220px" title="'+esc(location.origin+location.pathname+"?share="+x.id)+'"><b>'+esc(x.name||"(file)")+'</b><br><small style="color:var(--text-dim)">'+(exp?'⛔ Kedaluwarsa':x.expiresAt?'Sampai '+esc(new Date(x.expiresAt).toLocaleString("id-ID")):'Tanpa batas')+(x.by?' · oleh '+esc(x.by):'')+'</small></span><button data-cp>Salin</button><button data-rv class="danger-outline">Cabut</button></div>'; }).join("") : '<div class="hint">Belum ada link dokumen.</div>';
-    }catch(err){ box.innerHTML = '<div class="hint">Gagal memuat: '+esc(err.message)+'</div>'; }
+      extShareRows = rows;
+      const live = rows.filter(x=>!(x.expiresAt && Date.now()>x.expiresAt)).length;
+      $ext("#extStatDoc").textContent = live; $ext("#extDocCount").textContent = rows.length;
+      box.innerHTML = rows.length ? rows.map(x=>{ const off = x.expiresAt && Date.now()>x.expiresAt;
+        return '<div class="ext-link'+(off?' is-off':'')+'" data-id="'+esc(x.id)+'"><div class="ext-ico">'+extFileIcon(x.name)+'</div><div class="ext-main"><div class="ext-name">'+esc(x.name||"(file)")+'<span class="ext-pill '+(off?'off':'ok')+'">'+(off?'Kedaluwarsa':'Aktif')+'</span></div>'+
+          '<div class="ext-meta">'+(x.size ? esc(x.size>=1048576 ? (x.size/1048576).toFixed(1)+" MB" : (x.size/1024).toFixed(0)+" KB")+' · ' : '')+(x.expiresAt?'Berlaku sampai '+esc(new Date(x.expiresAt).toLocaleString("id-ID")):'Tanpa batas waktu')+(x.by?' · oleh '+esc(x.by):'')+'</div></div>'+
+          '<div class="ext-acts"><button class="primary" data-cp title="'+esc(location.origin+location.pathname+"?share="+x.id)+'">Salin link</button><button data-op title="Buka seperti yang dilihat penerima">↗ Buka</button><button data-ed>✎ Edit</button><button data-rv class="danger-outline">Cabut</button></div></div>'; }).join("")
+        : '<div class="ext-empty"><b>📎</b>Belum ada link dokumen.<br>Buka tab Dokumen, klik kanan file, lalu pilih Bagikan link.</div>';
+    }catch(err){ box.innerHTML = '<div class="ext-empty"><b>⚠️</b>Gagal memuat: '+esc(err.message)+'</div>'; }
   }
   $ext("#extShares").addEventListener("click", async e=>{
     const row = e.target.closest("[data-id]"); if(!row) return;
     if(e.target.closest("[data-cp]")){ const url = location.origin+location.pathname+"?share="+row.dataset.id; try{ await navigator.clipboard.writeText(url); toast("Link disalin."); }catch(_){ window.prompt("Salin link:", url); } }
+    else if(e.target.closest("[data-ed]")) extEditShare(row.dataset.id);
+    else if(e.target.closest("[data-op]")) window.open(location.origin+location.pathname+"?share="+row.dataset.id, "_blank", "noopener");
     else if(e.target.closest("[data-rv]")){ if(await confirmDialog("Cabut link dokumen ini? Orang yang punya link tidak bisa mengunduh lagi.", "Cabut")){ try{ await db.collection("driveShares").doc(row.dataset.id).delete(); toast("Link dicabut."); }catch(err){ toast("Gagal: "+err.message); } extLoadShares(); } }
   });
   $ext("#extSharesRefresh").onclick = extLoadShares;
+  extPanel.querySelectorAll("[data-ext-sub]").forEach(b=>b.addEventListener("click", ()=>{
+    extPanel.querySelectorAll("[data-ext-sub]").forEach(x=>x.classList.toggle("active", x===b));
+    $ext("#extSubDev").style.display = b.dataset.extSub==="dev" ? "" : "none";
+    $ext("#extSubDoc").style.display = b.dataset.extSub==="doc" ? "" : "none";
+  }));
   document.querySelector('.tab-btn[data-tab="ext"]').addEventListener("click", extLoadShares);
+  setTimeout(()=>{ try{ extLoadShares(); }catch(_){} }, 2500);
 
   // ================= enhancement (Firestore: koleksi "enhancements") =================
   const ENH_STATUS = ["Usulan","Dikerjakan","Selesai","Ditolak"];
@@ -4735,13 +5042,6 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   document.getElementById("momProject").addEventListener("change", renderMom);
   document.getElementById("momSearch").addEventListener("input", renderMom);
   document.getElementById("momAdd").addEventListener("click", ()=>openMomModal(null));
-  const MOM_PRESET_AURORA = {"title": "Aurora x Mediflash - PT Sarana Solusi Amanah (SSA)", "date": "2026-10-08", "time": "10.00 WIB", "place": "Kantor PT SSA", "notulis": "Nisa", "attendees": "Pak Rinaldi, Pak Roland, Pak Defit, Pak Fikri, Zahwa, Nisa, Ahmad, 6 perwakilan PT SSA", "agenda": "1. Perkenalan SSA dan produk Mediflash.\n2. Demo Aurora.\n3. Pembahasan skema kerja sama dan persiapan PKS.", "discussion": "A. Skema Kerja Sama\n- Konsep kerja sama yang dibahas adalah produk hybrid Aurora x Mediflash.\n- SSA/Mediflash tetap menjalankan sistem dan layanan existing, sedangkan Aurora berfokus pada marketing, onboarding klien, dan pengembangan layanan baru.\n- Aurora akan menggunakan jaringan provider Mediflash yang saat ini berjumlah sekitar 2.500 provider.\n- Terdapat kemungkinan penggunaan konsep re-branding Aurora x Mediflash.\n- Diperkirakan masih diperlukan 1-2 pertemuan untuk finalisasi, serta kemungkinan pertemuan tambahan untuk ceremonial.\n\nB. Produk dan Pricing\n- Produk dan layanan SSA meliputi Mediflash, ASO, Provider Setup, Reimbursement Klaim, konsultasi asuransi jiwa dan kesehatan, MCU, serta Claim Assistance.\n- Skema ASO telah menjadi pilihan SSA saat ini. Secara umum, rawat jalan dapat menggunakan ASO, sedangkan rawat inap dapat menggunakan fully funded, sesuai kebutuhan klien SSA.\n- SSA akan menggunakan pricing existing sebagai dasar simulasi paket, sementara biaya Aurora akan ditambahkan.\n- Aurora belum dapat menentukan harga final karena biaya provider dan operasional masih perlu dihitung.\n- Kedua pihak akan membawa pricing masing-masing pada pertemuan berikutnya.\n\nC. Integrasi Sistem dan Data\n- Di TPA lain terdapat concern terkait ketidaksesuaian data antara portal HR, data peserta, dan sistem lainnya.\n- Dibutuhkan integrasi API antara Mediflash dan Aurora untuk mengambil data peserta, termasuk pencarian berdasarkan nomor peserta melalui portal provider.\n- Data peserta yang telah diproses melalui Aurora diharapkan dapat terhubung dan tampil di Mediflash.\n- Aurora membutuhkan akun staging untuk mempelajari sistem existing Mediflash.\n- Perlu disiapkan kebutuhan dashboard untuk Mediflash, termasuk reporting dalam format Excel atau PDF.\n- Usulan dari Pak Rinaldi: peremajaan UI Mediflash agar lebih user friendly, termasuk kemungkinan pengembangan Mediflash Mobile.\n\nD. Verifikasi Peserta dan Layanan Provider\n- Saat ini Mediflash melakukan verifikasi menggunakan nomor kartu, kemudian rumah sakit mencocokkan data dengan identitas peserta.\n- Dengan Aurora, verifikasi hanya menggunakan wajah untuk mempermudah proses pelayanan.\n- Pengadaan perangkat tambahan untuk provider menjadi concern karena dapat menambah biaya operasional. Mekanisme verifikasi perlu menyesuaikan fasilitas yang tersedia di rumah sakit.\n- Saat ini di SSA, untuk kondisi darurat atau IGD, peserta dilayani terlebih dahulu sebelum verifikasi identitas.\n- Aurora berpotensi menangani layanan di luar jaringan provider Mediflash sesuai kesepakatan.\n- Perlu ditentukan pembagian tanggung jawab terkait verifikasi identitas dan kasus ketidaksesuaian data.\n\nE. Surat Jaminan dan Fitur Layanan\n- Alur surat jaminan merupakan salah satu prioritas utama dalam pengembangan sistem.\n- Pada sistem existing, surat jaminan disetujui oleh SSA dan ditargetkan dapat diproses sekitar lima menit melalui Call Center.\n- Perlu dibahas lebih lanjut integrasi surat jaminan dengan telemedicine, admission, dan FWA.\n- Fitur telemedicine berpotensi menggunakan sistem pemilihan jadwal berdasarkan ketersediaan.\n- Fitur SCPA juga menjadi perhatian dan perlu dikonfirmasi kebutuhan detailnya.\n- Aurora mempertimbangkan kerja sama dengan vendor wellness, seperti gym, untuk mendukung pencegahan dan pengendalian biaya klaim.\n\nF. Branding dan Pengembangan Sistem\n- Aurora mengusulkan penyesuaian UI Mediflash agar lebih modern dan mudah digunakan.\n- Penamaan Aurora x Mediflash masih perlu dibahas.\n- SSA perlu mengonfirmasi rencana perubahan UI dan branding kepada pihak EDI.\n- Perlu disusun metrik layanan dan pembagian tanggung jawab dalam draft PKS.\n- Aurora juga perlu memperbaiki wording pada dokumen PDF Biosense.", "decisions": "1. Kerja sama akan dilanjutkan dengan konsep produk hybrid Aurora x Mediflash.\n2. SSA/Mediflash mempertahankan sistem existing, sedangkan Aurora menangani marketing, onboarding klien, dan pengembangan layanan baru sesuai kesepakatan.\n3. Aurora akan memanfaatkan jaringan provider Mediflash.\n4. Pricing existing SSA menjadi dasar simulasi paket, dengan penambahan biaya layanan Aurora.\n5. Pricing final akan dibahas kembali setelah kedua pihak menyiapkan simulasi biaya.\n6. Integrasi sistem, perubahan UI, dan branding akan dibahas lebih lanjut bersama tim terkait.\n7. Draft PKS akan disiapkan untuk mengatur ruang lingkup kerja sama, metrik layanan, dan pembagian tanggung jawab.", "actionItems": [{"task": "Menyiapkan materi presentasi Aurora yang lebih mudah dipahami.", "pic": "Aurora", "due": "", "done": false}, {"task": "Menyiapkan pricing dan simulasi paket masing-masing.", "pic": "Aurora & SSA", "due": "", "done": false}, {"task": "Menyusun draft PKS.", "pic": "Aurora & SSA", "due": "", "done": false}, {"task": "Menyediakan akun staging Mediflash.", "pic": "SSA/Mediflash", "due": "", "done": false}, {"task": "Membahas kebutuhan API, integrasi data, dan dashboard.", "pic": "Tim IT Aurora & Mediflash", "due": "", "done": false}, {"task": "Membahas alur surat jaminan, FWA, admission, dan verifikasi peserta.", "pic": "Aurora & Mediflash", "due": "", "done": false}, {"task": "Mengonfirmasi perubahan UI dan branding kepada EDI.", "pic": "SSA", "due": "", "done": false}, {"task": "Memperbaiki wording PDF Biosense.", "pic": "Aurora", "due": "", "done": false}], "nextMeeting": "Pricing & simulasi paket; draft PKS; evaluasi sistem existing & integrasi; alur surat jaminan, verifikasi peserta, dan dashboard. Catatan: detail fitur, integrasi, pricing, dan branding masih perlu konfirmasi kedua pihak."};
-  document.getElementById("momPresetAurora").addEventListener("click", ()=>{
-    const ap = projects.find(x=>/aurora/i.test(x.name||""));
-    const exist = momItems.find(m=>m.title===MOM_PRESET_AURORA.title && m.date===MOM_PRESET_AURORA.date);
-    if(exist){ openMomModal(exist.id); toast("Catatan ini sudah tersimpan, dibuka untuk diedit."); return; }
-    openMomModal(null, { ...MOM_PRESET_AURORA, ...(ap ? { projectId: ap.id } : {}) });
-  });
   document.getElementById("momExport").addEventListener("click", openMomExportModal);
 
   // ---- teks MoM (siap tempel ke WhatsApp / email) ----
@@ -5598,6 +5898,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     { label:"All Akses", note:"Akses project", icon:"⌘", action:()=>navigateTo("akses") },
     { label:"Knowledge", note:"Informasi produk", icon:"◇", action:()=>navigateTo("knowledge") },
     { label:"Akses Eksternal", note:"Link developer & dokumen", icon:"🔗", action:()=>navigateTo("ext") },
+    { label:"Panduan Pemakaian", note:"Cara memakai semua fitur", icon:"?", action:()=>navigateTo("guide") },
     { label:"Suara notifikasi", note:"Klik untuk aktif/nonaktif", icon:"🔔", action:()=>{ const on = !devSoundOn(); try{ localStorage.setItem("qa_dev_sound", on ? "on" : "off"); }catch(_){} devUnlock(); if(on) devPing(); toast("Suara notifikasi "+(on?"aktif":"nonaktif")+"."); } },
     { label:"Notifikasi browser", note:"Saat tab lain dibuka (klik untuk aktifkan)", icon:"🪧", action:()=>{
         if(!("Notification" in window)){ toast("Browser ini tidak mendukung notifikasi."); return; }
@@ -5642,6 +5943,108 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       e.preventDefault(); navigateTo("manage"); document.getElementById("bugSearch").focus();
     }
   });
+
+  // ================= panduan pemakaian =================
+  const GUIDE = [
+    { id:"mulai", icon:"🚀", title:"Mulai cepat: alur kerja harian", tab:null,
+      sum:"Urutan yang paling sering dipakai QA, dari mulai tes sampai laporan.",
+      steps:["Masuk dengan akun Anda. Status koneksi tampil di pojok kanan atas.","Buka **Kelola Bug**, lalu pilih project yang sedang dites.","Tarik screenshot temuan ke kotak unggah (boleh banyak sekaligus), isi **Existing** dan **Expected**, lalu klik **Simpan Semua**.","Pantau bug di papan. Ubah status lewat tarik-lepas kartu atau titik warna kecil di kartu.","Cek **Akses Eksternal** kalau ada usulan status dari developer, lalu **Terapkan** atau **Tolak**.","Tutup hari di **Laporan Harian**: salin **Teks Laporan** untuk dikirim, atau **Export PDF**."],
+      tips:["Bug yang masih Open atau In Progress otomatis dibawa ke hari berikutnya dengan label kuning Carry-over, jadi tidak perlu dicatat ulang.","Semua orang di tim melihat data yang sama secara langsung, tidak perlu refresh."] },
+    { id:"dash", icon:"◫", title:"Dashboard", tab:"dash",
+      sum:"Ringkasan kondisi kualitas, tempat paling cepat untuk melihat apa yang mendesak.",
+      steps:["Klik **+ Catat temuan** untuk langsung ke Kelola Bug, atau **Lihat laporan hari ini** untuk ke Laporan Harian.","Kartu **Fokus hari ini** menunjukkan jumlah temuan dan yang sudah selesai pada periode yang dipilih.","Di **Ringkasan kualitas**, ganti periode (Minggu ini, Minggu lalu, 7 hari terakhir, 30 hari terakhir).","Klik bug yang tampil di dashboard untuk membuka detailnya.","Klik **Export PDF** untuk mengunduh ringkasan."],
+      tips:[] },
+    { id:"bug", icon:"▦", title:"Kelola Bug: memilih project", tab:"manage",
+      sum:"Semua pencatatan bug dimulai dari memilih project.",
+      steps:["Di bagian **Pilih project**, klik kartu project. Kartu menampilkan jumlah bug dan berapa yang belum selesai.","Gunakan kotak **Cari project** untuk menyaring kalau project banyak.","Tambah project baru lewat tombol tambah, ketik nama, lalu **Tambah**.","Arahkan kursor ke kartu project untuk mengubah nama (✎) atau menghapusnya (✕)."],
+      tips:["Menghapus project tidak dianjurkan kalau masih punya bug. Pindahkan bug-nya dulu (lihat bagian pindah project)."] },
+    { id:"bug-add", icon:"📸", title:"Kelola Bug: mencatat temuan", tab:"manage",
+      sum:"Ada dua cara: dari screenshot, atau manual tanpa gambar.",
+      steps:["Tarik satu atau banyak screenshot ke kotak **Tarik screenshot ke sini**, atau klik kotaknya untuk memilih file.","Untuk tiap gambar, pilih **Project** (atau **Lainnya** untuk mengetik nama baru), isi **Existing** (kondisi sekarang) dan **Expected** (kondisi yang diharapkan).","Opsional: tambah **Gambar Expected**, atur **Status**, **Priority**, dan **Due Date**.","Klik **Simpan Semua**. Klik **Batal** untuk membuang semua yang belum disimpan, atau **Hapus** pada satu gambar saja.","Tidak punya screenshot? Klik **+ Tambah bug manual (tanpa gambar)**."],
+      tips:["**Prioritas dan due date otomatis:** kata “wording” menjadi Low; “scan”, “skrining”, dan “nominal” menjadi High; “cetak pdf”, “bahasa”, dan “tampilan” menjadi Medium. Due date menyusul: Critical/High +1 hari, Medium +2 hari, Low +3 hari.","Kalau Anda mengubah prioritas atau due date sendiri, nilai itu tidak akan ditimpa otomatis lagi."] },
+    { id:"bug-board", icon:"🗂️", title:"Kelola Bug: papan, tabel, dan filter", tab:"manage",
+      sum:"Dua tampilan untuk data yang sama. Pilih lewat tombol **Papan** atau **Tabel**.",
+      steps:["**Papan** punya kolom Open, In Progress, Fixed, Rejected, dan Update. Tarik kartu antar kolom untuk mengganti status.","Di kartu, klik **titik warna kecil** untuk ganti status tanpa membuka detail. Di HP, pakai dropdown **Ubah status**.","**Tabel** memungkinkan edit langsung di baris: Existing, Expected, priority, due date, status, dan tanggal. Klik area kosong di baris untuk membuka detail lengkap.","Gunakan **kotak cari** (mencari di Existing dan Expected), **filter prioritas**, dan pilihan **tanggal**. Centang **semua tanggal** untuk melihat seluruh riwayat project.","Tombol **📝 Teks Laporan** dan **⬇ Export PDF** di atas membuat laporan project yang sedang dipilih."],
+      tips:["Label **Carry-over** (kuning) berarti bug belum selesai dari hari sebelumnya. Label **Selesai hari ini** (hijau) berarti bug baru saja diselesaikan hari ini."] },
+    { id:"bug-detail", icon:"🔎", title:"Detail bug dan pindah project", tab:"manage",
+      sum:"Klik sebuah kartu (atau area kosong di baris tabel) untuk membuka detail bug.",
+      steps:["Ubah **Existing**, **Expected**, gambar, **Status**, **Priority**, **Due Date**, dan **Tanggal** (tombol ‹ › untuk mundur atau maju sehari).","Untuk memindahkan satu bug, ganti dropdown **Project**, lalu klik **Simpan**. Bug langsung pindah ke project tujuan.","Kalau developer mengusulkan status, muncul banner kuning dengan tombol **Terapkan** atau **Tolak** di bagian atas detail.","Klik **Hapus** untuk menghapus bug (akan ada konfirmasi)."],
+      tips:[] },
+    { id:"bug-bulk", icon:"☑", title:"Pindahkan banyak bug sekaligus", tab:"manage",
+      sum:"Untuk memindahkan banyak bug ke project lain dalam sekali jalan.",
+      steps:["Di Kelola Bug, klik **☑ Pilih beberapa**. Kartu (atau baris tabel) mendapat kotak centang.","Klik kartu atau centang baris untuk memilih. Gunakan **Pilih semua yang tampil** untuk memilih seluruh hasil filter, atau **Kosongkan** untuk mengulang.","Pada bar di bawah layar, pilih project tujuan di dropdown, lalu klik **Pindahkan** dan konfirmasi.","Klik ✕ di bar untuk keluar dari mode pilih tanpa memindahkan."],
+      tips:["Pilihan otomatis dikosongkan kalau Anda berganti project.","“Pilih semua yang tampil” mengikuti filter yang sedang aktif, jadi gabungkan dengan pencarian untuk memilih sekelompok bug sejenis."] },
+    { id:"enh", icon:"✧", title:"Enhancement", tab:"enh",
+      sum:"Usulan perbaikan atau fitur, dipisah dari bug.",
+      steps:["Klik **+ Enhancement**, isi judul, deskripsi, dan project.","Ubah status dengan menarik kartu antar kolom (Usulan, Dikerjakan, Selesai, Ditolak) atau klik titik warna di kartu.","Klik kartu untuk mengedit atau menghapus.","Filter per project di bagian atas, dan **Export PDF** untuk rekap."],
+      tips:["Action item dari Catatan Meeting otomatis masuk ke sini dengan status Usulan."] },
+    { id:"mom", icon:"✎", title:"Catatan Meeting (MoM)", tab:"mom",
+      sum:"Mencatat hasil meeting per project: peserta, pembahasan, keputusan, dan action item.",
+      steps:["Klik **+ Catatan Meeting**, lalu isi judul, tanggal, waktu, tempat, notulis, peserta, dan project.","Tulis pembahasan, keputusan, dan **action item**. Draf tersimpan otomatis saat Anda mengetik, setelah judul, tanggal, dan project terisi.","Klik **Simpan**. Tiap action item otomatis dibuatkan Enhancement. Mencentang action item selesai akan mengubah Enhancement-nya menjadi Selesai.","Buka sebuah catatan untuk mengunduh **PDF MoM** atau menyalin **teks** yang siap ditempel ke WhatsApp atau email.","**Export PDF** di toolbar merekap beberapa meeting sekaligus. Gunakan filter project dan kotak cari untuk mencari catatan."],
+      tips:["Menghapus action item di catatan tidak menghapus Enhancement yang sudah terbuat."] },
+    { id:"daily", icon:"▤", title:"Laporan Harian", tab:"daily",
+      sum:"Rekap bug per tanggal, siap dikirim.",
+      steps:["Pilih **Tanggal** dan **Project** (atau Semua Project). Centang **semua tanggal** untuk melihat semuanya.","Klik **📝 Teks Laporan** untuk mendapatkan teks yang bisa disalin dan dikirim ke atasan.","Klik **⬇ Export PDF** untuk laporan berformat PDF."],
+      tips:["Bug carry-over ikut tercantum, begitu juga bug yang baru diselesaikan pada tanggal tersebut."] },
+    { id:"scan", icon:"◎", title:"Ceklis Scan AI", tab:"scan",
+      sum:"Pemeriksaan harian: apakah scan AI tiap project berhasil atau gagal.",
+      steps:["Pilih tanggal dengan ‹ ›, atau klik **Hari ini**.","Tandai hasil tiap project: berhasil atau gagal. Titik di kanan menunjukkan riwayat 7 hari terakhir (hijau berhasil, merah gagal, abu belum dicek).","Klik **✔ Semua berhasil** untuk menandai semuanya sekaligus, atau **Reset hari ini** untuk mengulang.","**+ Project Baru** menambah project ke ceklis. **⚙ Pilih Project AI** menentukan project mana yang ikut ceklis.","**Export PDF** untuk rekap."],
+      tips:[] },
+    { id:"akses", icon:"⌘", title:"All Akses", tab:"akses",
+      sum:"Kumpulan akun dan akses per project, tersimpan bersama untuk satu tim.",
+      steps:["Klik **+ Project** untuk menambah project beserta akun-akunnya.","Klik email atau password (atau tombol 📋) untuk menyalin. Password tersembunyi sampai Anda klik 👁.","Arahkan kursor ke kartu untuk mengedit (✎) atau menghapus (🗑).","**tampilkan semua password**, **Buka semua**, dan **Ringkas semua** mengatur tampilan banyak kartu sekaligus."],
+      tips:["File **Export PDF** berisi password asli. Jangan dibagikan ke pihak yang tidak berwenang."] },
+    { id:"knowledge", icon:"◇", title:"Knowledge", tab:"knowledge",
+      sum:"Informasi produk: deskripsi, fitur, peran, dan update terbaru.",
+      steps:["Klik **+ Produk** untuk menambah produk, atau klik nama produk untuk membuka detailnya.","Di detail, gunakan **Edit** untuk mengisi deskripsi, fitur, dan peran.","Tambah **update terbaru** per produk. Tanggal dan pembuatnya terisi otomatis.","Unduh PDF per produk, atau **Export PDF** untuk semua produk."],
+      tips:["Semua orang di tim melihat perubahan yang sama."] },
+    { id:"files", icon:"▣", title:"Dokumen", tab:"files",
+      sum:"Penyimpanan file bersama ala Drive.",
+      steps:["Klik **↥ Unggah** atau seret file dari komputer. Maksimal 5 MB per file.","Tempel screenshot dengan **Ctrl+V** (atau ⌘+V) saat tab Dokumen terbuka.","**+ Folder** membuat folder. Klik folder untuk membuka, dan gunakan jalur di atas untuk kembali.","Klik file untuk **pratinjau** (gambar, PDF, teks, CSV/Excel, Word). Gunakan panah ‹ › untuk pindah antar file.","**Klik kanan** file untuk menu: bagikan link, tautkan ke bug atau project, ubah nama, pindahkan, hapus.","Pilih banyak file dengan Ctrl/Shift+klik atau centang. **☰ / ▦** mengganti tampilan daftar dan grid."],
+      tips:["Item yang dihapus masuk **🗑 Sampah** dan bisa dipulihkan selama 30 hari sebelum terhapus permanen."] },
+    { id:"ext", icon:"🔗", title:"Akses Eksternal: link developer dan dokumen", tab:"ext",
+      sum:"Semua link untuk orang di luar tim, dengan Create, Read, Update, dan Delete lengkap.",
+      steps:["**Buat link developer:** isi nama, pilih project (chip), pilih masa berlaku, lalu **Buat link**. Klik **Salin link** dan kirim ke developer.","Developer membuka link tanpa login dan hanya melihat project yang Anda pilih. Mereka bisa mengusulkan status **In Progress** atau **Fixed** untuk bug yang masih Open atau In Progress, dan melihat screenshot.","Usulan muncul di kotak kuning **Menunggu pengecekan QA**. Klik barisnya untuk melihat detail bug, lalu **Terapkan** atau **Tolak**.","**↗ Buka** menampilkan halaman persis seperti yang dilihat penerima. **✎ Edit** mengubah nama, project, dan masa berlaku tanpa mengganti alamat link. **↻** menyegarkan isi halaman developer. **Cabut** menghapus link.","Di sub-tab **Dokumen**: **＋ Buat link dokumen** memilih file dari tab Dokumen dan masa berlakunya. Penerima membuka link, **meninjau file dulu**, lalu bisa mengunduh.","Link dokumen juga bisa **Edit** (ubah masa berlaku), **Buka**, **Salin**, dan **Cabut**."],
+      tips:["Link yang sudah kedaluwarsa atau dicabut langsung tidak bisa dibuka lagi.","Developer tidak bisa mengubah data secara langsung. Perubahan status baru berlaku setelah Anda menekan Terapkan."] },
+    { id:"audit", icon:"☰", title:"Riwayat dan Pengguna", tab:"audit",
+      sum:"Jejak perubahan data dan daftar akun.",
+      steps:["**Riwayat** menampilkan 300 aktivitas terakhir: siapa menambah, mengubah, atau menghapus data. Saring dengan orang, aksi, modul, rentang tanggal, atau kotak cari.","Isi data sensitif seperti password tidak dicatat, hanya nama field yang berubah.","**Pengguna** menampilkan akun yang pernah membuka aplikasi. Anda bisa mengedit nama dan catatan, mengirim reset kata sandi, menonaktifkan akun, atau menghapusnya dari daftar.","**+ Pengguna** membuat akun baru dengan kata sandi awal minimal 6 karakter."],
+      tips:["Menghapus pengguna dari daftar tidak menghapus akun login-nya di Firebase. Hapus juga di Firebase Console bila perlu."] },
+    { id:"nav", icon:"⌨️", title:"Jelajah cepat, pintasan, dan notifikasi", tab:null,
+      sum:"Cara berpindah halaman lebih cepat dan tidak ketinggalan usulan developer.",
+      steps:["Klik **Jelajah cepat** di bagian atas, atau tekan pintasan di bawah. Ketik untuk mencari halaman atau aksi, lalu Enter. Tutup dengan ✕ atau Esc.","Kalau ada usulan developer yang menunggu, angka merah muncul di Jelajah cepat dan di menu **Akses Eksternal**. Usulannya terdaftar di bagian **Notifikasi** pada Jelajah cepat.","Notifikasi baru berbunyi. Hidupkan atau matikan suaranya lewat Jelajah cepat → **Suara notifikasi**.","Saat tab sedang tidak dibuka, judul tab berkedip dan muncul notifikasi browser. Aktifkan izinnya lewat Jelajah cepat → **Notifikasi browser**.","**Mode gelap** mengganti tema, dan **Keluar** mengakhiri sesi."],
+      keys:[["⌘ / Ctrl + K","Buka Jelajah cepat"],["/","Langsung ke pencarian bug di Kelola Bug"],["Esc","Menutup Jelajah cepat, pratinjau, atau dialog"],["Ctrl / ⌘ + V","Tempel screenshot ke tab Dokumen"],["Ctrl / ⌘ + A","Pilih semua file di tab Dokumen"],["← →","Pindah file saat pratinjau Dokumen"]],
+      tips:[] },
+    { id:"faq", icon:"❓", title:"Pertanyaan umum", tab:null,
+      sum:"Masalah yang sering ditanyakan.",
+      steps:["**Bug saya hilang dari daftar.** Cek tanggal yang dipilih atau centang **semua tanggal**. Cek juga apakah bug sudah dipindahkan ke project lain.","**Developer tidak melihat bug terbaru.** Buka Akses Eksternal dan klik **↻** pada link-nya.","**Link dokumen tidak bisa dibuka penerima.** Cek apakah masa berlakunya sudah lewat. Perpanjang lewat **Edit**.","**Tidak ada notifikasi saat tab lain dibuka.** Izinkan notifikasi browser lewat Jelajah cepat → Notifikasi browser. Kalau sebelumnya diblokir, izinkan lewat ikon gembok di address bar.","**Salah memindahkan bug.** Buka detail bug, ganti project ke yang benar, lalu Simpan. Untuk banyak bug, pakai Pilih beberapa lagi."],
+      tips:[] }
+  ];
+  (function guideInit(){
+    const gEsc = t=>esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>");
+    const toc = document.getElementById("gdToc"), body = document.getElementById("gdBody"), q = document.getElementById("gdSearch");
+    const hay = g=>(g.title+" "+g.sum+" "+g.steps.join(" ")+" "+(g.tips||[]).join(" ")+" "+(g.keys||[]).map(k=>k.join(" ")).join(" ")).toLowerCase();
+    const TAB_NAME = { dash:"Dashboard", manage:"Kelola Bug", enh:"Enhancement", mom:"Catatan Meeting", daily:"Laporan Harian", scan:"Ceklis Scan AI", akses:"All Akses", knowledge:"Knowledge", files:"Dokumen", ext:"Akses Eksternal", audit:"Riwayat" };
+    function draw(){
+      const term = q.value.trim().toLowerCase(), list = GUIDE.filter(g=>!term || hay(g).includes(term));
+      toc.innerHTML = list.map(g=>'<button type="button" data-gd="'+g.id+'"><span>'+g.icon+'</span><span>'+esc(g.title.split(":")[0])+'</span></button>').join("");
+      body.innerHTML = list.length ? list.map(g=>
+        '<section class="gd-sec" id="gd-'+g.id+'"><div class="gd-sec-h"><div class="gd-ic">'+g.icon+'</div><h3>'+esc(g.title)+'</h3>'+(g.tab ? '<button type="button" data-gd-go="'+g.tab+'">Buka '+esc(TAB_NAME[g.tab]||"tab")+' →</button>' : '')+'</div>'+
+        '<p class="gd-sum">'+gEsc(g.sum)+'</p>'+
+        (g.steps.length ? '<div class="gd-sub">Langkah</div><ol class="gd-steps">'+g.steps.map(t=>'<li>'+gEsc(t)+'</li>').join("")+'</ol>' : '')+
+        (g.keys ? '<div class="gd-sub">Pintasan keyboard</div><table class="gd-keys"><tbody>'+g.keys.map(k=>'<tr><td><kbd>'+esc(k[0])+'</kbd></td><td>'+esc(k[1])+'</td></tr>').join("")+'</tbody></table>' : '')+
+        (g.tips && g.tips.length ? '<div class="gd-tips"><b>💡 Tips</b><ul>'+g.tips.map(t=>'<li>'+gEsc(t)+'</li>').join("")+'</ul></div>' : '')+'</section>').join("")
+        : '<div class="ext-empty"><b>🔍</b>Tidak ada panduan yang cocok dengan “'+esc(q.value)+'”.<br>Coba kata lain, mis. “project”, “link”, atau “status”.</div>';
+    }
+    toc.addEventListener("click", e=>{
+      const b = e.target.closest("[data-gd]"); if(!b) return;
+      toc.querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===b));
+      const el = document.getElementById("gd-"+b.dataset.gd); if(el) el.scrollIntoView({ behavior:"smooth", block:"start" });
+    });
+    body.addEventListener("click", e=>{ const b = e.target.closest("[data-gd-go]"); if(b) navigateTo(b.dataset.gdGo); });
+    q.addEventListener("input", draw);
+    draw();
+  })();
 
   // ================= riwayat perubahan (tampilan) =================
   let auditRows = [];
