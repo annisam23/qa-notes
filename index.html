@@ -748,6 +748,14 @@
   .command-item .nav-icon { color:var(--accent); }
   .command-item small { margin-left:auto; color:var(--text-dim); font-size:10px; }
   .command-empty { color:var(--text-dim); font-size:12px; padding:18px; }
+  .command-close { flex:none; width:30px; height:30px; min-height:0; padding:0; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; border:1px solid var(--border); background:var(--surface-2); color:var(--text-dim); font-size:14px; line-height:1; cursor:pointer; }
+  .command-close:hover { color:var(--danger); border-color:var(--danger); }
+  .tab-btn .nav-badge { margin-left:auto; background:var(--danger); color:#fff; font-size:10.5px; font-weight:800; padding:1px 7px; border-radius:20px; line-height:1.5; }
+  .ext-sub { font-size:12.5px; color:var(--text-dim); margin:4px 0 14px; }
+  .ext-block-title { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 0 4px; }
+  .dev-detail-link { cursor:pointer; }
+  .dev-detail-link:hover b:first-child { color:var(--accent); text-decoration:underline; }
+  .dev-pend-banner { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:10px 12px; margin-bottom:10px; border-radius:10px; border:1px solid var(--warn); background:color-mix(in srgb,var(--warn) 12%,var(--surface)); font-size:12.5px; }
   @media (max-width:1160px) {
     .app-shell { grid-template-columns:218px minmax(0,1fr); }
     .quick-jump { min-width:38px; }
@@ -946,6 +954,8 @@
     <button class="tab-btn" data-tab="files"><span class="nav-icon">▣</span><span>Dokumen</span></button>
     <button class="tab-btn" data-tab="audit"><span class="nav-icon">☰</span><span>Riwayat</span></button>
     <button class="tab-btn" data-tab="users"><span class="nav-icon">◎</span><span>Pengguna</span></button>
+    <div class="nav-section-label nav-section-secondary">EKSTERNAL</div>
+    <button class="tab-btn" data-tab="ext"><span class="nav-icon">🔗</span><span>Akses Eksternal</span><span class="nav-badge" id="extBadge" style="display:none"></span></button>
     <div class="sidebar-footer"><div class="sidebar-footer-icon">✦</div><strong>Bekerja lebih fokus.</strong><p>Setiap detail QA, tertata di satu tempat.</p></div>
   </div>
 
@@ -978,7 +988,7 @@
     <div class="proj-picker">
       <div class="proj-picker-head">
         <div><span class="plabel">PILIH PROJECT</span><p class="picker-sub">Tentukan area kerja sebelum mencatat temuan.</p></div>
-        <div class="row-flex"><button id="btnDevLinks" title="Buat link baca-saja per developer">🔗 Link Developer</button><input type="text" id="projSearch" placeholder="Cari project…" aria-label="Cari project"></div>
+        <div class="row-flex"><input type="text" id="projSearch" placeholder="Cari project…" aria-label="Cari project"></div>
       </div>
       <div class="proj-grid" id="projTabs"><div class="hint">Memuat…</div></div>
       <div style="position:relative;">
@@ -1193,6 +1203,32 @@
     </div>
   </div>
   <div class="dv-up" id="dvUp"></div>
+
+  <div class="tab-panel" id="tab-ext">
+    <div class="card">
+      <h3 style="margin:0;">Akses Eksternal</h3>
+      <div class="ext-sub">Semua link untuk orang di luar tim (developer, klien, dsb.) ada di sini. Link bisa dicabut kapan saja.</div>
+
+      <div class="ext-block-title"><b style="font-size:14px;">🔗 Link Developer</b></div>
+      <div class="hint" style="margin-bottom:8px;">Halaman Bug Report tanpa login, hanya project yang dipilih. Developer bisa mengusulkan status (berstatus <b>belum dicek QA</b>) dan melihat screenshot.</div>
+      <div id="dlPend"></div>
+      <div id="dlList"></div>
+      <div style="border-top:1px solid var(--border);margin:12px 0 8px"></div>
+      <b style="font-size:13px">Buat link baru</b>
+      <input type="text" id="dlName" placeholder="Nama developer, mis. Dev Aurora" style="margin:8px 0">
+      <div id="dlPrj" style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:8px"></div>
+      <div class="row-flex" style="gap:8px;flex-wrap:wrap;">
+        <select id="dlExp" style="width:auto;min-width:170px;"><option value="604800000">Berlaku 7 hari</option><option value="2592000000" selected>Berlaku 30 hari</option><option value="7776000000">Berlaku 90 hari</option><option value="0">Tanpa batas waktu</option></select>
+        <button class="primary" id="dlMk">Buat link</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ext-block-title"><b style="font-size:14px;">📎 Link Dokumen</b><button id="extSharesRefresh" type="button" title="Muat ulang">↻</button></div>
+      <div class="hint" style="margin-bottom:8px;">Link unduh file yang dibagikan dari tab Dokumen. Untuk membuat link baru: Dokumen → klik kanan file → Bagikan link.</div>
+      <div id="extShares"><div class="hint">Memuat…</div></div>
+    </div>
+  </div>
 
   <div class="tab-panel" id="tab-mom">
     <div class="card">
@@ -2200,6 +2236,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
           '<span class="badge '+e.status.replace(" ","-")+'" id="mStatusBadge">'+e.status+'</span>'+
           '<span class="badge-priority '+(e.priority||"Medium")+'" id="mPriorityBadge">'+(e.priority||"Medium")+'</span>'+
         '</div>'+
+        (e.devStatus ? '<div class="dev-pend-banner"><span>⏳ <b>'+esc(e.devBy||"Dev")+'</b> mengusulkan <b>'+esc(e.status||"Open")+' → '+esc(e.devStatus)+'</b>'+(e.devNote?' · “'+esc(e.devNote)+'”':'')+' <small>(belum dicek QA)</small></span><span class="row-flex" style="gap:6px;"><button class="primary" id="mDevOk" type="button">✓ Terapkan</button><button id="mDevNo" type="button">✕ Tolak</button></span></div>' : '')+
         '<label>Gambar Existing</label>'+
         (e.imageData ? '<img class="preview" id="mExistingImg" src="'+e.imageData+'">' : '<div class="hint" id="mExistingImg">Tanpa gambar existing</div>')+
         '<label>Existing</label><textarea id="mExisting">'+esc(e.existing)+'</textarea>'+
@@ -2209,6 +2246,8 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
           '<button id="mAddExpImg">'+(e.expectedImageData?'Ganti gambar expected':'+ Tambah gambar expected')+'</button>'+
           (e.expectedImageData ? '<button class="danger-outline" id="mRemoveExpImg">Hapus gambar expected</button>' : '')+
         '</div>'+
+        '<label>Project</label><select id="mProject">'+projects.map(p=>'<option value="'+esc(p.id)+'" '+(e.projectId===p.id?'selected':'')+'>'+esc(p.name)+'</option>').join('')+(isOtherId(e.projectId) ? '<option value="'+esc(e.projectId)+'" selected>'+esc(e.projectId.slice(OTHER_PREFIX.length))+' (lainnya)</option>' : '')+'</select>'+
+        '<div class="hint" id="mProjectHint" style="display:none;">Bug akan dipindahkan ke project ini saat disimpan.</div>'+
         '<label>Status</label><select id="mStatus">'+STATUS_OPTS.map(s=>'<option value="'+s+'" '+(e.status===s?'selected':'')+'>'+s+'</option>').join('')+'</select>'+
         '<label>Priority</label><select id="mPriority">'+PRIORITY_OPTS.map(p=>'<option value="'+p+'" '+((e.priority||"Medium")===p?'selected':'')+'>'+p+'</option>').join('')+'</select>'+
         '<label>Due Date</label><input type="date" id="mDueDate" value="'+(e.dueDate||"")+'">'+
@@ -2226,6 +2265,8 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     mStatusSel.addEventListener("change", ()=>{ mStatusBadge.className = "badge "+mStatusSel.value.replace(" ","-"); mStatusBadge.textContent = mStatusSel.value; });
     const mPrioSel = overlay.querySelector("#mPriority"), mPrioBadge = overlay.querySelector("#mPriorityBadge");
     mPrioSel.addEventListener("change", ()=>{ mPrioBadge.className = "badge-priority "+mPrioSel.value; mPrioBadge.textContent = mPrioSel.value; });
+    const mProjSel = overlay.querySelector("#mProject"), mProjHint = overlay.querySelector("#mProjectHint");
+    mProjSel.addEventListener("change", ()=>{ mProjHint.style.display = mProjSel.value!==e.projectId ? "" : "none"; });
     const mDateInput = overlay.querySelector("#mDate");
     overlay.querySelector("#mDatePrev").onclick = ()=>{ mDateInput.value = addDays(mDateInput.value, -1); };
     overlay.querySelector("#mDateNext").onclick = ()=>{ mDateInput.value = addDays(mDateInput.value, 1); };
@@ -2265,6 +2306,9 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         toast("Gambar expected siap — klik Simpan.");
       });
     };
+    const devOkBtn = overlay.querySelector("#mDevOk"), devNoBtn = overlay.querySelector("#mDevNo");
+    if(devOkBtn) devOkBtn.onclick = async ()=>{ try{ await db.collection("entries").doc(id).update({ status:e.devStatus, statusChangedDate:todayStr(), ...devClear() }); toast("Status diterapkan."); overlay.remove(); }catch(err){ toast("Gagal: "+err.message); } };
+    if(devNoBtn) devNoBtn.onclick = async ()=>{ try{ await db.collection("entries").doc(id).update(devClear()); toast("Usulan ditolak."); overlay.remove(); }catch(err){ toast("Gagal: "+err.message); } };
     overlay.onclick = ev=>{ if(ev.target===overlay) overlay.remove(); };
     overlay.querySelector("#mCancel").onclick = ()=>overlay.remove();
     overlay.querySelector("#mSave").onclick = async ()=>{
@@ -2277,8 +2321,11 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         date: overlay.querySelector("#mDate").value || e.date
       };
       if(pendingExpectedImage !== undefined) patch.expectedImageData = pendingExpectedImage;
+      const newProj = mProjSel.value, moved = newProj && newProj !== e.projectId;
+      if(moved) patch.projectId = newProj;
       await updateEntry(id, patch);
       overlay.remove();
+      if(moved){ const np = projects.find(x=>x.id===newProj); toast("Bug dipindahkan ke project "+(np ? np.name : String(newProj).replace(OTHER_PREFIX,""))+"."); }
     };
     overlay.querySelector("#mDelete").onclick = async ()=>{
       const ok = await confirmDialog("Hapus bug ini?");
@@ -4207,16 +4254,45 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   }
   function devNotifCommands(){
     const pn = id=>(projects.find(p=>p.id===id)||{}).name||"-";
-    const list = entries.filter(e=>e.devStatus).sort((a,b)=>(b.devAt||0)-(a.devAt||0)).map(e=>({ notif:true, icon:"⏳", label:pn(e.projectId)+" · "+String(e.existing||"").slice(0,48), note:(e.devBy||"Dev")+": "+(e.status||"Open")+" → "+e.devStatus+" · belum dicek QA", action:()=>{ navigateTo("manage"); devDlg(); } }));
+    const list = entries.filter(e=>e.devStatus).sort((a,b)=>(b.devAt||0)-(a.devAt||0)).map(e=>({ notif:true, icon:"⏳", label:pn(e.projectId)+" · "+String(e.existing||"").slice(0,48), note:(e.devBy||"Dev")+": "+(e.status||"Open")+" → "+e.devStatus+" · belum dicek QA", action:()=>{ navigateTo("manage"); openEntryModal(e.id); } }));
     return list;
   }
+  // ---- notifikasi saat tab browser sedang tidak dilihat (judul tab + notifikasi sistem) ----
+  const DEV_BASE_TITLE = document.title;
+  let devFlashTimer = null;
+  const devPendCount = ()=>entries.filter(e=>e.devStatus).length;
+  function devTitleBadge(){ const n = devPendCount(); document.title = (n ? "("+n+") " : "")+DEV_BASE_TITLE; }
+  function devStopFlash(){ if(devFlashTimer){ clearInterval(devFlashTimer); devFlashTimer = null; } devTitleBadge(); }
+  function devAskPermission(){
+    if(!("Notification" in window) || Notification.permission!=="default") return;
+    try{ if(localStorage.getItem("qa_dev_notif")==="off") return; }catch(_){}
+    try{ const r = Notification.requestPermission(); if(r && r.catch) r.catch(()=>{}); }catch(_){}
+  }
+  ["click","keydown"].forEach(ev=>document.addEventListener(ev, devAskPermission, { once:true, passive:true }));
+  function devNotifyHidden(fresh){
+    if(!document.hidden || !fresh.length) return;
+    const first = fresh[0], who = first.devBy||"Developer";
+    const title = "🔔 "+who+" mengusulkan status "+first.devStatus;
+    const body = ((projects.find(p=>p.id===first.projectId)||{}).name||"-")+" · "+String(first.existing||"").slice(0,80)+(fresh.length>1 ? " (+"+(fresh.length-1)+" lainnya)" : "");
+    if(!devFlashTimer){ let on = false; devFlashTimer = setInterval(()=>{ on = !on; document.title = on ? "🔔 Usulan developer baru!" : "("+devPendCount()+") "+DEV_BASE_TITLE; }, 1200); }
+    if("Notification" in window && Notification.permission==="granted"){
+      try{
+        const n = new Notification(title, { body, tag:"qa-dev-update", renotify:true });
+        n.onclick = ()=>{ window.focus(); n.close(); navigateTo("manage"); openEntryModal(first.id); };
+      }catch(_){}
+    }
+  }
+  document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) devStopFlash(); });
+  window.addEventListener("focus", devStopFlash);
   function devBadge(){
     const pend = entries.filter(e=>e.devStatus), n = pend.length, b = document.getElementById("btnDevLinks"), qb = document.getElementById("qjBadge");
     if(b) b.textContent = "🔗 Link Developer"+(n ? " ("+n+" menunggu cek)" : "");
+    const eb = document.getElementById("extBadge"); if(eb){ eb.style.display = n ? "inline-block" : "none"; eb.textContent = n; }
     if(qb){ qb.style.display = n ? "inline-block" : "none"; qb.textContent = n; }
     const keys = new Set(pend.map(e=>e.id+"|"+e.devAt));
-    if(devSeen){ const fresh = pend.filter(e=>!devSeen.has(e.id+"|"+e.devAt)); if(fresh.length){ devPing(); toast("🔔 "+(fresh[0].devBy||"Developer")+" mengusulkan status "+fresh[0].devStatus+(fresh.length>1?" (+"+(fresh.length-1)+" lainnya)":"")+" — buka Jelajah cepat"); } }
+    if(devSeen){ const fresh = pend.filter(e=>!devSeen.has(e.id+"|"+e.devAt)); if(fresh.length){ devPing(); devNotifyHidden(fresh); toast("🔔 "+(fresh[0].devBy||"Developer")+" mengusulkan status "+fresh[0].devStatus+(fresh.length>1?" (+"+(fresh.length-1)+" lainnya)":"")+" — buka Jelajah cepat"); } }
     if(entries.length || devSeen) devSeen = keys;
+    if(!devFlashTimer) devTitleBadge();
   }
   function devSchedule(){
     devBadge(); devProcess(); if(devRefresh) devRefresh();
@@ -4226,44 +4302,68 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   db.collection("devLinks").onSnapshot(s=>{ devLinks = s.docs.map(d=>({id:d.id,...d.data()})); devSchedule(); }, ()=>{});
   db.collection("devUpdates").onSnapshot(s=>{ devUps = s.docs.map(d=>({id:d.id,...d.data()})); devProcess(); }, ()=>{});
   const devClear = ()=>{ const D = firebase.firestore.FieldValue.delete(); return { devStatus:D, devNote:D, devBy:D, devAt:D }; };
-  function devDlg(){
-    const ov = dvOv('<h3 style="margin:0 0 4px">Link Developer</h3><div class="hint" style="margin-bottom:8px">Halaman Bug Report tanpa login, hanya project yang dipilih. Developer bisa mengusulkan status (berstatus <b>belum dicek QA</b>) dan melihat screenshot.</div><div id="dlPend"></div><div id="dlList"></div><div style="border-top:1px solid var(--border);margin:12px 0 8px"></div><b style="font-size:13px">Buat link baru</b><input type="text" id="dlName" placeholder="Nama developer, mis. Dev Aurora" style="margin:8px 0"><div id="dlPrj" style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:8px"></div><select id="dlExp"><option value="604800000">Berlaku 7 hari</option><option value="2592000000" selected>Berlaku 30 hari</option><option value="7776000000">Berlaku 90 hari</option><option value="0">Tanpa batas waktu</option></select><div class="modal-actions"><button id="dlX">Tutup</button><button class="primary" id="dlMk">Buat link</button></div>');
-    ov.firstChild.style.maxWidth = "620px";
-    ov.querySelector("#dlPrj").innerHTML = projects.map(p=>'<label style="font-size:13px;display:flex;gap:5px;align-items:center"><input type="checkbox" value="'+p.id+'" style="width:auto"> '+esc(p.name)+'</label>').join("") || '<span class="hint">Belum ada project.</span>';
-    const draw = ()=>{
-      const pend = entries.filter(e=>e.devStatus), pn = id=>(projects.find(p=>p.id===id)||{}).name||"-";
-      ov.querySelector("#dlPend").innerHTML = pend.length ? '<b style="font-size:13px">⏳ Menunggu pengecekan QA ('+pend.length+')</b>'+pend.map(e=>'<div class="dv-lnk" data-pe="'+e.id+'" style="flex-wrap:wrap"><span style="flex:1 1 240px"><b>'+esc(pn(e.projectId))+'</b> · '+esc(String(e.existing||"").slice(0,70))+'<br><small>'+esc(e.devBy||"Dev")+': '+esc(e.status||"Open")+' → <b>'+esc(e.devStatus)+'</b>'+(e.devNote?' · “'+esc(e.devNote)+'”':'')+'</small></span><button data-ok class="primary">✓ Terapkan</button><button data-no>✕ Tolak</button></div>').join("")+'<div style="margin-bottom:10px"></div>' : "";
-      ov.querySelector("#dlList").innerHTML = devLinks.length ? devLinks.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(l=>'<div class="dv-lnk" data-id="'+l.id+'" style="flex-wrap:wrap"><span style="flex:1 1 200px" title="'+esc(devUrl(l.id))+'"><b>'+esc(l.name)+'</b> · '+esc((l.projectIds||[]).map(pn).join(", "))+'<br><small style="color:var(--text-dim)">'+(devExpired(l)?'⛔ Kedaluwarsa':l.expiresAt?'Sampai '+esc(new Date(l.expiresAt).toLocaleDateString("id-ID")):'Tanpa batas')+(l.updatedAt?' · update '+esc(new Date(l.updatedAt).toLocaleString("id-ID")):'')+'</small></span><button data-cp>Salin</button><button data-up title="Perbarui sekarang">↻</button><button data-rv class="danger-outline">Cabut</button></div>').join("") : '<div class="hint">Belum ada link.</div>';
-    };
-    devRefresh = draw; draw();
-    const close = ov.close; ov.close = ()=>{ devRefresh = null; close(); };
-    ov.querySelector("#dlX").onclick = ov.close;
-    ov.onclick = async e=>{
-      if(e.target===ov) return ov.close();
-      const pe = e.target.closest("[data-pe]");
-      if(pe){ const en = entries.find(x=>x.id===pe.dataset.pe); if(!en) return;
-        try{
-          if(e.target.closest("[data-ok]")){ await db.collection("entries").doc(en.id).update({ status:en.devStatus, statusChangedDate:todayStr(), ...devClear() }); toast("Status diterapkan."); }
-          else if(e.target.closest("[data-no]")){ await db.collection("entries").doc(en.id).update(devClear()); toast("Usulan ditolak."); }
-        }catch(err){ toast("Gagal: "+err.message); } return; }
-      const row = e.target.closest("[data-id]"); if(!row) return; const l = devLinks.find(x=>x.id===row.dataset.id); if(!l) return;
-      if(e.target.closest("[data-cp]")){ try{ await navigator.clipboard.writeText(devUrl(l.id)); toast("Link disalin."); }catch(_){ window.prompt("Salin link:", devUrl(l.id)); } }
-      else if(e.target.closest("[data-up]")){ try{ await devPush(l, true); toast("Diperbarui."); }catch(err){ toast("Gagal: "+err.message); } }
-      else if(e.target.closest("[data-rv]")){ if(await confirmDialog('Cabut link "'+l.name+'"? Developer tidak bisa membukanya lagi.', "Cabut")){ try{
-        for(const k of Object.keys(l.imgSig||{})) await db.collection("devImg").doc(l.id+"_"+k).delete();
-        await db.collection("devPages").doc(l.id).delete(); await db.collection("devLinks").doc(l.id).delete(); }catch(err){ toast("Gagal: "+err.message); } } }
-    };
-    ov.querySelector("#dlMk").onclick = async ()=>{
-      const name = ov.querySelector("#dlName").value.trim(), ids = Array.from(ov.querySelectorAll("#dlPrj input:checked")).map(x=>x.value), ms = parseInt(ov.querySelector("#dlExp").value,10);
-      if(!name || !ids.length){ toast("Isi nama developer dan pilih minimal satu project."); return; }
-      try{
-        const l = { name, projectIds:ids, expiresAt: ms ? Date.now()+ms : null, createdAt:Date.now(), by:auditWho(), hash:"", imgSig:{} };
-        const ref = await db.collection("devLinks").add(l); await devPush({ ...l, id:ref.id }, true);
-        ov.querySelector("#dlName").value = ""; toast("Link dibuat. Klik Salin.");
-      }catch(err){ toast("Gagal membuat link: "+err.message); }
-    };
+  // ---- tab "Akses Eksternal": link developer + link dokumen ----
+  const extPanel = document.getElementById("tab-ext");
+  const $ext = sel=>extPanel.querySelector(sel);
+  function devDlg(){ navigateTo("ext"); }
+  function devDraw(){
+    const pend = entries.filter(e=>e.devStatus), pn = id=>(projects.find(p=>p.id===id)||{}).name||"-";
+    $ext("#dlPend").innerHTML = pend.length ? '<b style="font-size:13px">⏳ Menunggu pengecekan QA ('+pend.length+')</b>'+pend.map(e=>'<div class="dv-lnk" data-pe="'+e.id+'" style="flex-wrap:wrap"><span class="dev-detail-link" data-detail title="Lihat detail bug" style="flex:1 1 240px"><b>'+esc(pn(e.projectId))+'</b> · '+esc(String(e.existing||"").slice(0,70))+'<br><small>'+esc(e.devBy||"Dev")+': '+esc(e.status||"Open")+' → <b>'+esc(e.devStatus)+'</b>'+(e.devNote?' · “'+esc(e.devNote)+'”':'')+'</small></span><button data-ok class="primary">✓ Terapkan</button><button data-no>✕ Tolak</button></div>').join("")+'<div style="margin-bottom:10px"></div>' : "";
+    $ext("#dlList").innerHTML = devLinks.length ? devLinks.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(l=>'<div class="dv-lnk" data-id="'+l.id+'" style="flex-wrap:wrap"><span style="flex:1 1 200px" title="'+esc(devUrl(l.id))+'"><b>'+esc(l.name)+'</b> · '+esc((l.projectIds||[]).map(pn).join(", "))+'<br><small style="color:var(--text-dim)">'+(devExpired(l)?'⛔ Kedaluwarsa':l.expiresAt?'Sampai '+esc(new Date(l.expiresAt).toLocaleDateString("id-ID")):'Tanpa batas')+(l.updatedAt?' · update '+esc(new Date(l.updatedAt).toLocaleString("id-ID")):'')+'</small></span><button data-cp>Salin</button><button data-up title="Perbarui sekarang">↻</button><button data-rv class="danger-outline">Cabut</button></div>').join("") : '<div class="hint">Belum ada link.</div>';
+    const box = $ext("#dlPrj"), sig = projects.map(p=>p.id+":"+p.name).join("|");
+    if(box.dataset.sig !== sig){
+      const keep = new Set(Array.from(box.querySelectorAll("input:checked")).map(x=>x.value));
+      box.innerHTML = projects.map(p=>'<label style="font-size:13px;display:flex;gap:5px;align-items:center"><input type="checkbox" value="'+p.id+'" style="width:auto"> '+esc(p.name)+'</label>').join("") || '<span class="hint">Belum ada project.</span>';
+      box.dataset.sig = sig;
+      box.querySelectorAll("input").forEach(i=>{ if(keep.has(i.value)) i.checked = true; });
+    }
   }
-  document.getElementById("btnDevLinks").addEventListener("click", devDlg);
+  devRefresh = devDraw; try{ devDraw(); }catch(_){}
+
+  $ext("#dlPend").addEventListener("click", async e=>{
+    const pe = e.target.closest("[data-pe]"); if(!pe) return;
+    const en = entries.find(x=>x.id===pe.dataset.pe); if(!en) return;
+    if(e.target.closest("[data-detail]")){ openEntryModal(en.id); return; }
+    try{
+      if(e.target.closest("[data-ok]")){ await db.collection("entries").doc(en.id).update({ status:en.devStatus, statusChangedDate:todayStr(), ...devClear() }); toast("Status diterapkan."); }
+      else if(e.target.closest("[data-no]")){ await db.collection("entries").doc(en.id).update(devClear()); toast("Usulan ditolak."); }
+    }catch(err){ toast("Gagal: "+err.message); }
+  });
+  $ext("#dlList").addEventListener("click", async e=>{
+    const row = e.target.closest("[data-id]"); if(!row) return; const l = devLinks.find(x=>x.id===row.dataset.id); if(!l) return;
+    if(e.target.closest("[data-cp]")){ try{ await navigator.clipboard.writeText(devUrl(l.id)); toast("Link disalin."); }catch(_){ window.prompt("Salin link:", devUrl(l.id)); } }
+    else if(e.target.closest("[data-up]")){ try{ await devPush(l, true); toast("Diperbarui."); }catch(err){ toast("Gagal: "+err.message); } }
+    else if(e.target.closest("[data-rv]")){ if(await confirmDialog('Cabut link "'+l.name+'"? Developer tidak bisa membukanya lagi.', "Cabut")){ try{
+      for(const k of Object.keys(l.imgSig||{})) await db.collection("devImg").doc(l.id+"_"+k).delete();
+      await db.collection("devPages").doc(l.id).delete(); await db.collection("devLinks").doc(l.id).delete(); }catch(err){ toast("Gagal: "+err.message); } } }
+  });
+  $ext("#dlMk").onclick = async ()=>{
+    const name = $ext("#dlName").value.trim(), ids = Array.from(extPanel.querySelectorAll("#dlPrj input:checked")).map(x=>x.value), ms = parseInt($ext("#dlExp").value,10);
+    if(!name || !ids.length){ toast("Isi nama developer dan pilih minimal satu project."); return; }
+    try{
+      const l = { name, projectIds:ids, expiresAt: ms ? Date.now()+ms : null, createdAt:Date.now(), by:auditWho(), hash:"", imgSig:{} };
+      const ref = await db.collection("devLinks").add(l); await devPush({ ...l, id:ref.id }, true);
+      $ext("#dlName").value = ""; toast("Link dibuat. Klik Salin.");
+    }catch(err){ toast("Gagal membuat link: "+err.message); }
+  };
+
+  // link dokumen yang dibagikan dari tab Dokumen
+  async function extLoadShares(){
+    const box = $ext("#extShares"); box.innerHTML = '<div class="hint">Memuat…</div>';
+    try{
+      const snap = await db.collection("driveShares").get();
+      const rows = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+      box.innerHTML = rows.length ? rows.map(x=>{ const exp = x.expiresAt && Date.now()>x.expiresAt;
+        return '<div class="dv-lnk" data-id="'+esc(x.id)+'" style="flex-wrap:wrap"><span style="flex:1 1 220px" title="'+esc(location.origin+location.pathname+"?share="+x.id)+'"><b>'+esc(x.name||"(file)")+'</b><br><small style="color:var(--text-dim)">'+(exp?'⛔ Kedaluwarsa':x.expiresAt?'Sampai '+esc(new Date(x.expiresAt).toLocaleString("id-ID")):'Tanpa batas')+(x.by?' · oleh '+esc(x.by):'')+'</small></span><button data-cp>Salin</button><button data-rv class="danger-outline">Cabut</button></div>'; }).join("") : '<div class="hint">Belum ada link dokumen.</div>';
+    }catch(err){ box.innerHTML = '<div class="hint">Gagal memuat: '+esc(err.message)+'</div>'; }
+  }
+  $ext("#extShares").addEventListener("click", async e=>{
+    const row = e.target.closest("[data-id]"); if(!row) return;
+    if(e.target.closest("[data-cp]")){ const url = location.origin+location.pathname+"?share="+row.dataset.id; try{ await navigator.clipboard.writeText(url); toast("Link disalin."); }catch(_){ window.prompt("Salin link:", url); } }
+    else if(e.target.closest("[data-rv]")){ if(await confirmDialog("Cabut link dokumen ini? Orang yang punya link tidak bisa mengunduh lagi.", "Cabut")){ try{ await db.collection("driveShares").doc(row.dataset.id).delete(); toast("Link dicabut."); }catch(err){ toast("Gagal: "+err.message); } extLoadShares(); } }
+  });
+  $ext("#extSharesRefresh").onclick = extLoadShares;
+  document.querySelector('.tab-btn[data-tab="ext"]').addEventListener("click", extLoadShares);
 
   // ================= enhancement (Firestore: koleksi "enhancements") =================
   const ENH_STATUS = ["Usulan","Dikerjakan","Selesai","Ditolak"];
@@ -5497,14 +5597,22 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     { label:"Ceklis Scan AI", note:"Pemeriksaan harian", icon:"◎", action:()=>navigateTo("scan") },
     { label:"All Akses", note:"Akses project", icon:"⌘", action:()=>navigateTo("akses") },
     { label:"Knowledge", note:"Informasi produk", icon:"◇", action:()=>navigateTo("knowledge") },
+    { label:"Akses Eksternal", note:"Link developer & dokumen", icon:"🔗", action:()=>navigateTo("ext") },
     { label:"Suara notifikasi", note:"Klik untuk aktif/nonaktif", icon:"🔔", action:()=>{ const on = !devSoundOn(); try{ localStorage.setItem("qa_dev_sound", on ? "on" : "off"); }catch(_){} devUnlock(); if(on) devPing(); toast("Suara notifikasi "+(on?"aktif":"nonaktif")+"."); } },
+    { label:"Notifikasi browser", note:"Saat tab lain dibuka (klik untuk aktifkan)", icon:"🪧", action:()=>{
+        if(!("Notification" in window)){ toast("Browser ini tidak mendukung notifikasi."); return; }
+        if(Notification.permission==="granted"){ toast("Notifikasi browser sudah aktif."); return; }
+        if(Notification.permission==="denied"){ toast("Notifikasi diblokir. Izinkan lewat ikon gembok di address bar."); return; }
+        try{ localStorage.removeItem("qa_dev_notif"); }catch(_){}
+        Notification.requestPermission().then(r=>toast(r==="granted" ? "Notifikasi browser aktif." : "Izin notifikasi tidak diberikan.")).catch(()=>{});
+      } },
     { label:"Cari temuan", note:"Filter bug di project", icon:"⌕", action:()=>{ navigateTo("manage"); document.getElementById("bugSearch").focus(); } }
   ];
   function openQuickJump(){
     if(document.querySelector(".command-overlay")) return;
     const overlay = document.createElement("div");
     overlay.className = "command-overlay";
-    overlay.innerHTML = '<div class="command-box" role="dialog" aria-modal="true" aria-label="Jelajah cepat"><div class="command-search"><span>⌕</span><input id="commandInput" type="text" placeholder="Cari halaman atau aksi…" autocomplete="off" aria-label="Cari halaman atau aksi"><kbd>ESC</kbd></div><div class="command-results" id="commandResults"></div></div>';
+    overlay.innerHTML = '<div class="command-box" role="dialog" aria-modal="true" aria-label="Jelajah cepat"><div class="command-search"><span>⌕</span><input id="commandInput" type="text" placeholder="Cari halaman atau aksi…" autocomplete="off" aria-label="Cari halaman atau aksi"><kbd>ESC</kbd><button type="button" class="command-close" id="commandClose" aria-label="Tutup" title="Tutup">✕</button></div><div class="command-results" id="commandResults"></div></div>';
     document.body.appendChild(overlay);
     const input = overlay.querySelector("#commandInput"), results = overlay.querySelector("#commandResults");
     let matches = devNotifCommands().concat(quickCommands), selected = 0;
@@ -5524,6 +5632,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       if(e.key==="Enter"){ e.preventDefault(); run(selected); }
     });
     overlay.addEventListener("click", e=>{ if(e.target===overlay) close(); });
+    overlay.querySelector("#commandClose").addEventListener("click", close);
     render(); input.focus();
   }
   document.getElementById("quickJump").addEventListener("click", openQuickJump);
