@@ -1028,6 +1028,53 @@
   .dv-lnk { display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; background:var(--surface-2); margin:4px 0; font-size:12.5px; }
   .dv-lnk span { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .dv-pick { max-height:200px; overflow:auto; margin-top:6px; } .dv-pick button { display:block; width:100%; text-align:left; margin:3px 0; font-size:12.5px; }
+
+  /* ===== Pilih Project — tampilan kartu baru ===== */
+  .picker-meta { display:inline-block; margin-left:6px; padding:2px 9px; border-radius:999px; background:color-mix(in srgb,var(--accent) 10%,transparent); color:var(--accent); font-size:10.5px; font-weight:700; }
+  .proj-grid { gap:12px; }
+  .proj-tab { min-height:148px; padding:15px 16px 13px; gap:10px; border-radius:16px; background:var(--surface); border:1px solid var(--border); justify-content:flex-start; overflow:hidden; }
+  .proj-tab::before { content:""; position:absolute; left:0; top:14px; bottom:14px; width:3px; border-radius:0 3px 3px 0; background:transparent; transition:background .15s; }
+  .proj-tab:hover { border-color:color-mix(in srgb,var(--accent) 55%,var(--border)); transform:translateY(-3px); box-shadow:var(--shadow-lift); }
+  .proj-tab:hover::before { background:var(--accent-2); }
+  .proj-tab.active { background:color-mix(in srgb,var(--accent) 8%,var(--surface)); border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset, 0 8px 22px color-mix(in srgb,var(--accent) 14%,transparent); }
+  .proj-tab.active::before { background:var(--accent); }
+  .proj-tab .pt-top { align-items:center; gap:7px; }
+  .proj-tab .pt-name { flex:1; min-width:0; font-size:14px; font-weight:800; letter-spacing:-.01em; }
+  .proj-tab .pt-new { flex:none; padding:2px 7px; border-radius:999px; background:var(--accent); color:var(--accent-text); font-size:9px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; }
+  .proj-tab .pt-mid { display:flex; align-items:flex-end; justify-content:space-between; gap:8px; margin-top:2px; }
+  .proj-tab .pt-num { font-size:28px; font-weight:800; line-height:1; letter-spacing:-.03em; color:var(--text); }
+  .proj-tab .pt-num small { font-size:11px; font-weight:700; color:var(--text-dim); margin-left:4px; letter-spacing:0; }
+  .proj-tab .pt-chip { padding:3px 9px; border-radius:999px; font-size:10.5px; font-weight:700; white-space:nowrap; }
+  .proj-tab .pt-chip.warn { background:rgba(224,54,60,.10); color:#d6303a; }
+  .proj-tab .pt-chip.ok { background:rgba(23,166,115,.12); color:#12906a; }
+  .proj-tab .pt-chip.empty { background:var(--surface-2); color:var(--text-dim); }
+  .proj-tab .pt-bar { height:6px; border-radius:6px; gap:2px; }
+  .proj-tab .pt-bar span { border-radius:6px; }
+  .proj-tab .pt-foot { display:flex; justify-content:space-between; gap:8px; font-size:10.5px; font-weight:600; color:var(--text-dim); margin-top:auto; }
+  .add-proj-btn { min-height:148px; border-radius:16px; border:1.5px dashed color-mix(in srgb,var(--accent) 45%,var(--border)); color:var(--accent); background:color-mix(in srgb,var(--accent) 3%,transparent); font-size:14px; }
+  .add-proj-btn::before { display:none; }
+  .add-proj-btn:hover { background:color-mix(in srgb,var(--accent) 8%,transparent); transform:translateY(-2px); }
+  @media (hover:none) { .proj-tab .pt-actions { opacity:1; } }
+  @media (max-width:620px) { .proj-tab { min-height:132px; padding:13px; } .proj-tab .pt-num { font-size:24px; } .add-proj-btn { min-height:132px; } }
+  @media (max-width:400px) {
+    .proj-tab .pt-top { display:flex; }
+    .proj-tab .pt-name { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .proj-tab .pt-actions { position:static; }
+    .proj-tab .cnt { padding-right:0; }
+    .proj-tab .pt-mid { flex-direction:column; align-items:flex-start; gap:6px; }
+  }
+
+  /* ===== Ringkasan project (satu baris) ===== */
+  .proj-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-bottom:14px; }
+  .proj-summary .ps-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:14px; border:1px solid var(--border); background:var(--surface-2); min-width:0; }
+  .proj-summary .ps-ico { width:38px; height:38px; flex:none; display:flex; align-items:center; justify-content:center; border-radius:11px; font-size:17px; background:var(--surface); box-shadow:var(--shadow); }
+  .proj-summary .ps-num { font-size:24px; font-weight:800; line-height:1; letter-spacing:-.03em; color:var(--text); }
+  .proj-summary .ps-lbl { margin-top:4px; font-size:11.5px; font-weight:700; color:var(--text-dim); }
+  .proj-summary .ps-lbl em { font-style:normal; font-weight:600; opacity:.8; margin-left:3px; }
+  .proj-summary .ps-item.open .ps-num { color:#d6303a; }
+  .proj-summary .ps-item.done .ps-num { color:#12906a; }
+  @media (max-width:720px) { .proj-summary { gap:8px; } .proj-summary .ps-item { padding:10px 11px; gap:9px; } .proj-summary .ps-ico { width:30px; height:30px; font-size:14px; } .proj-summary .ps-num { font-size:20px; } .proj-summary .ps-lbl em { display:none; } }
+  @media (max-width:480px) { .proj-summary .ps-ico { display:none; } .proj-summary .ps-lbl { font-size:10.5px; } }
 </style>
 </head>
 <body>
@@ -1146,9 +1193,10 @@
 
     <div class="proj-picker">
       <div class="proj-picker-head">
-        <div><span class="plabel">PILIH PROJECT</span><p class="picker-sub">Tentukan area kerja sebelum mencatat temuan.</p></div>
+        <div><span class="plabel">PILIH PROJECT</span><p class="picker-sub">Tentukan area kerja sebelum mencatat temuan. <span id="projSortMeta" class="picker-meta"></span></p></div>
         <div class="row-flex"><input type="text" id="projSearch" placeholder="Cari project…" aria-label="Cari project"></div>
       </div>
+      <div class="proj-summary" id="projSummary"></div>
       <div class="proj-grid" id="projTabs"><div class="hint">Memuat…</div></div>
       <div style="position:relative;">
         <div class="popover" id="addProjPopover" style="display:none; left:0;">
@@ -2114,31 +2162,73 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   function renderProjTabs(){
     const wrap = document.getElementById("projTabs");
     const q = projSearchQuery.trim().toLowerCase();
-    const visible = projects.filter(p=>p.name.toLowerCase().includes(q));
+    // urutan prioritas: project dengan aktivitas (bug dimasukkan / project dibuat) paling baru di paling atas
+    const lastAct = {};
+    entries.forEach(e=>{ const t = Number(e.createdAt)||0; if(t > (lastAct[e.projectId]||0)) lastAct[e.projectId] = t; });
+    const actOf = p => Math.max(lastAct[p.id]||0, Number(p.createdAt)||0);
+    const visible = projects.filter(p=>p.name.toLowerCase().includes(q))
+      .sort((a,b)=> actOf(b)-actOf(a) || String(a.name).localeCompare(String(b.name)));
+    const ago = ts=>{
+      if(!ts) return "belum ada aktivitas";
+      const d = Date.now()-ts, m = Math.floor(d/60000);
+      if(m < 1) return "baru saja";
+      if(m < 60) return m+" menit lalu";
+      const h = Math.floor(m/60); if(h < 24) return h+" jam lalu";
+      const dd = Math.floor(h/24); if(dd < 7) return dd+" hari lalu";
+      if(dd < 30) return Math.floor(dd/7)+" minggu lalu";
+      return new Date(ts).toLocaleDateString("id-ID",{day:"numeric",month:"short",year:"numeric"});
+    };
+    const meta = document.getElementById("projSortMeta");
+    if(meta) meta.textContent = projects.length ? (projects.length+" project · urut aktivitas terbaru") : "";
+    // ringkasan satu baris: total bug, masih open, selesai minggu ini
+    (function(){
+      const box = document.getElementById("projSummary"); if(!box) return;
+      if(!projects.length){ box.style.display = "none"; return; }
+      box.style.display = "";
+      const ids = new Set(projects.map(p=>p.id));
+      const all = entries.filter(e=>ids.has(e.projectId));
+      const unres = all.filter(e=>UNRESOLVED_STATUSES.includes(e.status));
+      const nOpen = unres.filter(e=>e.status==="Open").length, nProg = unres.length - nOpen;
+      const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - ((d.getDay()+6)%7)); // Senin minggu ini
+      const mon = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+      const doneWk = all.filter(e=>!UNRESOLVED_STATUSES.includes(e.status) && e.statusChangedDate && e.statusChangedDate >= mon).length;
+      const item = (cls, ico, num, lbl, sub)=>'<div class="ps-item '+cls+'"><span class="ps-ico">'+ico+'</span><div><div class="ps-num">'+num+'</div><div class="ps-lbl">'+lbl+(sub?' <em>'+sub+'</em>':'')+'</div></div></div>';
+      box.innerHTML =
+        item("total","🐞",all.length,"Total bug","di "+projects.length+" project")+
+        item("open","🔴",unres.length,"Masih Open", nProg ? nOpen+" open · "+nProg+" in progress" : "")+
+        item("done","✅",doneWk,"Selesai minggu ini","sejak Senin");
+    })();
     let html = "";
     if(!projects.length){
       html += '<div class="hint">Belum ada project — klik "+ Project" di bawah.</div>';
     } else if(!visible.length){
       html += '<div class="hint">Tidak ada project yang cocok dengan pencarian.</div>';
     } else {
-      html = visible.map(p=>{
+      html = visible.map((p,i)=>{
         const stat = projectStatusCounts(p.id);
         const active = p.id===selectedProjectId;
         const belum = (stat.counts["Open"]||0) + (stat.counts["In Progress"]||0);
+        const done = stat.counts["Fixed"]||0;
+        const pctDone = stat.total ? Math.round(done/stat.total*100) : 0;
         const bar = STATUS_OPTS.map(s=>{
           const n = stat.counts[s]||0;
           if(!n) return "";
           const pct = (n/Math.max(stat.total,1))*100;
           return '<span style="width:'+pct+'%; background:'+STATUS_COLOR[s]+';"></span>';
         }).join("") || '<span style="width:100%; background:var(--border);"></span>';
-        return '<div class="proj-tab '+(active?'active':'')+'" data-select="'+p.id+'" role="button" tabindex="0" aria-label="Pilih project '+esc(p.name)+'">'+
-          '<div class="pt-top"><span class="pt-name">'+esc(p.name)+'</span>'+
+        const tag = (i===0 && !q) ? '<span class="pt-new">Terbaru</span>' : '';
+        const chip = !stat.total ? '<span class="pt-chip empty">Belum ada bug</span>'
+          : belum===0 ? '<span class="pt-chip ok">✓ Semua selesai</span>'
+          : '<span class="pt-chip warn">'+belum+' belum selesai</span>';
+        return '<div class="proj-tab '+(active?'active':'')+(i===0&&!q?' is-latest':'')+'" data-select="'+p.id+'" role="button" tabindex="0" aria-label="Pilih project '+esc(p.name)+'">'+
+          '<div class="pt-top"><span class="pt-name" title="'+esc(p.name)+'">'+esc(p.name)+'</span>'+tag+
             '<span class="pt-actions">'+
               '<button type="button" class="icon-btn" data-rename="'+p.id+'" title="Ubah nama project" aria-label="Ubah nama project">✎</button>'+
               '<button type="button" class="icon-btn" data-del="'+p.id+'" title="Hapus project" aria-label="Hapus project">✕</button>'+
             '</span></div>'+
-          '<span class="cnt">'+stat.total+' bug · '+belum+' belum selesai</span>'+
+          '<div class="pt-mid"><span class="pt-num">'+stat.total+'<small>bug</small></span>'+chip+'</div>'+
           '<div class="pt-bar">'+bar+'</div>'+
+          '<div class="pt-foot"><span>'+(stat.total?pctDone+'% selesai':'—')+'</span><span title="Aktivitas terakhir">⏱ '+ago(lastAct[p.id]||0)+'</span></div>'+
         '</div>';
       }).join("");
     }
