@@ -1088,6 +1088,23 @@
   .mm-rec-live { margin-top:8px; font-size:12px; color:var(--text-dim); line-height:1.5; min-height:18px; }
   .mm-rec.on .mm-rec-live { color:var(--text); font-style:italic; }
   @keyframes mmPulse { 0%{box-shadow:0 0 0 0 rgba(224,54,60,.5);} 70%{box-shadow:0 0 0 8px rgba(224,54,60,0);} 100%{box-shadow:0 0 0 0 rgba(224,54,60,0);} }
+
+  /* ===== Rekam rapat (semua peserta + ringkasan AI) ===== */
+  .mm-rec-mode { display:flex; gap:6px; margin-bottom:10px; padding:3px; border-radius:10px; background:var(--surface-2); }
+  .mm-rec-mode button { flex:1; padding:6px 8px; border:0; border-radius:8px; background:transparent; font-size:12px; font-weight:700; color:var(--text-dim); box-shadow:none; }
+  .mm-rec-mode button.on { background:var(--surface); color:var(--accent); box-shadow:var(--shadow); }
+  .mm-lvl { display:inline-block; width:60px; height:6px; border-radius:6px; background:var(--border); overflow:hidden; vertical-align:middle; }
+  .mm-lvl i { display:block; height:100%; width:0; background:#17a673; transition:width .15s; }
+  .mm-chk { display:flex; align-items:center; gap:7px; margin:10px 0 0; font-size:12px; font-weight:600; }
+  .mm-chk input { width:auto; margin:0; }
+  .mm-chk small { color:var(--text-dim); font-weight:500; }
+  .mm-key { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .mm-key input { flex:1 1 180px; width:auto; font-size:12px; padding:7px 10px; }
+  .mm-rec-note { margin-top:8px; font-size:11px; line-height:1.55; color:var(--text-dim); }
+  .mm-rec-live button { padding:3px 9px; font-size:11px; margin-left:4px; }
+  .mm-trans { margin-top:10px; border:1px solid var(--border); border-radius:10px; padding:8px 12px; }
+  .mm-trans summary { cursor:pointer; font-size:12.5px; font-weight:700; color:var(--accent); }
+  .mm-trans textarea { margin-top:8px; }
 </style>
 </head>
 <body>
@@ -1349,6 +1366,12 @@
             <button type="button" class="step" id="scanNext" title="Maju 1 hari">›</button>
           </div>
           <button id="scanToday">Hari ini</button>
+          <label style="font-size:12.5px; color:var(--text-dim); margin-left:6px;" for="scanSort">Urut:</label>
+          <select id="scanSort" style="width:auto;" title="Urutan kartu project">
+            <option value="recent">Terakhir dicek (terbaru di atas)</option>
+            <option value="attn">Gagal / belum dicek dulu</option>
+            <option value="bug">Aktivitas bug terbaru</option>
+          </select>
         </div>
         <div class="row-flex">
           <button id="scanAddProj">+ Project Baru</button>
@@ -1361,7 +1384,7 @@
       <div class="status-summary" id="scanSummary"></div>
       <div class="scan-progress" id="scanBar"></div>
       <div id="scanList"></div>
-      <div class="hint">Titik di kanan = riwayat 7 hari terakhir (hijau = berhasil, merah = gagal, abu = belum).</div>
+      <div class="hint">Titik di kanan = riwayat 7 hari terakhir (hijau = berhasil, merah = gagal, abu = belum). Urutan kartu mengikuti pilihan di kotak <b>Urut</b>.</div>
     </div>
   </div>
 
@@ -1473,13 +1496,13 @@
 
   <div class="tab-panel" id="tab-convert">
     <div class="ext-hero">
-      <div><h2>Konversi ke PDF</h2><p>Ubah file Excel atau CSV menjadi PDF rapi bergaya aplikasi (ungu), lengkap dengan ringkasan, kelompok, dan status berwarna. Semua diproses di browser Anda, file tidak diunggah ke server.</p></div>
+      <div><h2>Konversi ke PDF</h2><p>Ubah file Excel, CSV, atau PDF menjadi PDF rapi bergaya aplikasi (ungu), lengkap dengan ringkasan, kelompok, dan status berwarna. Semua diproses di browser Anda, file tidak diunggah ke server.</p></div>
     </div>
-    <div id="cvDrop" class="cv-drop" tabindex="0" role="button" aria-label="Pilih file Excel atau CSV">
+    <div id="cvDrop" class="cv-drop" tabindex="0" role="button" aria-label="Pilih file Excel, CSV, atau PDF">
       <div class="big">📊</div><b>Tarik file ke sini, atau klik untuk memilih</b>
-      <small>Format .xlsx, .xls, .csv · maksimal 10 MB<br>Judul, baris header, kolom status, dan kelompok dideteksi otomatis, dan bisa Anda atur sendiri.</small>
+      <small>Format .xlsx, .xls, .csv, .pdf · maksimal 10 MB<br>PDF harus berisi teks (bukan hasil scan). Tabelnya dibaca otomatis.<br>Judul, baris header, kolom status, dan kelompok dideteksi otomatis, dan bisa Anda atur sendiri.</small>
     </div>
-    <input type="file" id="cvFile" accept=".xlsx,.xls,.csv" hidden>
+    <input type="file" id="cvFile" accept=".xlsx,.xls,.csv,.pdf" hidden>
     <div id="cvWork" style="display:none;">
       <div class="cv-grid">
         <div class="card cv-opts">
@@ -2172,15 +2195,19 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     bugs.forEach(e=>{ if(counts[e.status]!==undefined) counts[e.status]++; });
     return { total: bugs.length, counts };
   }
-  function renderProjTabs(){
-    const wrap = document.getElementById("projTabs");
-    const q = projSearchQuery.trim().toLowerCase();
-    // urutan prioritas: project dengan aktivitas (bug dimasukkan / project dibuat) paling baru di paling atas
+  // urutan prioritas project: aktivitas paling baru (bug dimasukkan / project dibuat) di paling atas.
+  // Dipakai bersama oleh kartu Pilih Project dan tab Ceklis Scan AI.
+  function projPriority(){
     const lastAct = {};
     entries.forEach(e=>{ const t = Number(e.createdAt)||0; if(t > (lastAct[e.projectId]||0)) lastAct[e.projectId] = t; });
     const actOf = p => Math.max(lastAct[p.id]||0, Number(p.createdAt)||0);
-    const visible = projects.filter(p=>p.name.toLowerCase().includes(q))
-      .sort((a,b)=> actOf(b)-actOf(a) || String(a.name).localeCompare(String(b.name)));
+    return { lastAct, actOf, cmp:(a,b)=> actOf(b)-actOf(a) || String(a.name).localeCompare(String(b.name)) };
+  }
+  function renderProjTabs(){
+    const wrap = document.getElementById("projTabs");
+    const q = projSearchQuery.trim().toLowerCase();
+    const { lastAct, cmp:projCmp } = projPriority();
+    const visible = projects.filter(p=>p.name.toLowerCase().includes(q)).sort(projCmp);
     const ago = ts=>{
       if(!ts) return "belum ada aktivitas";
       const d = Date.now()-ts, m = Math.floor(d/60000);
@@ -3112,7 +3139,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       sumEl.innerHTML = ""; barEl.innerHTML = "";
       return;
     }
-    const aiProjects = projects.filter(p=>p.scanAi);
+    const aiProjects = projects.filter(p=>p.scanAi).sort(projPriority().cmp);   // urutan dasar: aktivitas bug terbaru
     if(!aiProjects.length){
       list.innerHTML = '<div class="empty-state">Belum ada project yang dipilih memakai AI.<br>Klik <b>⚙ Pilih Project AI</b> untuk memilih.</div>';
       sumEl.innerHTML = ""; barEl.innerHTML = "";
@@ -3124,8 +3151,13 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       const c = scanChecks[scanKey(date,p.id)] || {};
       const st = scanState(c);
       counts[st]++;
-      return { p, c, st };
+      const touch = Math.max(Number(c.checkedAt)||0, ...scanNotesOf(c).map(n=>Number(n.at)||0));
+      return { p, c, st, touch };
     });
+    // urutan kartu sesuai pilihan (sort stabil: sisanya tetap urut aktivitas bug)
+    const sortMode = (document.getElementById("scanSort")||{}).value || "recent";
+    if(sortMode === "recent") items.sort((a,b)=>b.touch-a.touch);
+    else if(sortMode === "attn"){ const rank = { fail:0, none:1, success:2 }; items.sort((a,b)=>rank[a.st]-rank[b.st] || b.touch-a.touch); }
 
     // ringkasan (chip bisa diklik untuk filter)
     const total = aiProjects.length;
@@ -3390,6 +3422,11 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   document.getElementById("scanNext").addEventListener("click", ()=>{
     const i = document.getElementById("scanDate"); i.value = addDays(i.value || todayStr(), 1); renderScanTab();
   });
+  (function(){
+    const sel = document.getElementById("scanSort"); if(!sel) return;
+    try{ const v = localStorage.getItem("qa_scan_sort"); if(v && sel.querySelector('option[value="'+v+'"]')) sel.value = v; }catch(_){}
+    sel.addEventListener("change", ()=>{ try{ localStorage.setItem("qa_scan_sort", sel.value); }catch(_){} renderScanTab(); });
+  })();
   document.getElementById("scanToday").addEventListener("click", ()=>{
     document.getElementById("scanDate").value = todayStr(); renderScanTab();
   });
@@ -5335,13 +5372,26 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         '<label>Peserta (pisahkan dengan koma atau baris baru)</label><textarea id="mmAtt" rows="2" placeholder="mis. Budi (PM), Sari (Dev), Andi (QA)"></textarea>'+
         '<label>Agenda</label><textarea id="mmAgenda" rows="2" placeholder="Poin yang dibahas"></textarea>'+
         '<div class="mm-rec" id="mmRec">'+
+          '<div class="mm-rec-mode"><button type="button" class="on" data-mode="mic">🎙 Mikrofon saja</button><button type="button" data-mode="meet">👥 Semua peserta + ringkasan AI</button></div>'+
+          '<div id="mmRecMic">'+
           '<div class="mm-rec-head"><span class="mm-rec-dot" id="mmRecDot"></span><b>Rekam → teks</b>'+
             '<span class="mm-rec-time" id="mmRecTime">00:00</span>'+
             '<select id="mmRecLang" title="Bahasa pembicaraan"><option value="id-ID">Indonesia</option><option value="en-US">English</option></select>'+
             '<button type="button" class="primary" id="mmRecBtn">🎙 Mulai rekam</button></div>'+
-          '<div class="mm-rec-live" id="mmRecLive">Klik <b>Mulai rekam</b>, izinkan mikrofon, lalu bicara. Hasil ucapan otomatis masuk ke kolom <b>Pembahasan</b> dan bisa kamu edit.</div>'+
+          '<div class="mm-rec-live" id="mmRecLive">Klik <b>Mulai rekam</b>, izinkan mikrofon, lalu bicara. Hasil ucapan otomatis masuk ke kolom <b>Pembahasan</b> dan bisa kamu edit. Mode ini hanya mendengar suara kamu.</div>'+
+          '</div>'+
+          '<div id="mmRecMeet" style="display:none;">'+
+            '<div class="mm-rec-head"><span class="mm-rec-dot" id="mmMeetDot"></span><b>Rekam rapat</b>'+
+              '<span class="mm-rec-time" id="mmMeetTime">00:00</span><span class="mm-lvl" title="Level suara"><i id="mmLvl"></i></span>'+
+              '<button type="button" class="primary" id="mmMeetBtn">🔴 Rekam rapat</button></div>'+
+            '<div class="mm-rec-live" id="mmMeetStat">Klik <b>Rekam rapat</b>, lalu pilih <b>tab Google Meet / Zoom / Teams (web)</b> dan centang <b>Bagikan audio tab</b>. Semua suara peserta + suara kamu direkam, lalu diubah jadi transkrip, ringkasan, keputusan, dan action item.</div>'+
+            '<label class="mm-chk"><input type="checkbox" id="mmMeetMic" checked> Sertakan mikrofon saya <small>(pakai headset agar suara peserta tidak terekam dua kali)</small></label>'+
+            '<div class="mm-key"><input type="password" id="mmGKey" placeholder="Gemini API key" autocomplete="off"><input type="text" id="mmGModel" placeholder="Model (otomatis)" autocomplete="off"></div>'+
+            '<div class="mm-rec-note">Kunci gratis: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. Kunci hanya disimpan di browser ini. Rekaman dikirim ke Google Gemini untuk diproses, jadi pastikan peserta rapat setuju direkam. Aplikasi desktop (Zoom/Teams app) butuh pilihan <b>Seluruh layar</b> + <b>Bagikan audio sistem</b> (Windows/ChromeOS saja; di Mac pakai versi web).</div>'+
+          '</div>'+
         '</div>'+
         '<label>Pembahasan</label><textarea id="mmDisc" rows="5" placeholder="Ringkasan diskusi"></textarea>'+
+        '<details id="mmTransBox" class="mm-trans"><summary>Transkrip lengkap rapat (dari rekaman AI)</summary><textarea id="mmTrans" rows="8" placeholder="Muncul di sini setelah rekaman rapat diproses"></textarea></details>'+
         '<label>Keputusan</label><textarea id="mmDec" rows="3" placeholder="Hal yang disepakati"></textarea>'+
         '<label>Action items</label><div id="mmAis"></div>'+
         '<div class="row-flex" style="margin-top:2px;"><button type="button" id="mmAiAdd">+ Action item</button></div>'+
@@ -5363,6 +5413,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     $f("#mmAgenda").value = d.agenda || "";
     $f("#mmDisc").value = d.discussion || "";
     $f("#mmDec").value = d.decisions || "";
+    $f("#mmTrans").value = d.transcript || ""; if(d.transcript) $f("#mmTransBox").open = true;
     $f("#mmNext").value = d.nextMeeting || "";
 
     const ais = (d.actionItems || []).map(a=>({ task:a.task||"", pic:a.pic||"", due:a.due||"", done:!!a.done, enhId:a.enhId||"" }));
@@ -5393,14 +5444,14 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     };
 
     // ---- rekam suara -> teks (Web Speech API, langsung di browser) ----
-    let recStop = ()=>{};
+    let recStop = ()=>{}, meetBusy = ()=>false;
     (function initRecorder(){
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       const box = $f("#mmRec"), btn = $f("#mmRecBtn"), langSel = $f("#mmRecLang"), live = $f("#mmRecLive"),
             timeEl = $f("#mmRecTime"), disc = $f("#mmDisc");
       if(!SR){
         box.classList.add("off");
-        box.innerHTML = '<div class="hint" style="margin:0;">🎙 Fitur rekam → teks belum didukung browser ini. Gunakan <b>Google Chrome</b> atau <b>Microsoft Edge</b> (desktop/Android).</div>';
+        $f("#mmRecMic").innerHTML = '<div class="hint" style="margin:0;">🎙 Fitur rekam → teks belum didukung browser ini. Gunakan <b>Google Chrome</b> atau <b>Microsoft Edge</b> (desktop/Android).</div>';
         return;
       }
       let rec = null, on = false, tick = null, t0 = 0, restartT = null;
@@ -5460,6 +5511,186 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       ui();
     })();
 
+    // ---- rekam rapat: semua peserta (audio tab/layar + mic) -> transkrip + ringkasan AI (Gemini) ----
+    (function initMeet(){
+      const micStop = recStop;
+      const tabs = overlay.querySelectorAll(".mm-rec-mode button"), micP = $f("#mmRecMic"), meetP = $f("#mmRecMeet"), box = $f("#mmRec");
+      const keyEl = $f("#mmGKey"), modelEl = $f("#mmGModel"), btn = $f("#mmMeetBtn"), stat = $f("#mmMeetStat"), timeEl = $f("#mmMeetTime"), lvl = $f("#mmLvl"), micChk = $f("#mmMeetMic");
+      const LS = { get:k=>{ try{ return localStorage.getItem(k) || ""; }catch(_){ return ""; } }, set:(k,v)=>{ try{ if(v) localStorage.setItem(k,v); else localStorage.removeItem(k); }catch(_){} } };
+      keyEl.value = LS.get("qa_gemini_key"); modelEl.value = LS.get("qa_gemini_model");
+      keyEl.onchange = ()=>{ LS.set("qa_gemini_key", keyEl.value.trim()); modelCache = ""; };
+      modelEl.onchange = ()=>{ LS.set("qa_gemini_model", modelEl.value.trim()); modelCache = ""; };
+      const SEG_MS = 20*60*1000;
+      let st = "idle", R = null, pending = null, modelCache = "";
+      meetBusy = ()=>st !== "idle";
+      tabs.forEach(b=>{ b.onclick = ()=>{
+        if(meetBusy()) return;
+        const m = b.dataset.mode === "meet";
+        tabs.forEach(x=>x.classList.toggle("on", x===b));
+        micP.style.display = m ? "none" : ""; meetP.style.display = m ? "" : "none";
+        if(m) micStop();
+      }; });
+      const fmt = ms=>{ const t = Math.floor(ms/1000), h = Math.floor(t/3600), m = Math.floor(t%3600/60), s = t%60, p = n=>String(n).padStart(2,"0"); return (h ? h+":" : "")+p(m)+":"+p(s); };
+      function ui(){
+        box.classList.toggle("on", st==="rec");
+        btn.disabled = st==="proc";
+        btn.textContent = st==="rec" ? "■ Berhenti & proses" : st==="proc" ? "⏳ Memproses…" : "🔴 Rekam rapat";
+        btn.classList.toggle("danger-outline", st==="rec"); btn.classList.toggle("primary", st!=="rec");
+        if(st !== "rec") lvl.style.width = "0";
+      }
+      function cleanup(){
+        if(!R) return;
+        clearTimeout(R.timer); clearInterval(R.tick); window.onbeforeunload = null;
+        [R.disp, R.mic].forEach(s=>{ if(s) s.getTracks().forEach(t=>{ try{ t.stop(); }catch(_){} }); });
+        try{ R.ac.close(); }catch(_){}
+      }
+      const sleep = ms=>new Promise(r=>setTimeout(r, ms));
+      const b64 = blob=>new Promise((res, rej)=>{ const fr = new FileReader(); fr.onload = ()=>res(String(fr.result).split(",")[1]); fr.onerror = ()=>rej(new Error("Gagal membaca rekaman.")); fr.readAsDataURL(blob); });
+      async function gem(key, model, parts, json){
+        const body = { contents:[{ role:"user", parts }], generationConfig:Object.assign({ temperature:0.2 }, json ? { responseMimeType:"application/json" } : {}) };
+        for(let a = 0; a < 4; a++){
+          const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent", { method:"POST", headers:{ "Content-Type":"application/json", "x-goog-api-key":key }, body:JSON.stringify(body) });
+          if(r.ok){
+            const j = await r.json();
+            const t = (((j.candidates||[])[0]||{}).content||{}).parts; const txt = (t||[]).map(x=>x.text||"").join("");
+            if(!txt.trim()) throw new Error("AI tidak mengembalikan teks (mungkin tidak ada suara yang terdengar).");
+            return txt;
+          }
+          if([429,500,503].includes(r.status) && a < 3){ await sleep(2500*(a+1)); continue; }
+          let msg = ""; try{ msg = (await r.json()).error.message; }catch(_){}
+          if(r.status===404){ LS.set("qa_gemini_model",""); modelEl.value = ""; modelCache = ""; msg = "Model "+model+" tidak tersedia. Coba lagi (model dipilih otomatis), atau isi kolom Model manual. "+msg; }
+          if(r.status===400 && /api key/i.test(msg)) msg = "API key tidak valid.";
+          throw new Error(msg || ("HTTP "+r.status));
+        }
+      }
+      async function pickModel(key){
+        if(modelEl.value.trim()) return modelEl.value.trim();
+        if(modelCache) return modelCache;
+        try{
+          const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200", { headers:{ "x-goog-api-key":key } });
+          if(r.status===400 || r.status===403) throw new Error("API key tidak valid atau tidak punya akses.");
+          const j = await r.json();
+          const c = (j.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes("generateContent")).map(m=>String(m.name).replace("models/",""))
+            .map(n=>({ n, m:/^gemini-(\d+(?:\.\d+)?)-flash$/.exec(n) })).filter(x=>x.m).sort((a,b)=>parseFloat(b.m[1])-parseFloat(a.m[1]));
+          if(c.length) return (modelCache = c[0].n);
+        }catch(e){ if(/API key/.test(e.message)) throw e; }
+        return (modelCache = "gemini-3.5-flash");
+      }
+      const shiftTs = (txt, off)=>txt.replace(/\[(?:(\d{1,2}):)?(\d{1,2}):(\d{2})\]/g, (_, h, m, s)=>{ const t = (h?+h*3600:0) + (+m)*60 + (+s) + off; return "["+fmt(t*1000)+"]"; });
+      function transPrompt(i, n){
+        const att = $f("#mmAtt").value.trim();
+        return "Ini rekaman rapat tim"+(n>1 ? " (bagian "+(i+1)+" dari "+n+")" : "")+". Transkripsikan SELURUH percakapan secermat mungkin dalam bahasa aslinya (Indonesia/Inggris, jangan diterjemahkan). "+
+          "Pisahkan per giliran bicara, beri label pembicara (Pembicara 1, Pembicara 2, ...; pakai nama asli hanya bila disebut jelas dalam percakapan"+(att ? " atau cocok dengan daftar peserta: "+att : "")+"). "+
+          "Format tiap baris: [mm:ss] Pembicara: ucapan. Abaikan keheningan dan noise. Jangan tambahkan komentar, pembuka, atau ringkasan.";
+      }
+      function sumPrompt(full){
+        return "Berikut transkrip rapat tim. Buat catatan rapat dalam bahasa Indonesia. Balas HANYA JSON valid dengan bentuk: "+
+          '{"judul":"judul singkat rapat","ringkasan":["poin pembahasan utama (kalimat ringkas)"],"agenda":"topik yang dibahas, satu baris","keputusan":["hal yang disepakati"],"action_items":[{"tugas":"tindak lanjut","pic":"nama penanggung jawab atau kosong","tenggat":"YYYY-MM-DD atau kosong"}],"catatan_lanjutan":"jadwal rapat berikutnya atau catatan lain, boleh kosong"}. '+
+          "Jangan mengarang: hanya isi yang benar-benar ada di transkrip. Hari ini "+todayStr()+" (pakai untuk mengubah tenggat relatif seperti 'Jumat depan').\n\nTRANSKRIP:\n"+full;
+      }
+      function parseJson(t){ t = t.trim().replace(/^```(?:json)?/i,"").replace(/```$/,"").trim(); try{ return JSON.parse(t); }catch(_){ const a = t.indexOf("{"), b = t.lastIndexOf("}"); return JSON.parse(t.slice(a, b+1)); } }
+      function apply(full, sum){
+        const addTo = (el, txt)=>{ txt = (txt||"").trim(); if(!txt) return; el.value = el.value.trim() ? el.value.trim()+"\n\n"+txt : txt; el.dispatchEvent(new Event("input", { bubbles:true })); };
+        const fillIfEmpty = (el, txt)=>{ txt = (txt||"").trim(); if(txt && !el.value.trim()){ el.value = txt; el.dispatchEvent(new Event("input", { bubbles:true })); } };
+        const bullets = a=>(Array.isArray(a) ? a : (a ? [a] : [])).map(x=>String(x).trim()).filter(Boolean).map(x=>"• "+x.replace(/^[•\-\*]\s*/,"")).join("\n");
+        if(sum){
+          fillIfEmpty($f("#mmTitle"), String(sum.judul||"").slice(0,120));
+          fillIfEmpty($f("#mmAgenda"), String(sum.agenda||""));
+          addTo($f("#mmDisc"), bullets(sum.ringkasan));
+          addTo($f("#mmDec"), bullets(sum.keputusan));
+          fillIfEmpty($f("#mmNext"), String(sum.catatan_lanjutan||"").slice(0,200));
+          (Array.isArray(sum.action_items) ? sum.action_items : []).forEach(a=>{
+            const task = String((a && a.tugas) || "").trim(); if(!task) return;
+            ais.push({ task, pic:String(a.pic||"").trim(), due:/^\d{4}-\d{2}-\d{2}$/.test(a.tenggat||"") ? a.tenggat : "", done:false });
+          });
+          renderAis(); overlay.dispatchEvent(new Event("change"));
+        }
+        const tr = $f("#mmTrans"); tr.value = tr.value.trim() ? tr.value.trim()+"\n\n————————\n\n"+full : full;
+        $f("#mmTransBox").open = true; tr.dispatchEvent(new Event("input", { bubbles:true }));
+      }
+      async function processSegs(segs){
+        st = "proc"; ui(); pending = segs;
+        try{
+          const key = keyEl.value.trim();
+          if(!segs.length) throw new Error("Tidak ada audio yang terekam.");
+          stat.textContent = "Menyiapkan AI…";
+          const model = await pickModel(key), parts = [];
+          for(let i = 0; i < segs.length; i++){
+            stat.textContent = "Mentranskrip bagian "+(i+1)+" dari "+segs.length+"… (bisa beberapa menit)";
+            const data = await b64(segs[i]);
+            if(data.length > 19*1048576) throw new Error("Bagian rekaman terlalu besar untuk dikirim.");
+            const txt = await gem(key, model, [{ inline_data:{ mime_type:segs[i].type.split(";")[0], data } }, { text:transPrompt(i, segs.length) }]);
+            parts.push(shiftTs(txt.trim(), i*SEG_MS/1000));
+          }
+          const full = parts.join("\n\n");
+          stat.textContent = "Membuat ringkasan…";
+          let sum = null, sumErr = "";
+          try{ sum = parseJson(await gem(key, model, [{ text:sumPrompt(full) }], true)); }catch(e){ sumErr = e.message; }
+          if(R && R.aborted) return;
+          apply(full, sum); pending = null; st = "idle"; ui();
+          stat.innerHTML = sum ? "✓ Selesai. Ringkasan, keputusan, action item, dan transkrip sudah masuk ke form. Periksa dulu sebelum disimpan." : "✓ Transkrip masuk ke form, tapi ringkasan gagal dibuat ("+esc(sumErr)+"). Klik <b>Rekam rapat</b> lagi atau tulis manual.";
+        }catch(e){
+          st = "idle"; ui();
+          stat.innerHTML = "⚠ Gagal memproses: "+esc(e.message)+' <button type="button" id="mmMeetRetry">↻ Coba lagi</button> <button type="button" id="mmMeetDl">⬇ Unduh audio</button>';
+          const rt = stat.querySelector("#mmMeetRetry"), dl = stat.querySelector("#mmMeetDl");
+          if(rt) rt.onclick = ()=>{ if(pending) processSegs(pending); };
+          if(dl) dl.onclick = ()=>{ (pending||[]).forEach((b,i)=>{ const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "rekaman-rapat-"+todayStr()+(pending.length>1 ? "-"+(i+1) : "")+(/mp4/.test(b.type) ? ".m4a" : ".webm"); a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 4000); }); };
+        }
+      }
+      async function start(){
+        const key = keyEl.value.trim();
+        if(!key){ toast("Isi Gemini API key dulu."); keyEl.focus(); return; }
+        LS.set("qa_gemini_key", key);
+        if(!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia || !window.MediaRecorder){ toast("Browser ini belum mendukung rekam tab/layar. Pakai Chrome atau Edge di komputer."); return; }
+        let ac; try{ ac = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ toast("Audio browser tidak tersedia."); return; }
+        let disp;
+        try{ disp = await navigator.mediaDevices.getDisplayMedia({ video:true, audio:true, selfBrowserSurface:"exclude", systemAudio:"include" }); }
+        catch(e){ try{ ac.close(); }catch(_){} stat.textContent = "Pemilihan tab/layar dibatalkan."; return; }
+        if(!disp.getAudioTracks().length){
+          disp.getTracks().forEach(t=>t.stop()); try{ ac.close(); }catch(_){}
+          stat.innerHTML = "⚠ Audio tidak ikut dibagikan. Ulangi: pilih <b>tab Chrome</b> (Meet/Zoom web) lalu centang <b>Bagikan audio tab</b>, atau pilih <b>Seluruh layar</b> + <b>Bagikan audio sistem</b> (Windows).";
+          return;
+        }
+        let mic = null;
+        if(micChk.checked){ try{ mic = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true } }); }catch(_){ mic = null; } }
+        try{ await ac.resume(); }catch(_){}
+        const dest = ac.createMediaStreamDestination(), gain = ac.createGain(), an = ac.createAnalyser(); an.fftSize = 512; gain.gain.value = 0.9;
+        gain.connect(dest); gain.connect(an);
+        ac.createMediaStreamSource(new MediaStream(disp.getAudioTracks())).connect(gain);
+        if(mic) ac.createMediaStreamSource(mic).connect(gain);
+        const mime = ["audio/webm;codecs=opus","audio/webm","audio/mp4","audio/ogg;codecs=opus"].find(m=>MediaRecorder.isTypeSupported(m));
+        if(!mime){ disp.getTracks().forEach(t=>t.stop()); if(mic) mic.getTracks().forEach(t=>t.stop()); try{ ac.close(); }catch(_){} toast("Format rekaman tidak didukung browser ini."); return; }
+        R = { ac, disp, mic, dest, mime, segs:[], mr:null, timer:null, tick:null, t0:Date.now(), stopping:false, aborted:false };
+        st = "rec"; ui(); timeEl.textContent = "00:00";
+        let quiet = 0; const buf = new Uint8Array(an.fftSize);
+        R.tick = setInterval(()=>{
+          if(!overlay.isConnected){ recStop(); return; }
+          timeEl.textContent = fmt(Date.now()-R.t0);
+          an.getByteTimeDomainData(buf); let sum = 0; for(let i = 0; i < buf.length; i++){ const v = (buf[i]-128)/128; sum += v*v; }
+          const rms = Math.sqrt(sum/buf.length); lvl.style.width = Math.min(100, rms*420)+"%";
+          quiet = rms < 0.004 ? quiet+0.2 : 0;
+          stat.textContent = quiet > 20 ? "⚠ Tidak ada suara terdeteksi selama "+Math.floor(quiet)+" detik. Cek audio tab yang dibagikan dan volume rapat." : "Merekam audio rapat"+(mic ? " + mikrofon" : "")+"… jangan tutup form ini.";
+        }, 200);
+        window.onbeforeunload = ()=>"Rekaman rapat sedang berjalan.";
+        const segStart = ()=>{
+          const chunks = [], mr = new MediaRecorder(dest.stream, { mimeType:mime, audioBitsPerSecond:24000 });
+          R.mr = mr;
+          mr.ondataavailable = e=>{ if(e.data && e.data.size) chunks.push(e.data); };
+          mr.onstop = ()=>{ if(chunks.length) R.segs.push(new Blob(chunks, { type:mime })); if(R.stopping) finish(); else segStart(); };
+          mr.start(2000);
+          R.timer = setTimeout(()=>{ try{ mr.stop(); }catch(_){} }, SEG_MS);
+        };
+        const endEv = ()=>{ if(st==="rec") stopRec(); };
+        disp.getTracks().forEach(t=>t.addEventListener("ended", endEv));
+        segStart();
+      }
+      function finish(){ const segs = R.segs, aborted = R.aborted; cleanup(); if(aborted){ st = "idle"; ui(); return; } processSegs(segs); }
+      function stopRec(){ if(!R || st!=="rec" || R.stopping) return; R.stopping = true; clearTimeout(R.timer); stat.textContent = "Menghentikan rekaman…"; try{ R.mr.stop(); }catch(_){ finish(); } }
+      btn.onclick = ()=>{ if(st==="idle") start(); else if(st==="rec") stopRec(); };
+      recStop = ()=>{ micStop(); if(R && st==="rec"){ R.aborted = true; R.stopping = true; cleanup(); try{ R.mr.onstop = null; R.mr.stop(); }catch(_){} st = "idle"; } else if(R && st==="proc"){ R.aborted = true; } };
+      ui();
+    })();
+
     // ---- simpan otomatis: draf ikut tersimpan ke Firestore tiap kali ada perubahan ----
     let docId = cur ? cur.id : null, autoTimer = null, dirty = false, closed = false, chain = Promise.resolve();
     const autoEl = $f("#mmAuto");
@@ -5468,7 +5699,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       place: $f("#mmPlace").value.trim(), notulis: $f("#mmNotulis").value.trim(),
       attendees: $f("#mmAtt").value.trim(), agenda: $f("#mmAgenda").value.trim(),
       discussion: $f("#mmDisc").value.trim(), decisions: $f("#mmDec").value.trim(),
-      nextMeeting: $f("#mmNext").value.trim(),
+      nextMeeting: $f("#mmNext").value.trim(), transcript: $f("#mmTrans").value.trim(),
       actionItems: ais.filter(a=>a.task.trim()).map(a=>({ task:a.task.trim(), pic:a.pic.trim(), due:a.due||"", done:!!a.done, enhId:a.enhId||"" }))
     });
     function autoSaveNow(){
@@ -5491,6 +5722,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     overlay.addEventListener("input", markDirty);
     overlay.addEventListener("change", markDirty);
     const closeModal = ()=>{
+      if(meetBusy() && !confirm("Rekaman rapat / proses AI masih berjalan. Tutup form dan batalkan?")) return;
       closed = true; recStop();
       const had = dirty, p = autoSaveNow();
       overlay.remove();
@@ -5517,10 +5749,11 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         place: $f("#mmPlace").value.trim(), notulis: $f("#mmNotulis").value.trim(),
         attendees: $f("#mmAtt").value.trim(), agenda: $f("#mmAgenda").value.trim(),
         discussion: $f("#mmDisc").value.trim(), decisions: $f("#mmDec").value.trim(),
-        nextMeeting: $f("#mmNext").value.trim(),
+        nextMeeting: $f("#mmNext").value.trim(), transcript: $f("#mmTrans").value.trim(),
         actionItems: ais.filter(a=>a.task.trim()).map(a=>({ task:a.task.trim(), pic:a.pic.trim(), due:a.due||"", done:!!a.done, enhId:a.enhId||"" }))
       };
       const btn = $f("#mmSave"); btn.disabled = true;
+      if(meetBusy() && !confirm("Rekaman rapat / proses AI masih berjalan. Simpan sekarang dan batalkan?")) return;
       recStop(); closed = true; clearTimeout(autoTimer); dirty = false; await chain;
       const existed = !!docId;
       try{
@@ -6215,7 +6448,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     { label:"All Akses", note:"Akses project", icon:"⌘", action:()=>navigateTo("akses") },
     { label:"Knowledge", note:"Informasi produk", icon:"◇", action:()=>navigateTo("knowledge") },
     { label:"Akses Eksternal", note:"Link developer & dokumen", icon:"🔗", action:()=>navigateTo("ext") },
-    { label:"Konversi PDF", note:"Ubah Excel / CSV jadi PDF", icon:"⇄", action:()=>navigateTo("convert") },
+    { label:"Konversi PDF", note:"Ubah Excel / CSV / PDF jadi PDF", icon:"⇄", action:()=>navigateTo("convert") },
     { label:"Panduan Pemakaian", note:"Cara memakai semua fitur", icon:"?", action:()=>navigateTo("guide") },
     { label:"Suara notifikasi", note:"Klik untuk aktif/nonaktif", icon:"🔔", action:()=>{ const on = !devSoundOn(); try{ localStorage.setItem("qa_dev_sound", on ? "on" : "off"); }catch(_){} devUnlock(); if(on) devPing(); toast("Suara notifikasi "+(on?"aktif":"nonaktif")+"."); } },
     { label:"Notifikasi browser", note:"Saat tab lain dibuka (klik untuk aktifkan)", icon:"🪧", action:()=>{
@@ -6272,6 +6505,93 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     if(/^(not yet|belum|belum selesai|belum diuji|open|todo|to do|pending|no|tidak|baru|new)$/.test(t)) return "warn";
     if(/^(in progress|progress|proses|sedang|dikerjakan|wip|ongoing|review|update)$/.test(t)) return "info";
     return "other";
+  }
+  // ---- baca tabel dari PDF (pdf.js dimuat saat pertama dipakai) ----
+  let _cvPdfJsP = null;
+  function cvLoadPdfJs(){
+    if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+    if(_cvPdfJsP) return _cvPdfJsP;
+    const base = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+    _cvPdfJsP = new Promise((res, rej)=>{
+      const sc = document.createElement("script"); sc.src = base+"pdf.min.js";
+      sc.onload = async ()=>{
+        try{ const t = await (await fetch(base+"pdf.worker.min.js")).text(); pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(new Blob([t], { type:"text/javascript" })); }
+        catch(_){ pdfjsLib.GlobalWorkerOptions.workerSrc = base+"pdf.worker.min.js"; }
+        res(pdfjsLib);
+      };
+      sc.onerror = ()=>{ _cvPdfJsP = null; rej(new Error("Pembaca PDF gagal dimuat. Cek koneksi internet.")); };
+      document.head.appendChild(sc);
+    });
+    return _cvPdfJsP;
+  }
+  async function cvPdfRows(buf){
+    const lib = await cvLoadPdfJs();
+    const pdf = await lib.getDocument({ data:new Uint8Array(buf) }).promise;
+    if(pdf.numPages > 150) throw new Error("PDF terlalu panjang (maks. 150 halaman).");
+    const lineList = []; let anyText = false;
+    for(let pn = 1; pn <= pdf.numPages; pn++){
+      const tc = await (await pdf.getPage(pn)).getTextContent();
+      const items = tc.items.filter(it=>it.str && it.str.trim()!=="").map(it=>({ s:it.str, x:it.transform[4], y:it.transform[5], w:it.width||0, h:Math.abs(it.transform[3]) || it.height || 8 }));
+      if(items.length) anyText = true;
+      items.sort((a,b)=>b.y-a.y || a.x-b.x);
+      const lines = [];
+      items.forEach(it=>{ const L = lines[lines.length-1]; if(L && Math.abs(L.y-it.y) <= Math.max(2, it.h*0.45)){ L.it.push(it); L.h = Math.max(L.h, it.h); } else lines.push({ y:it.y, h:it.h, it:[it] }); });
+      lines.forEach(L=>{
+        L.it.sort((a,b)=>a.x-b.x);
+        const cells = [];
+        L.it.forEach(it=>{
+          const c = cells[cells.length-1];
+          if(c){ const gap = it.x - c.x1;
+            if(gap <= it.h*0.6){ c.t += (gap > it.h*0.12 && !/\s$/.test(c.t) && !/^\s/.test(it.s) ? " " : "") + it.s; c.x1 = it.x + it.w; return; } }
+          cells.push({ t:it.s, x:it.x, x1:it.x+it.w });
+        });
+        lineList.push({ page:pn, y:L.y, h:L.h, cells:cells.map(c=>({ t:c.t.replace(/\s+/g," ").trim(), x:c.x })).filter(c=>c.t) });
+      });
+    }
+    if(!anyText) throw new Error("PDF ini tidak berisi teks (kemungkinan hasil scan atau foto), jadi tidak bisa dibaca.");
+    // kolom: kelompokkan posisi awal sel
+    const xs = []; lineList.forEach(L=>L.cells.forEach(c=>xs.push(c.x))); xs.sort((a,b)=>a-b);
+    const clusters = []; xs.forEach(x=>{ const k = clusters[clusters.length-1]; if(k && x-k.max <= 5){ k.n++; k.max = x; k.sum += x; } else clusters.push({ n:1, max:x, sum:x }); });
+    const minN = Math.max(3, Math.ceil(lineList.length*0.05));
+    let kept = clusters.filter(k=>k.n >= minN);
+    if(!kept.length) kept = [clusters.reduce((a,b)=>b.n>a.n?b:a)];
+    const merged = [];   // anchor yang terlalu dekat (< 10pt) dianggap satu kolom, ambil yang paling kuat
+    kept.forEach(k=>{ const m = merged[merged.length-1]; if(m && (k.sum/k.n) - (m.sum/m.n) < 10){ if(k.n > m.n) merged[merged.length-1] = k; } else merged.push(k); });
+    const pos = merged.map(k=>k.sum/k.n);
+    const ncol = pos.length;
+    const colOf = x=>{ let ci = 0; for(let i = 0; i < ncol; i++) if(x >= pos[i]-6) ci = i; return ci; };
+    // susun baris, gabungkan baris lanjutan (teks yang dibungkus ke baris berikutnya)
+    let rows = [], prev = null;
+    lineList.forEach(L=>{
+      const arr = Array(ncol).fill(""); let nc = 0;
+      L.cells.forEach(c=>{ const ci = colOf(c.x); arr[ci] = arr[ci] ? arr[ci]+" "+c.t : c.t; });
+      arr.forEach(v=>{ if(v) nc++; });
+      if(!nc) return;
+      if(/^(halaman|page)\s*\d+(\s*(\/|dari|of)\s*\d+)?$/i.test(arr.filter(Boolean).join(" "))) return;
+      const tight = prev && prev.page===L.page && (prev.y - L.y) <= Math.max(prev.h, L.h)*1.75;
+      if(tight && (arr[0]==="" || nc===1) && prev.row.some((v,i)=>v!=="" && i>=0)){
+        arr.forEach((v,i)=>{ if(v) prev.row[i] = prev.row[i] ? prev.row[i]+" "+v : v; });
+        prev.y = L.y; prev.h = L.h; return;
+      }
+      const o = { page:L.page, y:L.y, h:L.h, row:arr }; rows.push(o); prev = o;
+    });
+    // buang header / footer yang berulang di tiap halaman
+    const nPages = pdf.numPages;
+    if(nPages > 1){
+      const pg1 = rows.filter(r=>r.page===rows[0].page).map(r=>r.row);
+      const hdrRow = pg1[cvAnalyzeRows(pg1, null).hdr] || [];
+      const hdrKey = hdrRow.join("|");
+      const pagesOf = new Map(); rows.forEach(r=>{ const k = r.row.join("|"); if(!pagesOf.has(k)) pagesOf.set(k, new Set()); pagesOf.get(k).add(r.page); });
+      const need = Math.max(2, Math.ceil(nPages*0.6)); const seenHdr = {};
+      rows = rows.filter(r=>{
+        const k = r.row.join("|");
+        if(pagesOf.get(k).size < need) return true;
+        if(k === hdrKey){ if(seenHdr.v) return false; seenHdr.v = true; return true; }
+        return false;
+      });
+    }
+    if(!rows.length) throw new Error("Tidak ada teks tabel yang bisa dibaca dari PDF ini.");
+    return rows.map(r=>r.row);
   }
   function cvAnalyzeRows(rows, hdrIn){
     const nn = r=>r.reduce((a,x)=>a+(x!==""?1:0),0);
@@ -6466,11 +6786,19 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     }
     async function loadFile(f){
       if(!f) return;
-      if(!/\.(xlsx|xls|csv)$/i.test(f.name)){ toast("Format belum didukung. Pakai .xlsx, .xls, atau .csv."); return; }
+      if(!/\.(xlsx|xls|csv|pdf)$/i.test(f.name)){ toast("Format belum didukung. Pakai .xlsx, .xls, .csv, atau .pdf."); return; }
       if(f.size > 10*1048576){ toast("File terlalu besar (maks. 10 MB)."); return; }
       if(!window.XLSX){ toast("Library Excel gagal dimuat."); return; }
       try{
-        const wb = /\.csv$/i.test(f.name) ? XLSX.read(await f.text(), { type:"string" }) : XLSX.read(await f.arrayBuffer(), { type:"array" });
+        let wb;
+        if(/\.pdf$/i.test(f.name)){
+          toast("Membaca PDF…");
+          const aoa = await cvPdfRows(await f.arrayBuffer());
+          wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), (f.name.replace(/\.[^.]+$/,"").replace(/[\[\]:*?\/\\]/g," ").trim().slice(0,31)) || "PDF");
+        } else {
+          wb = /\.csv$/i.test(f.name) ? XLSX.read(await f.text(), { type:"string" }) : XLSX.read(await f.arrayBuffer(), { type:"array" });
+        }
         cv.wb = wb; cv.name = f.name;
         $c("cvSheet").innerHTML = wb.SheetNames.map(n=>'<option>'+esc(n)+'</option>').join("");
         $c("cvSheetWrap").style.display = wb.SheetNames.length>1 ? "" : "none";
@@ -6564,10 +6892,10 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       sum:"Penyimpanan file bersama ala Drive.",
       steps:["Klik **↥ Unggah** atau seret file dari komputer. Maksimal 5 MB per file.","Tempel screenshot dengan **Ctrl+V** (atau ⌘+V) saat tab Dokumen terbuka.","**+ Folder** membuat folder. Klik folder untuk membuka, dan gunakan jalur di atas untuk kembali.","Klik file untuk **pratinjau** (gambar, PDF, teks, CSV/Excel, Word). Gunakan panah ‹ › untuk pindah antar file.","**Klik kanan** file untuk menu: bagikan link, tautkan ke bug atau project, ubah nama, pindahkan, hapus.","Pilih banyak file dengan Ctrl/Shift+klik atau centang. **☰ / ▦** mengganti tampilan daftar dan grid."],
       tips:["Item yang dihapus masuk **🗑 Sampah** dan bisa dipulihkan selama 30 hari sebelum terhapus permanen."] },
-    { id:"convert", icon:"⇄", title:"Konversi PDF (Excel / CSV)", tab:"convert",
-      sum:"Mengubah file spreadsheet menjadi PDF rapi bergaya aplikasi. Diproses di browser, file tidak dikirim ke server.",
-      steps:["Buka tab **Konversi PDF**, lalu tarik file .xlsx, .xls, atau .csv ke kotak (atau klik untuk memilih).","Aplikasi mendeteksi **judul**, **baris header**, **kolom status**, dan **kolom pengelompokan** secara otomatis. Pratinjau PDF langsung tampil di sebelah kanan.","Atur sesuai selera: ubah label atas, judul, subjudul, orientasi, dan **kolom yang ditampilkan** (klik chip untuk menyembunyikan).","Pilih **Kelompokkan per** untuk memecah tabel jadi bagian-bagian berwarna lengkap dengan hitungan selesai. Pilih **Kolom status** untuk pill berwarna, kartu ringkasan, dan bar progres.","Kalau file punya banyak sheet, pilih sheet-nya di bagian atas. Klik **⬇ Unduh PDF** kalau sudah pas."],
-      tips:["Status seperti DONE, Selesai, Fixed, Pass dibaca sebagai selesai (hijau). NOT YET, Belum, Open, Pending dibaca sebagai belum (oranye). Fail, Gagal, Ditolak berwarna merah.","Kalau deteksi otomatis keliru, ubah angka **Baris header** atau klik **Atur ulang otomatis**.","Teks di luar huruf Latin (misalnya emoji atau aksara non-Latin) tidak bisa dicetak di PDF dan akan dihilangkan."] },
+    { id:"convert", icon:"⇄", title:"Konversi PDF (Excel / CSV / PDF)", tab:"convert",
+      sum:"Mengubah file spreadsheet atau PDF menjadi PDF rapi bergaya aplikasi. Diproses di browser, file tidak dikirim ke server.",
+      steps:["Buka tab **Konversi PDF**, lalu tarik file .xlsx, .xls, .csv, atau .pdf ke kotak (atau klik untuk memilih).","Aplikasi mendeteksi **judul**, **baris header**, **kolom status**, dan **kolom pengelompokan** secara otomatis. Pratinjau PDF langsung tampil di sebelah kanan.","Atur sesuai selera: ubah label atas, judul, subjudul, orientasi, dan **kolom yang ditampilkan** (klik chip untuk menyembunyikan).","Pilih **Kelompokkan per** untuk memecah tabel jadi bagian-bagian berwarna lengkap dengan hitungan selesai. Pilih **Kolom status** untuk pill berwarna, kartu ringkasan, dan bar progres.","Kalau file punya banyak sheet, pilih sheet-nya di bagian atas. Klik **⬇ Unduh PDF** kalau sudah pas."],
+      tips:["Untuk file **PDF**, aplikasi membaca teks dan menyusun tabelnya otomatis (baris header yang berulang di tiap halaman dan nomor halaman dibuang). PDF hasil scan atau foto tidak bisa dibaca. Periksa pratinjau, dan ubah **Baris header** kalau susunan kolom meleset.","Status seperti DONE, Selesai, Fixed, Pass dibaca sebagai selesai (hijau). NOT YET, Belum, Open, Pending dibaca sebagai belum (oranye). Fail, Gagal, Ditolak berwarna merah.","Kalau deteksi otomatis keliru, ubah angka **Baris header** atau klik **Atur ulang otomatis**.","Teks di luar huruf Latin (misalnya emoji atau aksara non-Latin) tidak bisa dicetak di PDF dan akan dihilangkan."] },
     { id:"ext", icon:"🔗", title:"Akses Eksternal: link developer dan dokumen", tab:"ext",
       sum:"Semua link untuk orang di luar tim, dengan Create, Read, Update, dan Delete lengkap.",
       steps:["**Buat link developer:** isi nama, pilih project (chip), pilih masa berlaku, lalu **Buat link**. Klik **Salin link** dan kirim ke developer.","Developer membuka link tanpa login dan hanya melihat project yang Anda pilih. Mereka bisa mengusulkan status **In Progress** atau **Fixed** untuk bug yang masih Open atau In Progress, dan melihat screenshot.","Usulan muncul di kotak kuning **Menunggu pengecekan QA**. Klik barisnya untuk melihat detail bug, lalu **Terapkan** atau **Tolak**.","**↗ Buka** menampilkan halaman persis seperti yang dilihat penerima. **✎ Edit** mengubah nama, project, dan masa berlaku tanpa mengganti alamat link. **↻** menyegarkan isi halaman developer. **Cabut** menghapus link.","Di sub-tab **Dokumen**: **＋ Buat link dokumen** memilih file dari tab Dokumen dan masa berlakunya. Penerima membuka link, **meninjau file dulu**, lalu bisa mengunduh.","Link dokumen juga bisa **Edit** (ubah masa berlaku), **Buka**, **Salin**, dan **Cabut**."],
