@@ -1105,6 +1105,20 @@
   .mm-trans { margin-top:10px; border:1px solid var(--border); border-radius:10px; padding:8px 12px; }
   .mm-trans summary { cursor:pointer; font-size:12.5px; font-weight:700; color:var(--accent); }
   .mm-trans textarea { margin-top:8px; }
+
+  /* ===== Bar rekaman di latar belakang (form ditutup, rekaman tetap jalan) ===== */
+  .mm-recv { margin:0 0 10px; padding:9px 11px; border:1px solid #e0a82e; background:rgba(224,168,46,.10); border-radius:10px; font-size:12px; line-height:1.5; }
+  .mm-recv-btn { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+  .mm-recv-btn button { padding:5px 10px; font-size:12px; }
+  .mm-bg-bar { position:fixed; top:calc(12px + env(safe-area-inset-top, 0px)); right:12px; z-index:1002; display:flex; align-items:center; gap:10px; width:min(460px, calc(100vw - 24px)); box-sizing:border-box; padding:10px 12px; background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-lift); }
+  .mm-bg-bar.rec { border-color:#e0363c; }
+  .mm-bg-dot { width:10px; height:10px; border-radius:50%; background:#17a673; flex:none; }
+  .mm-bg-bar.rec .mm-bg-dot { background:#e0363c; animation:mmPulse 1.1s infinite; }
+  .mm-bg-txt { flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:2px; }
+  .mm-bg-txt b { font-size:13px; font-variant-numeric:tabular-nums; }
+  .mm-bg-txt small { font-size:11px; color:var(--text-dim); line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .mm-bg-bar button { padding:6px 10px; font-size:12px; flex:none; white-space:nowrap; }
+  @media (max-width:520px){ .mm-bg-bar { flex-wrap:wrap; } .mm-bg-txt { flex-basis:100%; } .mm-bg-bar button { flex:1 1 0; } }
 </style>
 </head>
 <body>
@@ -5347,7 +5361,42 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   }
 
   // ---- tambah / edit ----
+  let momBg = null;   // form catatan meeting yang sedang disembunyikan karena rekaman masih jalan
+  // Penyimpanan darurat rekaman rapat (IndexedDB): potongan audio disimpan tiap ~2 detik supaya bisa dipulihkan kalau tab ter-refresh / browser crash.
+  const RecDB = (function(){
+    let dbp = null;
+    const open = ()=> dbp || (dbp = new Promise((res, rej)=>{
+      if(!window.indexedDB){ rej(new Error("IndexedDB tidak tersedia")); return; }
+      const rq = indexedDB.open("qa_rec_recovery", 1);
+      rq.onupgradeneeded = ()=>{ const d = rq.result; d.createObjectStore("meta", { keyPath:"sid" }); d.createObjectStore("chunks", { autoIncrement:true }).createIndex("sid", "sid"); };
+      rq.onsuccess = ()=>res(rq.result); rq.onerror = ()=>rej(rq.error);
+    }));
+    const req = r=>new Promise((res, rej)=>{ r.onsuccess = ()=>res(r.result); r.onerror = ()=>rej(r.error); });
+    const done = t=>new Promise(res=>{ t.oncomplete = ()=>res(true); t.onerror = t.onabort = ()=>res(false); });
+    return {
+      async start(meta){ try{ const t = (await open()).transaction("meta", "readwrite"); t.objectStore("meta").put(meta); await done(t); try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(_){} }catch(_){} },
+      async chunk(sid, seg, blob){ try{ const t = (await open()).transaction("chunks", "readwrite"); t.objectStore("chunks").add({ sid, seg, blob, t:Date.now() }); await done(t); }catch(_){} },
+      async list(){ try{ return await req((await open()).transaction("meta").objectStore("meta").getAll()); }catch(_){ return []; } },
+      async load(sid, mime){
+        try{
+          const all = await req((await open()).transaction("chunks").objectStore("chunks").index("sid").getAll(sid));
+          const by = {}; all.forEach(c=>{ (by[c.seg] = by[c.seg] || []).push(c.blob); });
+          return Object.keys(by).map(Number).sort((a,b)=>a-b).map(k=>new Blob(by[k], { type:mime }));
+        }catch(_){ return []; }
+      },
+      async drop(sid){
+        try{
+          const d = await open(), t = d.transaction(["meta", "chunks"], "readwrite");
+          t.objectStore("meta").delete(sid);
+          const c = t.objectStore("chunks").index("sid").openCursor(IDBKeyRange.only(sid));
+          c.onsuccess = ()=>{ const cur = c.result; if(cur){ cur.delete(); cur.continue(); } };
+          await done(t);
+        }catch(_){}
+      }
+    };
+  })();
   function openMomModal(id, prefill){
+    if(momBg){ momBg.show(); toast("Rekaman rapat masih berjalan. Form dibuka kembali; selesaikan dulu sebelum membuat catatan lain."); return; }
     const cur = id ? momItems.find(x=>x.id===id) : null;
     if(id && !cur) return;
     if(!projects.length){ toast("Tambahkan project dulu."); return; }
@@ -5372,6 +5421,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         '<label>Peserta (pisahkan dengan koma atau baris baru)</label><textarea id="mmAtt" rows="2" placeholder="mis. Budi (PM), Sari (Dev), Andi (QA)"></textarea>'+
         '<label>Agenda</label><textarea id="mmAgenda" rows="2" placeholder="Poin yang dibahas"></textarea>'+
         '<div class="mm-rec" id="mmRec">'+
+          '<div id="mmRecover" style="display:none;"></div>'+
           '<div class="mm-rec-mode"><button type="button" class="on" data-mode="mic">🎙 Mikrofon saja</button><button type="button" data-mode="meet">👥 Semua peserta + ringkasan AI</button></div>'+
           '<div id="mmRecMic">'+
           '<div class="mm-rec-head"><span class="mm-rec-dot" id="mmRecDot"></span><b>Rekam → teks</b>'+
@@ -5386,6 +5436,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
               '<button type="button" class="primary" id="mmMeetBtn">🔴 Rekam rapat</button></div>'+
             '<div class="mm-rec-live" id="mmMeetStat">Klik <b>Rekam rapat</b>, lalu pilih <b>tab Google Meet / Zoom / Teams (web)</b> dan centang <b>Bagikan audio tab</b>. Semua suara peserta + suara kamu direkam, lalu diubah jadi transkrip, ringkasan, keputusan, dan action item.</div>'+
             '<label class="mm-chk"><input type="checkbox" id="mmMeetMic" checked> Sertakan mikrofon saya <small>(pakai headset agar suara peserta tidak terekam dua kali)</small></label>'+
+            '<label class="mm-chk"><input type="checkbox" id="mmMeetDlAuto" checked> Unduh salinan audio otomatis saat rekaman berhenti <small>(cadangan kalau proses AI gagal)</small></label>'+
             '<div class="mm-key"><input type="password" id="mmGKey" placeholder="Gemini API key" autocomplete="off"><input type="text" id="mmGModel" placeholder="Model (otomatis)" autocomplete="off"></div>'+
             '<div class="mm-rec-note">Kunci gratis: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. Kunci hanya disimpan di browser ini. Rekaman dikirim ke Google Gemini untuk diproses, jadi pastikan peserta rapat setuju direkam. Aplikasi desktop (Zoom/Teams app) butuh pilihan <b>Seluruh layar</b> + <b>Bagikan audio sistem</b> (Windows/ChromeOS saja; di Mac pakai versi web).</div>'+
           '</div>'+
@@ -5444,7 +5495,11 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     };
 
     // ---- rekam suara -> teks (Web Speech API, langsung di browser) ----
-    let recStop = ()=>{}, meetBusy = ()=>false;
+    let recStop = ()=>{}, meetBusy = ()=>false, micOn = ()=>false, micStopFn = ()=>{}, meetState = ()=>"idle", meetStopFn = ()=>{};
+    // judul tab ikut berubah saat merekam, supaya kelihatan dari tab lain
+    let baseTitle = null;
+    const setRecTitle = t=>{ if(baseTitle === null) baseTitle = document.title; document.title = t; };
+    const resetRecTitle = ()=>{ if(baseTitle !== null){ document.title = baseTitle; baseTitle = null; } };
     (function initRecorder(){
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       const box = $f("#mmRec"), btn = $f("#mmRecBtn"), langSel = $f("#mmRecLang"), live = $f("#mmRecLive"),
@@ -5486,11 +5541,11 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
           const msg = { "not-allowed":"Izin mikrofon ditolak. Aktifkan mikrofon untuk situs ini di pengaturan browser.",
             "service-not-allowed":"Izin mikrofon ditolak. Aktifkan mikrofon untuk situs ini di pengaturan browser.",
             "audio-capture":"Mikrofon tidak ditemukan.", "network":"Perlu koneksi internet untuk mengubah suara jadi teks." }[ev.error] || ("Gagal merekam: "+ev.error);
-          on = false; clearInterval(tick); ui(); live.textContent = msg; toast(msg);
+          on = false; clearInterval(tick); resetRecTitle(); ui(); live.textContent = msg; toast(msg);
         };
         rec.onend = ()=>{      // Chrome menghentikan sendiri saat hening; sambung lagi selama masih merekam
           if(on && overlay.isConnected){ clearTimeout(restartT); restartT = setTimeout(()=>{ if(on) try{ begin(); }catch(e){} }, 250); }
-          else { on = false; clearInterval(tick); ui(); }
+          else { on = false; clearInterval(tick); resetRecTitle(); ui(); }
         };
         rec.start();
       }
@@ -5498,14 +5553,14 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         on = true; t0 = Date.now(); timeEl.textContent = "00:00"; live.textContent = "Mendengarkan…"; ui();
         try{ begin(); }catch(e){ on = false; ui(); live.textContent = "Gagal memulai rekaman."; return; }
         clearInterval(tick);
-        tick = setInterval(()=>{ if(!overlay.isConnected){ recStop(); return; } timeEl.textContent = fmt(Date.now()-t0); }, 500);
+        tick = setInterval(()=>{ if(!overlay.isConnected){ recStop(); return; } timeEl.textContent = fmt(Date.now()-t0); setRecTitle("🔴 "+timeEl.textContent+" Merekam"); }, 500);
       }
       function stop(){
-        const was = on; on = false; clearInterval(tick); clearTimeout(restartT);
+        const was = on; on = false; clearInterval(tick); clearTimeout(restartT); resetRecTitle();
         try{ if(rec) rec.stop(); }catch(e){}
         ui(); if(was) live.innerHTML = "Rekaman dihentikan ("+timeEl.textContent+"). Periksa dan rapikan teks di kolom Pembahasan.";
       }
-      recStop = stop;
+      recStop = stop; micOn = ()=>on; micStopFn = stop;
       btn.onclick = ()=>{ on ? stop() : start(); };
       langSel.onchange = ()=>{ if(on){ try{ rec.onend = null; rec.stop(); }catch(e){} begin(); } };
       ui();
@@ -5520,9 +5575,11 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       keyEl.value = LS.get("qa_gemini_key"); modelEl.value = LS.get("qa_gemini_model");
       keyEl.onchange = ()=>{ LS.set("qa_gemini_key", keyEl.value.trim()); modelCache = ""; };
       modelEl.onchange = ()=>{ LS.set("qa_gemini_model", modelEl.value.trim()); modelCache = ""; };
+      const dlAuto = $f("#mmMeetDlAuto"); dlAuto.checked = LS.get("qa_rec_autodl") !== "0"; dlAuto.onchange = ()=>LS.set("qa_rec_autodl", dlAuto.checked ? "1" : "0");
       const SEG_MS = 20*60*1000;
-      let st = "idle", R = null, pending = null, modelCache = "";
+      let st = "idle", R = null, pending = null, modelCache = "", curSid = null;
       meetBusy = ()=>st !== "idle";
+      meetState = ()=>st; meetStopFn = ()=>{ if(st==="rec") stopRec(); };
       tabs.forEach(b=>{ b.onclick = ()=>{
         if(meetBusy()) return;
         const m = b.dataset.mode === "meet";
@@ -5540,11 +5597,16 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       }
       function cleanup(){
         if(!R) return;
-        clearTimeout(R.timer); clearInterval(R.tick); window.onbeforeunload = null;
+        clearTimeout(R.timer); clearInterval(R.tick); window.onbeforeunload = null; resetRecTitle();
+        if(R.visH){ document.removeEventListener("visibilitychange", R.visH); R.visH = null; }
+        try{ if(R.wl) R.wl.release(); }catch(_){} R.wl = null;
         [R.disp, R.mic].forEach(s=>{ if(s) s.getTracks().forEach(t=>{ try{ t.stop(); }catch(_){} }); });
         try{ R.ac.close(); }catch(_){}
       }
       const sleep = ms=>new Promise(r=>setTimeout(r, ms));
+      function downloadSegs(segs){
+        (segs||[]).forEach((b, i)=>{ setTimeout(()=>{ const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "rekaman-rapat-"+todayStr()+(segs.length>1 ? "-"+(i+1) : "")+(/mp4/.test(b.type) ? ".m4a" : ".webm"); document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 4000); }, i*400); });
+      }
       const b64 = blob=>new Promise((res, rej)=>{ const fr = new FileReader(); fr.onload = ()=>res(String(fr.result).split(",")[1]); fr.onerror = ()=>rej(new Error("Gagal membaca rekaman.")); fr.readAsDataURL(blob); });
       async function gem(key, model, parts, json){
         const body = { contents:[{ role:"user", parts }], generationConfig:Object.assign({ temperature:0.2 }, json ? { responseMimeType:"application/json" } : {}) };
@@ -5609,7 +5671,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         $f("#mmTransBox").open = true; tr.dispatchEvent(new Event("input", { bubbles:true }));
       }
       async function processSegs(segs){
-        st = "proc"; ui(); pending = segs;
+        st = "proc"; ui(); pending = segs; setRecTitle("⏳ Memproses rekaman…");
         try{
           const key = keyEl.value.trim();
           if(!segs.length) throw new Error("Tidak ada audio yang terekam.");
@@ -5626,15 +5688,18 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
           stat.textContent = "Membuat ringkasan…";
           let sum = null, sumErr = "";
           try{ sum = parseJson(await gem(key, model, [{ text:sumPrompt(full) }], true)); }catch(e){ sumErr = e.message; }
-          if(R && R.aborted) return;
-          apply(full, sum); pending = null; st = "idle"; ui();
+          if(R && R.aborted){ resetRecTitle(); return; }
+          apply(full, sum); pending = null; st = "idle"; ui(); resetRecTitle();
+          if(curSid){ RecDB.drop(curSid).then(()=>{ curSid = null; checkRecovery(); }); }
           stat.innerHTML = sum ? "✓ Selesai. Ringkasan, keputusan, action item, dan transkrip sudah masuk ke form. Periksa dulu sebelum disimpan." : "✓ Transkrip masuk ke form, tapi ringkasan gagal dibuat ("+esc(sumErr)+"). Klik <b>Rekam rapat</b> lagi atau tulis manual.";
+          stat.insertAdjacentHTML("beforeend", ' <button type="button" id="mmMeetDl2">⬇ Unduh audio</button>');
+          const d2 = stat.querySelector("#mmMeetDl2"); if(d2) d2.onclick = ()=>downloadSegs(segs);
         }catch(e){
-          st = "idle"; ui();
+          st = "idle"; ui(); resetRecTitle();
           stat.innerHTML = "⚠ Gagal memproses: "+esc(e.message)+' <button type="button" id="mmMeetRetry">↻ Coba lagi</button> <button type="button" id="mmMeetDl">⬇ Unduh audio</button>';
           const rt = stat.querySelector("#mmMeetRetry"), dl = stat.querySelector("#mmMeetDl");
           if(rt) rt.onclick = ()=>{ if(pending) processSegs(pending); };
-          if(dl) dl.onclick = ()=>{ (pending||[]).forEach((b,i)=>{ const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "rekaman-rapat-"+todayStr()+(pending.length>1 ? "-"+(i+1) : "")+(/mp4/.test(b.type) ? ".m4a" : ".webm"); a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 4000); }); };
+          if(dl) dl.onclick = ()=>downloadSegs(pending);
         }
       }
       async function start(){
@@ -5660,7 +5725,13 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         if(mic) ac.createMediaStreamSource(mic).connect(gain);
         const mime = ["audio/webm;codecs=opus","audio/webm","audio/mp4","audio/ogg;codecs=opus"].find(m=>MediaRecorder.isTypeSupported(m));
         if(!mime){ disp.getTracks().forEach(t=>t.stop()); if(mic) mic.getTracks().forEach(t=>t.stop()); try{ ac.close(); }catch(_){} toast("Format rekaman tidak didukung browser ini."); return; }
-        R = { ac, disp, mic, dest, mime, segs:[], mr:null, timer:null, tick:null, t0:Date.now(), stopping:false, aborted:false };
+        R = { ac, disp, mic, dest, mime, segs:[], mr:null, timer:null, tick:null, t0:Date.now(), stopping:false, aborted:false, segNo:0, wl:null, visH:null };
+        curSid = "r"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+        RecDB.start({ sid:curSid, startedAt:Date.now(), mime, title:$f("#mmTitle").value.trim() });
+        // tahan layar agar tidak mati selama merekam (aktif lagi otomatis saat kembali ke tab ini)
+        const lockWake = async ()=>{ try{ if(navigator.wakeLock && R && !R.wl){ const wl = await navigator.wakeLock.request("screen"); R.wl = wl; wl.addEventListener("release", ()=>{ if(R && R.wl === wl) R.wl = null; }); } }catch(_){} };
+        R.visH = ()=>{ if(document.visibilityState === "visible" && st === "rec") lockWake(); };
+        document.addEventListener("visibilitychange", R.visH); lockWake();
         st = "rec"; ui(); timeEl.textContent = "00:00";
         let quiet = 0; const buf = new Uint8Array(an.fftSize);
         R.tick = setInterval(()=>{
@@ -5669,13 +5740,14 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
           an.getByteTimeDomainData(buf); let sum = 0; for(let i = 0; i < buf.length; i++){ const v = (buf[i]-128)/128; sum += v*v; }
           const rms = Math.sqrt(sum/buf.length); lvl.style.width = Math.min(100, rms*420)+"%";
           quiet = rms < 0.004 ? quiet+0.2 : 0;
-          stat.textContent = quiet > 20 ? "⚠ Tidak ada suara terdeteksi selama "+Math.floor(quiet)+" detik. Cek audio tab yang dibagikan dan volume rapat." : "Merekam audio rapat"+(mic ? " + mikrofon" : "")+"… jangan tutup form ini.";
+          setRecTitle((quiet > 20 ? "⚠ Tanpa suara " : "🔴 ")+timeEl.textContent+" Merekam rapat");
+          stat.textContent = quiet > 20 ? "⚠ Tidak ada suara terdeteksi selama "+Math.floor(quiet)+" detik. Cek audio tab yang dibagikan dan volume rapat." : "Merekam audio rapat"+(mic ? " + mikrofon" : "")+"… form boleh ditutup, rekaman tetap jalan.";
         }, 200);
         window.onbeforeunload = ()=>"Rekaman rapat sedang berjalan.";
         const segStart = ()=>{
-          const chunks = [], mr = new MediaRecorder(dest.stream, { mimeType:mime, audioBitsPerSecond:24000 });
+          const chunks = [], segNo = R.segNo++, sid = curSid, mr = new MediaRecorder(dest.stream, { mimeType:mime, audioBitsPerSecond:24000 });
           R.mr = mr;
-          mr.ondataavailable = e=>{ if(e.data && e.data.size) chunks.push(e.data); };
+          mr.ondataavailable = e=>{ if(e.data && e.data.size){ chunks.push(e.data); RecDB.chunk(sid, segNo, e.data); } };
           mr.onstop = ()=>{ if(chunks.length) R.segs.push(new Blob(chunks, { type:mime })); if(R.stopping) finish(); else segStart(); };
           mr.start(2000);
           R.timer = setTimeout(()=>{ try{ mr.stop(); }catch(_){} }, SEG_MS);
@@ -5684,10 +5756,40 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         disp.getTracks().forEach(t=>t.addEventListener("ended", endEv));
         segStart();
       }
-      function finish(){ const segs = R.segs, aborted = R.aborted; cleanup(); if(aborted){ st = "idle"; ui(); return; } processSegs(segs); }
+      function finish(){ const segs = R.segs, aborted = R.aborted; cleanup(); if(aborted){ st = "idle"; ui(); return; } if(dlAuto.checked) downloadSegs(segs); processSegs(segs); }
       function stopRec(){ if(!R || st!=="rec" || R.stopping) return; R.stopping = true; clearTimeout(R.timer); stat.textContent = "Menghentikan rekaman…"; try{ R.mr.stop(); }catch(_){ finish(); } }
       btn.onclick = ()=>{ if(st==="idle") start(); else if(st==="rec") stopRec(); };
-      recStop = ()=>{ micStop(); if(R && st==="rec"){ R.aborted = true; R.stopping = true; cleanup(); try{ R.mr.onstop = null; R.mr.stop(); }catch(_){} st = "idle"; } else if(R && st==="proc"){ R.aborted = true; } };
+      // ---- pemulihan rekaman yang belum sempat diproses (tab ter-refresh / crash / proses AI gagal) ----
+      const fmtDT = ts=>new Date(ts).toLocaleString("id-ID", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" });
+      async function checkRecovery(){
+        const box = $f("#mmRecover"); if(!box || !box.isConnected) return;
+        let metas = await RecDB.list();
+        const now = Date.now();
+        for(const m of metas.filter(m=>now - m.startedAt > 7*864e5)) await RecDB.drop(m.sid);   // bersihkan yang sudah > 7 hari
+        metas = metas.filter(m=>now - m.startedAt <= 7*864e5 && m.sid !== curSid).sort((a,b)=>a.startedAt-b.startedAt);
+        if(!metas.length){ box.style.display = "none"; box.innerHTML = ""; return; }
+        box.style.display = "";
+        box.innerHTML = metas.map(m=>'<div class="mm-recv" data-sid="'+esc(m.sid)+'"><div>⚠ Ada rekaman rapat yang belum selesai diproses · mulai '+esc(fmtDT(m.startedAt))+(m.title ? ' · '+esc(m.title) : '')+'</div>'+
+          '<div class="mm-recv-btn"><button type="button" class="primary" data-a="proc">Proses sekarang</button><button type="button" data-a="dl">⬇ Unduh audio</button><button type="button" class="danger-outline" data-a="del">Buang</button></div></div>').join("");
+        box.querySelectorAll(".mm-recv").forEach(row=>{
+          const sid = row.dataset.sid, m = metas.find(x=>x.sid===sid);
+          row.querySelectorAll("button").forEach(b=>{ b.onclick = async ()=>{
+            const a = b.dataset.a;
+            if(a === "del"){ if(!confirm("Buang rekaman ini? Tidak bisa dikembalikan.")) return; await RecDB.drop(sid); checkRecovery(); return; }
+            const segs = await RecDB.load(sid, m.mime);
+            if(!segs.length){ toast("Data rekaman kosong."); await RecDB.drop(sid); checkRecovery(); return; }
+            if(a === "dl"){ downloadSegs(segs); return; }
+            if(st !== "idle"){ toast("Masih ada rekaman / proses yang berjalan."); return; }
+            if(!keyEl.value.trim()){ toast("Isi Gemini API key dulu."); keyEl.focus(); return; }
+            LS.set("qa_gemini_key", keyEl.value.trim());
+            tabs.forEach(x=>{ if(x.dataset.mode === "meet") x.click(); });
+            R = null; curSid = sid; row.remove();
+            processSegs(segs);
+          }; });
+        });
+      }
+      checkRecovery();
+      recStop = ()=>{ micStop(); if(R && st==="rec"){ if(curSid){ RecDB.drop(curSid); curSid = null; } R.aborted = true; R.stopping = true; cleanup(); try{ R.mr.onstop = null; R.mr.stop(); }catch(_){} st = "idle"; } else if(R && st==="proc"){ R.aborted = true; } };
       ui();
     })();
 
@@ -5721,12 +5823,52 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     const markDirty = ()=>{ if(closed) return; dirty = true; clearTimeout(autoTimer); autoTimer = setTimeout(autoSaveNow, 1200); };
     overlay.addEventListener("input", markDirty);
     overlay.addEventListener("change", markDirty);
-    const closeModal = ()=>{
-      if(meetBusy() && !confirm("Rekaman rapat / proses AI masih berjalan. Tutup form dan batalkan?")) return;
-      closed = true; recStop();
+    // Tutup beneran: simpan otomatis lalu buang form.
+    let bar = null, barT = null;
+    const dropBar = ()=>{ clearInterval(barT); barT = null; if(bar){ bar.remove(); bar = null; } momBg = null; };
+    const reallyClose = ()=>{
+      closed = true; recStop(); dropBar(); resetRecTitle();
       const had = dirty, p = autoSaveNow();
       overlay.remove();
       p.then(()=>{ if(had && !dirty && docId) toast("Catatan meeting tersimpan otomatis."); });
+    };
+    // Rekaman / proses AI masih jalan: sembunyikan form, rekaman tetap berjalan, tampilkan bar kecil.
+    const showForm = ()=>{ dropBar(); overlay.style.display = ""; };
+    function minimize(){
+      if(bar) return;
+      overlay.style.display = "none";
+      bar = document.createElement("div"); bar.className = "mm-bg-bar"; bar.setAttribute("role","status");
+      bar.innerHTML = '<span class="mm-bg-dot"></span><div class="mm-bg-txt"><b></b><small></small></div>'+
+        '<button type="button" class="mm-bg-open">Buka form</button><button type="button" class="mm-bg-stop"></button>';
+      document.body.appendChild(bar);
+      momBg = { show: showForm };
+      const $b = q=>bar.querySelector(q);
+      $b(".mm-bg-open").onclick = showForm;
+      $b(".mm-bg-stop").onclick = ()=>{
+        if(meetState()==="rec") meetStopFn();
+        else if(micOn()) micStopFn();
+        else reallyClose();
+      };
+      const upd = ()=>{
+        if(!bar) return;
+        const ms = meetState(), mo = micOn(), head = $b("b"), sub = $b("small"), sb = $b(".mm-bg-stop");
+        const live = ms==="rec" || mo;
+        bar.classList.toggle("rec", live); sb.classList.toggle("danger-outline", live); sb.style.display = "";
+        if(ms==="rec"){ head.textContent = "Merekam rapat · "+$f("#mmMeetTime").textContent; sub.textContent = $f("#mmMeetStat").textContent; sb.textContent = "■ Berhenti & proses"; }
+        else if(mo){ head.textContent = "Merekam suara · "+$f("#mmRecTime").textContent; sub.textContent = $f("#mmRecLive").textContent; sb.textContent = "■ Berhenti"; }
+        else if(ms==="proc"){ head.textContent = "Memproses rekaman…"; sub.textContent = $f("#mmMeetStat").textContent; sb.style.display = "none"; }
+        else {
+          head.textContent = "Rekaman selesai";
+          const t = $f("#mmMeetStat").textContent;
+          sub.textContent = /^[✓⚠]/.test(t) ? t : ($f("#mmRecLive").textContent || "Hasil ada di form.");
+          sb.textContent = "Tutup form";
+        }
+      };
+      upd(); barT = setInterval(upd, 500);
+    }
+    const closeModal = ()=>{
+      if(meetBusy() || micOn()){ minimize(); return; }
+      reallyClose();
     };
     overlay.onclick = ev=>{ if(ev.target===overlay) closeModal(); };
     $f("#mmCancel").onclick = closeModal;
