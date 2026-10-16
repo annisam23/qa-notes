@@ -1107,6 +1107,10 @@
   .mm-trans textarea { margin-top:8px; }
 
   /* ===== Bar rekaman di latar belakang (form ditutup, rekaman tetap jalan) ===== */
+  .mm-aud { margin-top:10px; padding:9px 11px; border:1px solid var(--border); border-radius:10px; font-size:12px; }
+  .mm-aud-row { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-top:6px; line-height:1.5; }
+  .mm-aud-btn { display:flex; gap:6px; }
+  .mm-aud-btn button { padding:4px 10px; font-size:12px; }
   .mm-recv { margin:0 0 10px; padding:9px 11px; border:1px solid #e0a82e; background:rgba(224,168,46,.10); border-radius:10px; font-size:12px; line-height:1.5; }
   .mm-recv-btn { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
   .mm-recv-btn button { padding:5px 10px; font-size:12px; }
@@ -1582,6 +1586,7 @@
   <button type="button" id="bulkNone">Kosongkan</button>
   <select id="bulkTarget" aria-label="Project tujuan"></select>
   <button type="button" class="primary" id="bulkMove" disabled>Pindahkan</button>
+  <button type="button" id="bulkDup" disabled title="Salin bug terpilih ke satu atau beberapa project lain (bug asli tetap di sini)">⧉ Duplikat…</button>
   <button type="button" class="command-close" id="bulkExit" aria-label="Keluar dari mode pilih" title="Keluar dari mode pilih">✕</button>
 </div>
 <div id="toast" class="toast"></div>
@@ -2449,6 +2454,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       }
       document.getElementById("bulkCount").textContent = bulkSel.size;
       document.getElementById("bulkMove").disabled = !(bulkSel.size && sel.value);
+      document.getElementById("bulkDup").disabled = !bulkSel.size;
     }
     bulkPaint();
   }
@@ -2469,6 +2475,92 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       setBulkMode(false);
     }catch(err){ toast("Gagal memindahkan: "+err.message); }
   }
+  // ---- duplikat bug ke project lain (project mirip-mirip) ----
+  function dupDoc(e, tid, over){
+    const o = over || {}, d = todayStr(), prio = o.priority || e.priority || "Medium";
+    return {
+      projectId: tid, date: d,
+      imageData: o.imageData !== undefined ? o.imageData : (e.imageData || null),
+      expectedImageData: o.expectedImageData !== undefined ? o.expectedImageData : (e.expectedImageData || null),
+      existing: o.existing !== undefined ? o.existing : (e.existing || ""),
+      expected: o.expected !== undefined ? o.expected : (e.expected || ""),
+      status: "Open", priority: prio, prioManual: !!e.prioManual,
+      dueDate: autoDue(d, prio), dueAuto: true,
+      dupFrom: e.id, createdAt: Date.now()
+    };
+  }
+  async function dupCommit(docs){
+    // dipecah per batch supaya total ukuran (gambar base64) tidak kebesaran
+    let batch = db.batch(), n = 0, size = 0;
+    for(const d of docs){
+      const sz = (d.imageData ? d.imageData.length : 0) + (d.expectedImageData ? d.expectedImageData.length : 0) + 2000;
+      if(n && (n >= 100 || size + sz > 4000000)){ await batch.commit(); batch = db.batch(); n = 0; size = 0; }
+      batch.set(db.collection("entries").doc(), d); n++; size += sz;
+    }
+    if(n) await batch.commit();
+  }
+  function pickDupTargets(excludeId, count, extra){
+    return new Promise(res=>{
+      const list = projects.filter(p=>p.id !== excludeId);
+      if(!list.length){ toast("Belum ada project lain."); res(null); return; }
+      const ov = document.createElement("div");
+      ov.className = "modal-overlay"; ov.style.zIndex = 2500;
+      ov.innerHTML =
+        '<div class="modal-box" role="dialog" aria-modal="true" aria-label="Duplikat ke project lain" style="max-width:'+(extra ? 680 : 440)+'px;">'+
+          '<h3 style="margin:0 0 4px; font-size:15px;">Duplikat ke project lain</h3>'+
+          '<div class="hint" style="margin:0 0 10px;">'+count+' bug disalin sebagai bug baru: status <b>Open</b>, tanggal hari ini, gambar dan deskripsi ikut tersalin'+(extra ? ' (bisa diubah di bawah)' : '')+'. Bug asli tidak berubah.</div>'+
+          (extra ? '<div id="dupImgs" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:0 0 12px;">'+
+              ['imageData|Existing|existing','expectedImageData|Expected|expected'].map(function(x){ var k = x.split('|')[0], lb = x.split('|')[1], tk = x.split('|')[2];
+                return '<div data-k="'+k+'" style="border:1px solid var(--border,#e3e5ef); border-radius:10px; padding:8px; display:flex; flex-direction:column; gap:6px;">'+
+                  '<div style="font-size:11px; font-weight:700;">'+lb+'</div>'+
+                  '<div class="dupThumb" style="height:84px; display:flex; align-items:center; justify-content:center; background:rgba(128,128,128,.08); border-radius:6px; overflow:hidden; font-size:11px; color:#888;"></div>'+
+                  '<div style="display:flex; gap:6px; flex-wrap:wrap;"><button type="button" class="dupPick">Ganti foto</button><button type="button" class="dupReset" style="display:none;">Kembalikan</button></div>'+
+                  '<div style="font-size:11px; font-weight:700; margin-top:4px;">Deskripsi '+lb.toLowerCase()+'</div>'+
+                  '<textarea class="dupText" data-t="'+tk+'" rows="4" style="width:100%; resize:vertical; font:inherit; font-size:12px;"></textarea></div>'; }).join('')+
+            '</div>' : '')+
+          '<div id="dupList" style="max-height:46vh; overflow:auto; display:flex; flex-direction:column; gap:4px;">'+
+            list.map(p=>'<label class="opt-check"><input type="checkbox" value="'+esc(p.id)+'" style="width:auto;"> '+esc(p.name)+'</label>').join("")+
+          '</div>'+
+          '<div class="modal-actions"><button type="button" id="dupCancel">Batal</button><button type="button" class="primary" id="dupOk" disabled>Duplikat</button></div>'+
+        '</div>';
+      document.body.appendChild(ov);
+      const boxes = [...ov.querySelectorAll("#dupList input")], ok = ov.querySelector("#dupOk");
+      const done = v=>{ ov.remove(); res(v); };
+      if(extra){
+        ov.querySelectorAll("#dupImgs [data-k]").forEach(box=>{
+          const k = box.dataset.k, th = box.querySelector(".dupThumb"), rs = box.querySelector(".dupReset"), pk = box.querySelector(".dupPick");
+          const draw = ()=>{
+            const cur = extra[k] !== undefined ? extra[k] : (extra.e[k] || null);
+            th.innerHTML = cur ? '<img src="'+cur+'" style="max-width:100%; max-height:100%; object-fit:contain;">' : "Tidak ada gambar";
+            rs.style.display = extra[k] !== undefined ? "" : "none";
+            pk.textContent = cur ? "Ganti foto" : "+ Tambah foto";
+          };
+          pk.onclick = ()=>pickImageFor(u=>{ extra[k] = u; draw(); });
+          rs.onclick = ()=>{ delete extra[k]; draw(); };
+          draw();
+          const ta = box.querySelector(".dupText"), tk = ta.dataset.t;
+          ta.value = extra[tk] !== undefined ? extra[tk] : (extra.e[tk] || "");
+          ta.oninput = ()=>{ extra[tk] = ta.value; };
+        });
+      }
+      boxes.forEach(b=>b.onchange = ()=>{ const n = boxes.filter(x=>x.checked).length; ok.disabled = !n; ok.textContent = n > 1 ? "Duplikat ke "+n+" project" : "Duplikat"; });
+      ov.querySelector("#dupCancel").onclick = ()=>done(null);
+      ov.onclick = ev=>{ if(ev.target === ov) done(null); };
+      ok.onclick = ()=>done(boxes.filter(x=>x.checked).map(x=>x.value));
+    });
+  }
+  const projLabel = ids=>ids.length === 1 ? (()=>{ const p = projects.find(x=>x.id === ids[0]); return p ? p.name : "project lain"; })() : ids.length+" project";
+  async function bulkDuplicate(){
+    const src = [...bulkSel].map(id=>entries.find(e=>e.id===id)).filter(Boolean);
+    if(!src.length) return;
+    const proj = currentProject(), tg = await pickDupTargets(proj ? proj.id : null, src.length);
+    if(!tg || !tg.length) return;
+    try{
+      await dupCommit(tg.flatMap(t=>src.map(e=>dupDoc(e, t))));
+      toast(src.length+" bug diduplikat ke "+projLabel(tg)+".");
+    }catch(err){ toast("Gagal menduplikat: "+err.message); }
+  }
+  document.getElementById("bulkDup").addEventListener("click", bulkDuplicate);
   document.getElementById("btnBulk").addEventListener("click", ()=>setBulkMode(!bulkMode));
   document.getElementById("bulkExit").addEventListener("click", ()=>setBulkMode(false));
   document.getElementById("bulkNone").addEventListener("click", ()=>{ bulkSel.clear(); bulkRefresh(); });
@@ -2746,6 +2838,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         '</div>'+
         '<div class="bd-foot">'+
           '<button type="button" class="danger-outline" id="mDelete">🗑 Hapus</button>'+
+          '<button type="button" id="mDup" title="Salin bug ini ke project lain">⧉ Duplikat…</button>'+
           '<span class="bd-dirty" id="mDirty" style="display:none;">● Perubahan belum disimpan</span>'+
           '<span class="bd-foot-r"><button type="button" id="mCancel">Tutup</button><button type="button" class="primary" id="mSave" title="Simpan (Ctrl/⌘ + Enter)">Simpan</button></span>'+
         '</div>'+
@@ -2831,6 +2924,18 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     $m("#mDelete").onclick = async ()=>{
       const ok = await confirmDialog("Hapus bug ini?");
       if(ok){ close(); deleteEntry(id); }
+    };
+    $m("#mDup").onclick = async ()=>{
+      const extra = { e, existing:$m("#mExisting").value, expected:$m("#mExpected").value };
+      const tg = await pickDupTargets(e.projectId, 1, extra);
+      if(!tg || !tg.length) return;
+      // yang disalin = isi yang sedang tampil di form (termasuk perubahan yang belum disimpan)
+      const over = { existing:extra.existing, expected:extra.expected, priority:$m("#mPriority").value };
+      if(pendingExpectedImage !== undefined) over.expectedImageData = pendingExpectedImage;
+      if(extra.imageData !== undefined) over.imageData = extra.imageData;
+      if(extra.expectedImageData !== undefined) over.expectedImageData = extra.expectedImageData;
+      try{ await dupCommit(tg.map(t=>dupDoc(e, t, over))); toast("Bug diduplikat ke "+projLabel(tg)+"."); }
+      catch(err){ toast("Gagal menduplikat: "+err.message); }
     };
     base = snap();
   }
@@ -5304,6 +5409,8 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
           '<div class="mom-foot">'+
             (ai.length ? '<span class="mom-ai'+(open?'':' ok')+'">'+(open ? open+' action item terbuka' : 'Action item selesai')+'</span>' : '<span></span>')+
             '<div class="mom-acts">'+
+              ((m.transcript || "").trim() ? '<button type="button" data-mom-trans="'+m.id+'" title="Unduh transkrip (.txt)">📝 Transkrip</button>' : '')+
+              (m.audioSids && m.audioSids.length ? '<button type="button" data-mom-audio="'+m.id+'" title="Unduh rekaman audio rapat">🎧 Rekaman</button>' : '')+
               '<button type="button" data-mom-copy="'+m.id+'" title="Salin teks MoM">📋 Salin</button>'+
               '<button type="button" data-mom-pdf="'+m.id+'" title="Download PDF MoM">⬇ PDF</button>'+
             '</div></div></div>';
@@ -5322,11 +5429,25 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       if(m) copyText(momText(m)).then(()=>toast("Teks MoM disalin.")).catch(()=>toast("Gagal menyalin teks."));
       return;
     }
+    const tr = e.target.closest("[data-mom-trans]");
+    if(tr){
+      e.stopPropagation();
+      const m = momItems.find(x=>x.id===tr.dataset.momTrans);
+      if(m) momDownloadTranscript(m);
+      return;
+    }
+    const au = e.target.closest("[data-mom-audio]");
+    if(au){
+      e.stopPropagation();
+      const m = momItems.find(x=>x.id===au.dataset.momAudio);
+      if(m) momDownloadAudio(m);
+      return;
+    }
     const pf = e.target.closest("[data-mom-pdf]");
     if(pf){
       e.stopPropagation();
       const m = momItems.find(x=>x.id===pf.dataset.momPdf);
-      if(m) buildMomPdf([m], momProjName(m.projectId), {});
+      if(m){ if((m.transcript || "").trim()) openMomPdfChoice(m); else buildMomPdf([m], momProjName(m.projectId), {}); }
       return;
     }
     const c = e.target.closest("[data-mom-open]");
@@ -5384,6 +5505,15 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
           return Object.keys(by).map(Number).sort((a,b)=>a-b).map(k=>new Blob(by[k], { type:mime }));
         }catch(_){ return []; }
       },
+      async get(sid){ try{ return await req((await open()).transaction("meta").objectStore("meta").get(sid)); }catch(_){ return null; } },
+      keep(sid){   // tandai sebagai rekaman tersimpan (bukan lagi "belum diproses"), tidak ikut dibersihkan otomatis
+        return open().then(d=>new Promise(res=>{
+          const t = d.transaction("meta", "readwrite"), st = t.objectStore("meta"), g = st.get(sid);
+          g.onsuccess = ()=>{ const m = g.result; if(m){ m.kept = true; m.keptAt = Date.now(); st.put(m); } };
+          t.oncomplete = ()=>res(true); t.onerror = t.onabort = ()=>res(false);
+        })).catch(()=>false);
+      },
+      async info(sid){ try{ const all = await req((await open()).transaction("chunks").objectStore("chunks").index("sid").getAll(sid)); return { count:all.length, size:all.reduce((a,c)=>a+(c.blob ? c.blob.size : 0), 0) }; }catch(_){ return { count:0, size:0 }; } },
       async drop(sid){
         try{
           const d = await open(), t = d.transaction(["meta", "chunks"], "readwrite");
@@ -5395,6 +5525,62 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       }
     };
   })();
+  function recDownload(segs, base){
+    (segs||[]).forEach((b, i)=>{ setTimeout(()=>{ const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = base+(segs.length>1 ? "-"+(i+1) : "")+(/mp4/.test(b.type) ? ".m4a" : ".webm"); document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 4000); }, i*400); });
+  }
+  const audioSlug = t=>String(t||"").replace(/[^\w\-]+/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "").slice(0, 50) || "meeting";
+  // unduh rekaman audio milik sebuah catatan meeting (audio tersimpan di browser tempat rapat direkam)
+  async function momDownloadAudio(m){
+    const sids = (m && m.audioSids) || []; let got = 0;
+    for(let i = 0; i < sids.length; i++){
+      const meta = await RecDB.get(sids[i]); if(!meta || !meta.kept) continue;
+      const segs = await RecDB.load(sids[i], meta.mime); if(!segs.length) continue;
+      recDownload(segs, "rekaman-rapat-"+audioSlug(m.title)+"-"+(m.date || todayStr())+(sids.length > 1 ? "-r"+(i+1) : "")); got++;
+    }
+    toast(got ? "Mengunduh rekaman audio…" : "Rekaman tidak ditemukan di browser ini. File audio hanya tersimpan di browser tempat rapat direkam.");
+  }
+  // pilihan "lampirkan transkrip di PDF" diingat untuk berikutnya
+  const momTransPref = ()=>{ try{ return localStorage.getItem("qa_pdf_trans") !== "0"; }catch(_){ return true; } };
+  const setMomTransPref = v=>{ try{ localStorage.setItem("qa_pdf_trans", v ? "1" : "0"); }catch(_){} };
+  // dialog kecil sebelum unduh PDF satu meeting yang punya transkrip
+  function openMomPdfChoice(m){
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.innerHTML =
+      '<div class="modal-box">'+
+        '<h3 style="margin:0 0 4px; font-size:15px;">Unduh PDF MoM</h3>'+
+        '<div class="hint" style="margin:0 0 8px;">'+esc(m.title || "(tanpa judul)")+'</div>'+
+        '<label class="opt-check"><input type="checkbox" id="mpTrans" style="width:auto;"> Lampirkan transkrip lengkap rapat</label>'+
+        '<div class="hint">Transkrip masuk sebagai lampiran di halaman paling akhir. Transkrip yang panjang bisa menambah banyak halaman.</div>'+
+        '<div class="modal-actions"><button id="mpCancel">Batal</button><button class="primary" id="mpOk">Unduh PDF</button></div>'+
+      '</div>';
+    document.body.appendChild(overlay);
+    const $f = q=>overlay.querySelector(q);
+    $f("#mpTrans").checked = momTransPref();
+    overlay.onclick = ev=>{ if(ev.target===overlay) overlay.remove(); };
+    $f("#mpCancel").onclick = ()=>overlay.remove();
+    $f("#mpOk").onclick = ()=>{
+      const withTrans = $f("#mpTrans").checked; setMomTransPref(withTrans); overlay.remove();
+      buildMomPdf([m], momProjName(m.projectId), { transcript: withTrans });
+    };
+    $f("#mpOk").focus();
+  }
+  // unduh transkrip rapat sebagai file teks (.txt)
+  function momTranscriptText(m){
+    const L = ["TRANSKRIP RAPAT", "Judul: "+(m.title || "(tanpa judul)"), "Project: "+momProjName(m.projectId), "Tanggal: "+momTimeLabel(m)];
+    if(m.place) L.push("Lokasi / Media: "+m.place);
+    const att = momAttendees(m); if(att.length) L.push("Peserta: "+att.join(", "));
+    L.push("Catatan: transkrip dibuat otomatis oleh AI dari rekaman rapat dan belum tentu 100% akurat.", "", "------------------------------------", "", String(m.transcript || "").trim(), "");
+    return L.join("\r\n");
+  }
+  function momDownloadTranscript(m){
+    if(!(m && String(m.transcript || "").trim())){ toast("Belum ada transkrip untuk diunduh."); return; }
+    const blob = new Blob(["\uFEFF"+momTranscriptText(m).replace(/\r?\n/g, "\r\n")], { type:"text/plain;charset=utf-8" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+    a.download = "transkrip-"+audioSlug(m.title)+"-"+(m.date || todayStr())+".txt";
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+    toast("Transkrip diunduh.");
+  }
   function openMomModal(id, prefill){
     if(momBg){ momBg.show(); toast("Rekaman rapat masih berjalan. Form dibuka kembali; selesaikan dulu sebelum membuat catatan lain."); return; }
     const cur = id ? momItems.find(x=>x.id===id) : null;
@@ -5442,7 +5628,8 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
           '</div>'+
         '</div>'+
         '<label>Pembahasan</label><textarea id="mmDisc" rows="5" placeholder="Ringkasan diskusi"></textarea>'+
-        '<details id="mmTransBox" class="mm-trans"><summary>Transkrip lengkap rapat (dari rekaman AI)</summary><textarea id="mmTrans" rows="8" placeholder="Muncul di sini setelah rekaman rapat diproses"></textarea></details>'+
+        '<details id="mmTransBox" class="mm-trans"><summary>Transkrip lengkap rapat (dari rekaman AI)</summary><textarea id="mmTrans" rows="8" placeholder="Muncul di sini setelah rekaman rapat diproses"></textarea><div class="row-flex" style="margin-top:6px;"><button type="button" id="mmTransDl">⬇ Unduh transkrip (.txt)</button></div></details>'+
+        '<div id="mmAudio"></div>'+
         '<label>Keputusan</label><textarea id="mmDec" rows="3" placeholder="Hal yang disepakati"></textarea>'+
         '<label>Action items</label><div id="mmAis"></div>'+
         '<div class="row-flex" style="margin-top:2px;"><button type="button" id="mmAiAdd">+ Action item</button></div>'+
@@ -5489,6 +5676,37 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       });
     }
     renderAis();
+    // rekaman audio yang terkait catatan ini (file-nya tersimpan di IndexedDB browser ini)
+    const audioSids = (d.audioSids || []).slice();
+    async function renderAudio(){
+      const box = $f("#mmAudio"); if(!box) return;
+      if(!audioSids.length){ box.innerHTML = ""; return; }
+      const rows = await Promise.all(audioSids.map(async sid=>({ sid, meta: await RecDB.get(sid), inf: await RecDB.info(sid) })));
+      if(!box.isConnected) return;
+      const mmss = sec=>String(Math.floor(sec/60)).padStart(2,"0")+":"+String(sec%60).padStart(2,"0");
+      box.innerHTML = '<div class="mm-aud"><b>🎧 Rekaman audio</b>'+rows.map((x,i)=>{
+        const ok = x.meta && x.meta.kept && x.inf.count;
+        const info = ok ? 'Rekaman '+(rows.length > 1 ? (i+1)+' · ' : '')+new Date(x.meta.startedAt).toLocaleString("id-ID",{ day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" })+' · ±'+mmss(x.inf.count*2)+' · '+(x.inf.size/1048576).toFixed(1)+' MB'
+                      : 'Rekaman '+(i+1)+' tidak ada di browser ini (file hanya tersimpan di browser tempat rapat direkam).';
+        return '<div class="mm-aud-row" data-sid="'+esc(x.sid)+'"><span>'+info+'</span><span class="mm-aud-btn">'+(ok ? '<button type="button" data-a="dl">⬇ Unduh</button>' : '')+'<button type="button" class="danger-outline" data-a="del">'+(ok ? 'Hapus' : 'Lepas')+'</button></span></div>';
+      }).join("")+'</div>';
+      box.querySelectorAll(".mm-aud-row").forEach(row=>{
+        const sid = row.dataset.sid;
+        row.querySelectorAll("button").forEach(b=>{ b.onclick = async ()=>{
+          if(b.dataset.a === "dl"){
+            const meta = await RecDB.get(sid); const segs = meta ? await RecDB.load(sid, meta.mime) : [];
+            if(!segs.length){ toast("Data rekaman tidak ditemukan."); return; }
+            recDownload(segs, "rekaman-rapat-"+audioSlug($f("#mmTitle").value)+"-"+($f("#mmDate").value || todayStr())+(audioSids.length > 1 ? "-r"+(audioSids.indexOf(sid)+1) : ""));
+            return;
+          }
+          if(!confirm("Hapus rekaman audio ini dari browser? Transkrip dan isi catatan tidak ikut terhapus.")) return;
+          await RecDB.drop(sid); const k = audioSids.indexOf(sid); if(k >= 0) audioSids.splice(k, 1);
+          renderAudio(); overlay.dispatchEvent(new Event("change"));
+        }; });
+      });
+    }
+    renderAudio();
+    $f("#mmTransDl").onclick = ()=>momDownloadTranscript(collect());
     $f("#mmAiAdd").onclick = ()=>{
       ais.push({ task:"", pic:"", due:"", done:false }); renderAis();
       const rows = overlay.querySelectorAll(".mm-task"); if(rows.length) rows[rows.length-1].focus();
@@ -5690,7 +5908,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
           try{ sum = parseJson(await gem(key, model, [{ text:sumPrompt(full) }], true)); }catch(e){ sumErr = e.message; }
           if(R && R.aborted){ resetRecTitle(); return; }
           apply(full, sum); pending = null; st = "idle"; ui(); resetRecTitle();
-          if(curSid){ RecDB.drop(curSid).then(()=>{ curSid = null; checkRecovery(); }); }
+          if(curSid){ const sid = curSid; curSid = null; RecDB.keep(sid).then(()=>{ if(!audioSids.includes(sid)) audioSids.push(sid); renderAudio(); overlay.dispatchEvent(new Event("change")); checkRecovery(); }); }
           stat.innerHTML = sum ? "✓ Selesai. Ringkasan, keputusan, action item, dan transkrip sudah masuk ke form. Periksa dulu sebelum disimpan." : "✓ Transkrip masuk ke form, tapi ringkasan gagal dibuat ("+esc(sumErr)+"). Klik <b>Rekam rapat</b> lagi atau tulis manual.";
           stat.insertAdjacentHTML("beforeend", ' <button type="button" id="mmMeetDl2">⬇ Unduh audio</button>');
           const d2 = stat.querySelector("#mmMeetDl2"); if(d2) d2.onclick = ()=>downloadSegs(segs);
@@ -5765,8 +5983,8 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         const box = $f("#mmRecover"); if(!box || !box.isConnected) return;
         let metas = await RecDB.list();
         const now = Date.now();
-        for(const m of metas.filter(m=>now - m.startedAt > 7*864e5)) await RecDB.drop(m.sid);   // bersihkan yang sudah > 7 hari
-        metas = metas.filter(m=>now - m.startedAt <= 7*864e5 && m.sid !== curSid).sort((a,b)=>a.startedAt-b.startedAt);
+        for(const m of metas.filter(m=>!m.kept && now - m.startedAt > 7*864e5)) await RecDB.drop(m.sid);   // bersihkan yang sudah > 7 hari
+        metas = metas.filter(m=>!m.kept && now - m.startedAt <= 7*864e5 && m.sid !== curSid).sort((a,b)=>a.startedAt-b.startedAt);
         if(!metas.length){ box.style.display = "none"; box.innerHTML = ""; return; }
         box.style.display = "";
         box.innerHTML = metas.map(m=>'<div class="mm-recv" data-sid="'+esc(m.sid)+'"><div>⚠ Ada rekaman rapat yang belum selesai diproses · mulai '+esc(fmtDT(m.startedAt))+(m.title ? ' · '+esc(m.title) : '')+'</div>'+
@@ -5801,7 +6019,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       place: $f("#mmPlace").value.trim(), notulis: $f("#mmNotulis").value.trim(),
       attendees: $f("#mmAtt").value.trim(), agenda: $f("#mmAgenda").value.trim(),
       discussion: $f("#mmDisc").value.trim(), decisions: $f("#mmDec").value.trim(),
-      nextMeeting: $f("#mmNext").value.trim(), transcript: $f("#mmTrans").value.trim(),
+      nextMeeting: $f("#mmNext").value.trim(), transcript: $f("#mmTrans").value.trim(), audioSids: audioSids.slice(),
       actionItems: ais.filter(a=>a.task.trim()).map(a=>({ task:a.task.trim(), pic:a.pic.trim(), due:a.due||"", done:!!a.done, enhId:a.enhId||"" }))
     });
     function autoSaveNow(){
@@ -5876,7 +6094,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     if(cur) $f("#mmDel").onclick = async ()=>{
       const ok = await confirmDialog("Hapus catatan meeting ini?");
       if(!ok) return;
-      try{ await db.collection("meetings").doc(cur.id).delete(); overlay.remove(); toast("Catatan meeting dihapus."); }
+      try{ await db.collection("meetings").doc(cur.id).delete(); audioSids.forEach(sid=>RecDB.drop(sid)); overlay.remove(); toast("Catatan meeting dihapus."); }
       catch(err){ toast("Gagal menghapus."); }
     };
     $f("#mmSave").onclick = async ()=>{
@@ -5891,7 +6109,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         place: $f("#mmPlace").value.trim(), notulis: $f("#mmNotulis").value.trim(),
         attendees: $f("#mmAtt").value.trim(), agenda: $f("#mmAgenda").value.trim(),
         discussion: $f("#mmDisc").value.trim(), decisions: $f("#mmDec").value.trim(),
-        nextMeeting: $f("#mmNext").value.trim(), transcript: $f("#mmTrans").value.trim(),
+        nextMeeting: $f("#mmNext").value.trim(), transcript: $f("#mmTrans").value.trim(), audioSids: audioSids.slice(),
         actionItems: ais.filter(a=>a.task.trim()).map(a=>({ task:a.task.trim(), pic:a.pic.trim(), due:a.due||"", done:!!a.done, enhId:a.enhId||"" }))
       };
       const btn = $f("#mmSave"); btn.disabled = true;
@@ -5941,17 +6159,20 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
           '<div><label>Sampai tanggal (opsional)</label><input type="date" id="mxTo"></div>'+
         '</div>'+
         '<label class="opt-check"><input type="checkbox" id="mxAi" checked style="width:auto;"> Sertakan action items</label>'+
-        '<div class="hint">Hasilnya satu PDF: halaman rekap di depan, lalu tiap meeting di halaman sendiri (diurutkan per project, lalu tanggal).</div>'+
+        '<label class="opt-check"><input type="checkbox" id="mxTrans" checked style="width:auto;"> Lampirkan transkrip lengkap rapat (kalau ada)</label>'+
+        '<div class="hint">Hasilnya satu PDF: halaman rekap di depan, lalu tiap meeting di halaman sendiri (diurutkan per project, lalu tanggal). Transkrip lengkap, kalau dicentang, dilampirkan di halaman paling akhir.</div>'+
         '<div class="modal-actions"><button id="mxCancel">Batal</button><button class="primary" id="mxOk">Export PDF</button></div>'+
       '</div>';
     document.body.appendChild(overlay);
     const $f = q=>overlay.querySelector(q);
     $f("#mxProj").value = pid0;
+    $f("#mxTrans").checked = momTransPref();
     overlay.onclick = ev=>{ if(ev.target===overlay) overlay.remove(); };
     $f("#mxCancel").onclick = ()=>overlay.remove();
     $f("#mxOk").onclick = ()=>{
       const pid = $f("#mxProj").value, from = $f("#mxFrom").value, to = $f("#mxTo").value;
-      const withAi = $f("#mxAi").checked;
+      const withAi = $f("#mxAi").checked, withTrans = $f("#mxTrans").checked;
+      setMomTransPref(withTrans);
       const order = projects.map(p=>p.id);
       const list = momItems
         .filter(m=>(!pid || m.projectId===pid) && (!from || (m.date||"") >= from) && (!to || (m.date||"") <= to))
@@ -5963,7 +6184,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       overlay.remove();
       let periode = "";
       if(from || to) periode = (from ? fmtDate(from) : "awal") + " s/d " + (to ? fmtDate(to) : "sekarang");
-      buildMomPdf(list, pid ? momProjName(pid) : "Semua Project", { ai: withAi, periode });
+      buildMomPdf(list, pid ? momProjName(pid) : "Semua Project", { ai: withAi, periode, transcript: withTrans });
     };
   }
 
@@ -6087,6 +6308,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   async function buildMomPdf(list, label, opts){
     opts = opts || {};
     const withAi = opts.ai !== false;
+    const tList = opts.transcript === false ? [] : list.filter(m=>(m.transcript||"").trim());   // meeting yang punya transkrip -> jadi lampiran
     if(!window.jspdf){ toast("Library PDF gagal dimuat."); return; }
     const { jsPDF } = window.jspdf;
     const C = PDF_C;
@@ -6204,6 +6426,38 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       if((m.nextMeeting||"").trim()){ heading("Meeting Berikutnya / Catatan"); callout(m.nextMeeting.trim(), C.soft, C.accent); }
     }
 
+    // Lampiran: transkrip lengkap rapat (halaman baru, banner sendiri)
+    function drawTranscript(m, idx, total){
+      doc.addPage(); y = top;
+      const sub = [momProjName(m.projectId), momTimeLabel(m)].filter(Boolean).join("   |   ");
+      const bh = pdfBanner(doc, "LAMPIRAN"+(total > 1 ? " "+idx+" DARI "+total : ""), "Transkrip Lengkap: "+(m.title || "(tanpa judul)"), sub, pageW);
+      y = bh + 8;
+      lines("Transkrip dibuat otomatis oleh AI dari rekaman rapat dan belum tentu 100% akurat. Periksa kembali sebelum dijadikan rujukan.", 8.5, "italic", C.dim);
+      y += 2;
+      const lh = 4.4, indent = 4;
+      String(m.transcript).split(/\r?\n/).forEach(raw=>{
+        const ln = raw.trim();
+        if(!ln) return;
+        if(/^[\u2014\u2013\-_=]{4,}$/.test(ln)){ ensure(8); y += 2; doc.setDrawColor(...C.line); doc.setLineWidth(0.3); doc.line(mx, y, mx+availW, y); y += 5; return; }
+        const mt = /^\[((?:\d{1,2}:)?\d{1,2}:\d{2})\]\s*([^:\n]{1,40}?):\s*([\s\S]*)$/.exec(ln);
+        if(!mt){ lines(ln, 9, "normal"); return; }
+        doc.setFont("helvetica","normal"); doc.setFontSize(9);
+        const body = doc.splitTextToSize(pdfText(mt[3]) || "-", availW - indent);
+        ensure(lh*2 + 3);
+        y += 1.5;
+        const ts = "["+mt[1]+"]";
+        doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...C.dim);
+        doc.text(ts, mx, y);
+        const tw = doc.getTextWidth(ts + "  ");
+        doc.setFont("helvetica","bold"); doc.setTextColor(...C.accent);
+        doc.text(pdfText(mt[2]), mx + tw, y);
+        y += lh;
+        doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...C.body);
+        body.forEach(l=>{ ensure(lh); doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...C.body); doc.text(l, mx + indent, y); y += lh; });
+        y += 1;
+      });
+    }
+
     if(list.length > 1){
       const subParts = [];
       if(opts.periode) subParts.push("Periode: "+opts.periode);
@@ -6234,10 +6488,11 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     } else {
       drawMeeting(list[0]);
     }
+    tList.forEach((m, i)=>drawTranscript(m, i+1, tList.length));
 
     pdfFooter(doc, "Catatan Meeting - "+label, mx, [pdfCreatedLine(), "Dokumen ini bersifat rahasia dan tidak boleh disebarkan tanpa izin."]);
     const base = list.length === 1 ? "MoM_"+label+"_"+(list[0].title||"meeting")+"_"+(list[0].date||todayStr()) : "MoM_"+label+"_"+todayStr();
-    toast(pdfDownload(doc, base.replace(/[^\w\-]+/g,"_").replace(/_+/g,"_").slice(0,90) + ".pdf") ? "PDF MoM berhasil dibuat." : "Gagal membuat PDF.");
+    toast(pdfDownload(doc, base.replace(/[^\w\-]+/g,"_").replace(/_+/g,"_").slice(0,90) + ".pdf") ? "PDF MoM berhasil dibuat."+(tList.length ? " Termasuk "+tList.length+" lampiran transkrip." : "") : "Gagal membuat PDF.");
   }
   renderMom();
 
