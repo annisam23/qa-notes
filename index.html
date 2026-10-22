@@ -7804,5 +7804,176 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
 
 })();
 </script>
+<script>
+/* ===== Auto-save draft input & kata kunci pencarian (ditambahkan) =====
+   - Semua kolom isian (teks, textarea, tanggal, dropdown) otomatis disimpan di browser saat diketik,
+     lalu dipulihkan kalau halaman di-refresh / modal tertutup tidak sengaja.
+   - Draft otomatis dihapus begitu data berhasil disimpan ke Firestore.
+   - Kolom pencarian/filter: kata kunci disimpan, dihapus saat kolom dikosongkan atau
+     setelah SEARCH_TTL_MENIT tanpa aktivitas.
+   - Dilewati: password/token/secret, form login, file, checkbox/radio, dan halaman publik (?share= / ?dev=). */
+(function(){
+  "use strict";
+  if (/[?&](share|dev)=/.test(location.search)) return;
+
+  const SEARCH_TTL_MENIT = 10;      // kata kunci pencarian dibuang otomatis setelah N menit
+  const DRAFT_TTL_HARI   = 7;       // draft yang tidak pernah disimpan dibuang setelah N hari
+  const SEARCH_TTL = SEARCH_TTL_MENIT*60*1000, DRAFT_TTL = DRAFT_TTL_HARI*86400*1000;
+  const DPFX = "qa_draft:", SPFX = "qa_search:";
+  const SENSITIVE = /pass|pwd|pw|sandi|token|secret|api.?key|otp/i;
+  const BAD_TYPES = /^(password|file|hidden|checkbox|radio|button|submit|reset|range|color|image)$/;
+  const SKIP_WRITE_COL = /^(auditLog|users)$/;
+
+  const ls = {
+    get(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(_){ return null; } },
+    set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(_){} },
+    del(k){ try{ localStorage.removeItem(k); }catch(_){} }
+  };
+  const isField  = el => !!el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
+  const isSearch = el => el.tagName==="INPUT" && el.id!=="commandInput" &&
+                         (el.type==="search" || /search/i.test(el.id) || /^(🔍\s*)?cari/i.test(el.placeholder||""));
+
+  function ident(el){
+    if (el.id) return el.id;
+    if (el.dataset.sf) return "sf:"+el.dataset.sf;
+    if (el.dataset.f)  return "f:"+el.dataset.f;
+    return el.name || "";
+  }
+  function scopeOf(el){
+    const ov = el.closest(".modal-overlay");
+    if (ov){
+      const b = ov.querySelector(".modal-box");
+      const t = (b && (b.getAttribute("aria-label") || (b.querySelector("h2,h3")||{}).textContent)) || "modal";
+      return "ov:"+t.trim().slice(0,40);
+    }
+    const p = el.closest(".tab-panel");
+    return p ? p.id : "page";
+  }
+  function keyOf(el, pfx){ const id = ident(el); return id ? pfx+scopeOf(el)+"|"+id : null; }
+
+  function eligible(el){
+    if (!isField(el) || el.readOnly || el.disabled) return false;
+    if (BAD_TYPES.test(el.type)) return false;
+    if (el.closest("#loginGate")) return false;
+    const meta = [el.id, el.name, el.dataset.f, el.dataset.sf, el.placeholder, el.getAttribute("aria-label")].join(" ");
+    if (SENSITIVE.test(meta)) return false;
+    if (el.closest("tr,td") && (el.tagName==="SELECT" || !el.id)) return false;   // isian per-baris: identitas tidak stabil
+    return !!ident(el);
+  }
+
+  /* ---------- simpan ---------- */
+  function persist(el){
+    if (!eligible(el)) return;
+    if (isSearch(el)){
+      const k = keyOf(el, SPFX);
+      if (el.value.trim()==="") ls.del(k); else ls.set(k, {v:el.value, t:Date.now()});
+      return;
+    }
+    if (el.tagName!=="SELECT" && el.__qaInit) return;     // kolom berisi data lama (mode edit): bukan draft
+    const k = keyOf(el, DPFX);
+    if (el.value==="" || (el.tagName==="SELECT" && el.selectedIndex<=0)) ls.del(k);
+    else ls.set(k, {v:el.value, t:Date.now()});
+  }
+  document.addEventListener("focusin", e=>{
+    const el = e.target;
+    if (isField(el) && el.value !== el.__qaLast) el.__qaInit = el.value;   // nilai berubah oleh program = data bawaan
+  }, true);
+  function onEdit(e){
+    if (e.__qa) return;
+    const el = e.target; if (!isField(el)) return;
+    el.__qaLast = el.value;
+    el.classList.remove("qa-draft-restored");
+    clearTimeout(el.__qaT); el.__qaT = setTimeout(()=>persist(el), 400);
+  }
+  document.addEventListener("input",  onEdit, true);
+  document.addEventListener("change", onEdit, true);
+
+  /* ---------- pulihkan ---------- */
+  let restored = [];
+  function fire(el, type){ const ev = new Event(type, {bubbles:true}); ev.__qa = 1; el.dispatchEvent(ev); }
+  function restoreField(el){
+    if (el.__qaR) return; el.__qaR = 1;
+    if (!eligible(el)) return;
+    if (el.tagName!=="SELECT" && el.value!=="") return;
+    const search = isSearch(el), k = keyOf(el, search?SPFX:DPFX), d = ls.get(k);
+    if (!d) return;
+    if (Date.now()-d.t > (search?SEARCH_TTL:DRAFT_TTL)){ ls.del(k); return; }
+    if (el.tagName==="SELECT"){
+      if (el.selectedIndex>0 || ![...el.options].some(o=>o.value===d.v)) return;
+    }
+    el.value = d.v; el.__qaInit = ""; el.__qaLast = d.v;
+    fire(el,"input"); if (el.tagName==="SELECT") fire(el,"change");
+    if (!search){ el.classList.add("qa-draft-restored"); restored.push(el); }
+  }
+  function scan(root){
+    (root||document).querySelectorAll("input,textarea,select").forEach(restoreField);
+    if (root && isField(root)) restoreField(root);
+    if (restored.length) showToast();
+  }
+  function showToast(){
+    const list = restored; restored = [];
+    const old = document.getElementById("qaDraftToast"); if (old) old.remove();
+    const t = document.createElement("div"); t.id = "qaDraftToast";
+    t.innerHTML = 'Draft dipulihkan ('+list.length+' kolom) <button type="button">Buang draft</button>';
+    t.querySelector("button").onclick = ()=>{
+      list.forEach(el=>{
+        const k = keyOf(el, DPFX); if (k) ls.del(k);
+        if (el.tagName==="SELECT") el.selectedIndex = 0; else el.value = "";
+        el.__qaLast = el.value; el.classList.remove("qa-draft-restored"); fire(el,"input");
+      });
+      t.remove();
+    };
+    document.body.appendChild(t); setTimeout(()=>t.remove(), 9000);
+  }
+  let scanT = null;
+  new MutationObserver(muts=>{
+    clearTimeout(scanT);
+    scanT = setTimeout(()=>{
+      muts.forEach(m=>m.addedNodes.forEach(n=>{ if (n.nodeType===1) scan(n); }));
+    }, 120);
+  }).observe(document.body, {childList:true, subtree:true});
+  try { firebase.auth().onAuthStateChanged(u=>{ if (u) setTimeout(()=>scan(document), 800); }); }
+  catch(_){ setTimeout(()=>scan(document), 1000); }
+
+  /* ---------- hapus draft setelah berhasil disimpan ---------- */
+  let lastClick = null;
+  document.addEventListener("click", e=>{
+    const btn = e.target.closest && e.target.closest("button,[role=button],input[type=submit]");
+    if (!btn) return;
+    const root = btn.closest(".modal-overlay") || btn.closest(".card") || btn.closest(".tab-panel");
+    lastClick = root ? {root, t:Date.now()} : null;
+  }, true);
+  function clearDrafts(root){
+    root.querySelectorAll("input,textarea,select").forEach(el=>{
+      if (!isField(el) || isSearch(el)) return;
+      const k = keyOf(el, DPFX); if (k) ls.del(k);
+      el.__qaLast = undefined; el.__qaInit = undefined; el.classList.remove("qa-draft-restored");
+    });
+  }
+  function wrap(proto, name, colOf){
+    const orig = proto && proto[name]; if (!orig) return;
+    proto[name] = function(){
+      const c = lastClick, ok = c && (Date.now()-c.t < 8000) && !SKIP_WRITE_COL.test(colOf(this)||"");
+      const p = orig.apply(this, arguments);
+      if (ok && p && p.then) p.then(()=>clearDrafts(c.root), ()=>{});
+      return p;
+    };
+  }
+  try{
+    const FS = firebase.firestore;
+    wrap(FS.DocumentReference.prototype, "set",    r=>r.parent && r.parent.id);
+    wrap(FS.DocumentReference.prototype, "update", r=>r.parent && r.parent.id);
+    wrap(FS.CollectionReference.prototype, "add",  r=>r.id);
+    wrap(FS.WriteBatch.prototype, "commit",        ()=>"");
+  }catch(err){ console.warn("Auto-save: hook Firestore gagal", err); }
+
+  const st = document.createElement("style");
+  st.textContent = ".qa-draft-restored{outline:2px dashed rgba(124,92,255,.55);outline-offset:1px}" +
+    "#qaDraftToast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:99999;background:#1f2937;color:#fff;" +
+    "padding:10px 14px;border-radius:10px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.3);display:flex;gap:12px;align-items:center}" +
+    "#qaDraftToast button{background:transparent;color:#a5b4fc;border:1px solid #a5b4fc;border-radius:6px;padding:3px 9px;font-size:12px;cursor:pointer}";
+  document.head.appendChild(st);
+})();
+</script>
 </body>
 </html>
