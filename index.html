@@ -1124,6 +1124,328 @@
   .mm-bg-bar button { padding:6px 10px; font-size:12px; flex:none; white-space:nowrap; }
   @media (max-width:520px){ .mm-bg-bar { flex-wrap:wrap; } .mm-bg-txt { flex-basis:100%; } .mm-bg-bar button { flex:1 1 0; } }
 </style>
+<style id="qa-ux-refine">
+  /* =====================================================================
+     UX REFINE v1 — palet harmonis, tipografi terbaca, white space lega, CTA tegas
+     (lapisan di atas desain lama; tidak mengubah logika aplikasi)
+     ===================================================================== */
+  :root {
+    --bg:#f4f6fb; --surface:#ffffff; --surface-2:#f3f5fa; --border:#e2e7f1;
+    --text:#152038; --text-dim:#58667f;
+    --accent:#4f46e5; --accent-2:#7a71f0; --accent-text:#ffffff;
+    --accent-grad:linear-gradient(135deg,#4f46e5 0%,#6a5df0 100%);
+    --mint:#2fc9a2;
+    --danger:#d9455a; --ok:#0e9a78; --warn:#d68629; --gray:#6b7890;
+    --shadow:0 1px 2px rgba(21,32,56,.04),0 6px 20px rgba(21,32,56,.05);
+    --shadow-lift:0 4px 10px rgba(21,32,56,.06),0 22px 44px rgba(21,32,56,.11);
+    --shadow-cta:0 2px 4px rgba(79,70,229,.25),0 10px 24px rgba(79,70,229,.30);
+    --r-card:18px; --r-ctl:11px;
+    --gap:24px;
+  }
+  :root[data-theme="dark"] {
+    --bg:#0c1322; --surface:#152033; --surface-2:#1b293f; --border:#293a55;
+    --text:#f2f5fc; --text-dim:#b3bfd3;
+    --accent:#9b90ff; --accent-2:#c0b8ff; --accent-text:#0e1328;
+    --accent-grad:linear-gradient(135deg,#9b90ff 0%,#b7a9ff 100%);
+    --shadow-cta:0 2px 4px rgba(0,0,0,.3),0 10px 26px rgba(155,144,255,.28);
+  }
+  @media (prefers-color-scheme:dark) {
+    :root:not([data-theme="light"]):not([data-theme="dark"]) {
+      --bg:#0c1322; --surface:#152033; --surface-2:#1b293f; --border:#293a55;
+      --text:#f2f5fc; --text-dim:#b3bfd3;
+      --accent:#9b90ff; --accent-2:#c0b8ff; --accent-text:#0e1328;
+      --accent-grad:linear-gradient(135deg,#9b90ff 0%,#b7a9ff 100%);
+      --shadow-cta:0 2px 4px rgba(0,0,0,.3),0 10px 26px rgba(155,144,255,.28);
+    }
+  }
+
+  /* ---------- 1. TIPOGRAFI: ukuran lebih besar, kontras lebih baik ---------- */
+  html { -webkit-text-size-adjust:100%; }
+  body { font-size:14.5px; line-height:1.6; color:var(--text); -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
+  header.top h1, .hero h2, .section-intro h2, .dk-v, .sidebar-brand strong { letter-spacing:-.028em; }
+  header.top h1 { font-size:clamp(25px,2.2vw,32px); }
+  header.top .sub { font-size:14px; margin-top:6px; }
+  .page-eyebrow,.section-eyebrow,.proj-picker-head .plabel { font-size:11.5px; letter-spacing:.12em; }
+  .section-intro h2 { font-size:22px; line-height:1.3; }
+  .card h3,.dcard h3 { font-size:15.5px; font-weight:800; letter-spacing:-.01em; }
+  .hint,.picker-sub,.ext-sub,.ext-tip,.bd-hint { font-size:13px; line-height:1.6; color:var(--text-dim); }
+  input[type=text],input[type=date],input[type=email],input[type=password],textarea,select { font-size:14px; min-height:42px; padding:9px 13px; border-radius:var(--r-ctl); }
+  textarea { min-height:88px; line-height:1.6; }
+  .modal-box label, .ext-field-l, .gd-sub, .dv-label { font-size:11.5px; letter-spacing:.07em; }
+  .tab-btn { font-size:13.5px; min-height:44px; }
+  .nav-section-label { font-size:11px; letter-spacing:.14em; color:#8394ae; }
+  .dk-l { font-size:11.5px; letter-spacing:.07em; }
+  .dk-s { font-size:12px; }
+  .dk-v { font-size:34px; }
+  thead th { font-size:11.5px; padding:12px 10px; }
+  tbody td { padding:13px 10px; font-size:13.5px; }
+  .card-item .exc { font-size:13.5px; line-height:1.55; }
+  .badge,.badge-priority,.chip { font-size:11.5px; padding:3px 10px; }
+  .proj-tab .pt-name { font-size:15px; }
+  .proj-tab .cnt,.proj-tab .pt-foot,.proj-tab .pt-chip { font-size:12px; }
+  .proj-summary .ps-lbl { font-size:12.5px; }
+  .scan-name { font-size:14.5px; }
+  .gd-sum,.gd-steps li,.gd-keys { font-size:14.5px; }
+  .toast { font-size:13.5px; }
+
+  /* ---------- 2. WHITE SPACE: konten dibatasi lebar & diberi ruang napas ---------- */
+  .app-shell { grid-template-columns:264px minmax(0,1fr); }
+  header.top { padding:34px clamp(24px,4vw,64px) 26px; }
+  .tab-panel.active { padding:36px clamp(24px,4vw,64px) 96px; width:100%; max-width:1440px; justify-self:center; }
+  .card { padding:28px; border-radius:var(--r-card); }
+  .card + .card { margin-top:var(--gap); }
+  .proj-picker { padding:28px; margin-bottom:var(--gap); border-radius:var(--r-card); }
+  .proj-picker-head { margin-bottom:22px; gap:16px; }
+  .proj-grid { gap:16px; }
+  .proj-tab { padding:18px 18px 16px; min-height:156px; }
+  .proj-summary { gap:16px; margin-bottom:20px; }
+  .proj-summary .ps-item { padding:16px 18px; }
+  .section-intro { margin-bottom:22px !important; }
+  .hero { margin-bottom:44px; border-radius:24px; min-height:290px; }
+  .hero-copy { padding:44px clamp(32px,4vw,60px); }
+  .hero h2 { margin:20px 0 12px; font-size:clamp(28px,2.6vw,40px); }
+  .hero p { font-size:15px; line-height:1.7; max-width:470px; margin:0 0 28px; color:#d0d8ea; }
+  .hero-kicker { font-size:11px; }
+  .dash-kpis { gap:18px; margin-bottom:24px; }
+  .dkpi { padding:22px 24px; min-height:132px; }
+  .dash-grid { gap:22px; }
+  .dcard { padding:24px 26px; border-radius:var(--r-card); }
+  .dcard h3 { padding-bottom:14px; margin-bottom:16px; }
+  .board { gap:14px; }
+  .board-col { padding:12px; }
+  .card-item { padding:14px; }
+  .bug-filters { padding:14px 0 22px; gap:12px; }
+  .scan-grid { gap:16px; }
+  .scan-row { padding:20px; }
+  .modal-box { border-radius:20px; }
+  .modal-box:not(.bd-modal) { padding:28px; }
+  .row-flex { gap:10px; }
+  .ext-grid,.cv-grid { gap:24px; }
+  .ext-link,.ext-pend-item { padding:16px; }
+  .gd-sec { padding:24px 26px; margin-bottom:20px; }
+
+  /* ---------- 3. TOMBOL: hirarki jelas (primer > sekunder > tersier) ---------- */
+  button { font-size:13.5px; font-weight:600; border-radius:var(--r-ctl); }
+  .row-flex > button, .bug-filters button, .section-intro button, .ext-hero button, .top-actions button, .hero-actions button, .proj-picker-head button { min-height:40px; padding:8px 16px; }
+  :where(.row-flex > button, .bug-filters button, .section-intro button, .ext-hero button):not(.primary):not(.on):not(.active) { background:var(--surface); border:1px solid var(--border); color:var(--text); }
+  :where(.row-flex > button, .bug-filters button, .section-intro button, .ext-hero button):not(.primary):not(.on):not(.active):hover { border-color:color-mix(in srgb,var(--accent) 55%,var(--border)); color:var(--accent); }
+  button.primary,.cta-main,.fab-add {
+    background:var(--accent-grad); color:var(--accent-text); border:0; font-weight:800; letter-spacing:.005em;
+    min-height:44px; padding:10px 22px; box-shadow:var(--shadow-cta);
+  }
+  button.primary:hover,.cta-main:hover,.fab-add:hover { transform:translateY(-2px); filter:brightness(1.07); box-shadow:0 3px 6px rgba(79,70,229,.28),0 16px 32px rgba(79,70,229,.34); }
+  button.primary:active,.cta-main:active,.fab-add:active { transform:translateY(0); filter:brightness(.97); }
+  button.primary:focus-visible,.cta-main:focus-visible,.fab-add:focus-visible { outline:3px solid color-mix(in srgb,var(--accent) 45%,transparent); outline-offset:3px; }
+  button.primary[disabled],button:disabled { opacity:.5; box-shadow:none; transform:none; cursor:not-allowed; }
+  /* tombol "tambah" yang belum primary dibuat menonjol sebagai CTA sekunder */
+  #btnManualRow { background:color-mix(in srgb,var(--accent) 8%,var(--surface)) !important; border:1.5px solid color-mix(in srgb,var(--accent) 55%,var(--border)) !important; color:var(--accent) !important; font-weight:800; min-height:44px; padding:10px 20px; }
+  #btnManualRow:hover { background:var(--accent) !important; color:var(--accent-text) !important; border-color:var(--accent) !important; box-shadow:var(--shadow-cta); }
+  .view-toggle button { min-height:36px; padding:6px 16px; border:0; background:transparent; color:var(--text-dim); }
+  .view-toggle button.active { background:var(--accent); color:var(--accent-text); box-shadow:none; }
+  .icon-btn { min-height:0; }
+
+  /* Header: CTA utama selalu terlihat */
+  .top-actions { gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+  .top-actions button:not(.cta-main) { min-height:40px; font-size:12.5px; }
+  .cta-main { display:inline-flex; align-items:center; gap:8px; border-radius:12px; font-size:14px; white-space:nowrap; order:-1; }
+  .cta-main .cta-plus { display:grid; place-items:center; width:20px; height:20px; border-radius:50%; background:rgba(255,255,255,.22); font-size:16px; line-height:1; font-weight:700; }
+  :root[data-theme="dark"] .cta-main .cta-plus { background:rgba(14,19,40,.18); }
+  .status-pill { min-height:40px; padding:0 14px; font-size:11.5px; white-space:nowrap; max-width:none !important; }
+  .quick-jump kbd { font-size:11px; }
+
+  /* Hero: CTA besar, kontras tinggi */
+  .hero-actions { gap:12px; }
+  .hero-actions button { min-height:50px; padding:12px 24px; border-radius:13px; font-size:14.5px; font-weight:800; }
+  .hero-primary { background:#fff !important; color:#3730c9 !important; border:0 !important; box-shadow:0 0 0 5px rgba(255,255,255,.14),0 14px 30px rgba(0,0,0,.28); }
+  .hero-primary:hover { background:#f0eeff !important; transform:translateY(-2px); box-shadow:0 0 0 7px rgba(255,255,255,.18),0 18px 36px rgba(0,0,0,.32); color:#3730c9 !important; }
+  .hero-secondary { background:rgba(255,255,255,.08) !important; border:1px solid rgba(255,255,255,.34) !important; color:#fff !important; font-weight:700; }
+  .hero-secondary:hover { background:rgba(255,255,255,.18) !important; color:#fff !important; }
+  .hero-actions span { margin-left:9px; }
+
+  /* Drop zone = CTA unggah utama */
+  .drop-zone { padding:40px 20px; border-width:2px; border-radius:16px; font-size:15px; }
+  .drop-icon { width:50px; height:50px; font-size:28px; border-radius:14px; background:var(--accent-grad); color:var(--accent-text); box-shadow:var(--shadow-cta); }
+  .drop-zone .hint { font-size:13px; margin-top:6px; }
+
+  /* ---------- 4. PALET: hero satu keluarga warna (indigo → navy), sidebar selaras ---------- */
+  .hero { background:radial-gradient(ellipse at 88% -10%,rgba(122,113,240,.55) 0%,transparent 46%),radial-gradient(ellipse at 10% 115%,rgba(47,201,162,.16) 0%,transparent 42%),linear-gradient(120deg,#131f3d 0%,#1c2158 58%,#33308f 100%); }
+  .hero h2 em { color:#8ff0d3; }
+  .tab-btn.active { background:linear-gradient(110deg,rgba(122,113,240,.36),rgba(122,113,240,.08)); box-shadow:inset 3px 0 var(--mint); }
+  .eyebrow-dot { background:var(--mint); }
+  .dkpi::before { height:4px; opacity:.9; }
+  .proj-tab.active, .proj-pill.on { border-color:var(--accent); }
+  .board-col { background:color-mix(in srgb,var(--surface-2) 70%,var(--surface)); }
+
+
+  /* --- perbaikan spesifisitas CTA header & layout header satu baris --- */
+  .top-actions .cta-main { background:var(--accent-grad); color:var(--accent-text); border:0; box-shadow:var(--shadow-cta); min-height:44px; padding:10px 22px; font-size:14px; font-weight:800; }
+  .top-actions .cta-main:hover { background:var(--accent-grad); color:var(--accent-text); border-color:transparent; transform:translateY(-2px); filter:brightness(1.07); }
+  header.top { flex-wrap:nowrap; gap:24px; }
+  header.top .page-heading { flex:1 1 auto; min-width:0; }
+  .top-actions { flex:0 0 auto; flex-wrap:nowrap; }
+  @media (max-width:1560px) and (min-width:801px) {
+    .quick-jump { min-width:40px; padding:9px 12px; }
+    .quick-jump > span:nth-child(2), .quick-jump kbd, #themeLabel { display:none; }
+  }
+  header.top .sub { max-width:460px; }
+  @media (max-width:800px) { header.top { flex-wrap:wrap; } .top-actions { flex-wrap:wrap; width:100%; justify-content:flex-start; } .theme-toggle { margin-left:0 !important; } }
+
+  /* ---------- 5. FAB: tombol "Catat temuan" untuk layar kecil ---------- */
+  .fab-add { display:none; position:fixed; right:18px; bottom:calc(18px + env(safe-area-inset-bottom,0px)); z-index:700; border-radius:999px; padding:0 22px 0 18px; min-height:52px; align-items:center; gap:8px; font-size:14.5px; }
+  .fab-add .cta-plus { font-size:22px; line-height:1; font-weight:600; }
+  body.bulk-on .fab-add { display:none !important; }
+
+  @media (max-width:1160px) { .app-shell { grid-template-columns:230px minmax(0,1fr); } }
+  @media (max-width:800px) {
+    .app-shell { grid-template-columns:minmax(0,1fr); }
+    header.top { padding:22px 18px 18px; }
+    .tab-panel.active { padding:24px 16px 110px; }
+    .card,.proj-picker,.dcard { padding:20px; }
+    .hero-copy { padding:32px 24px 34px; }
+    .hero-actions button { flex:1 1 100%; justify-content:center; }
+    .top-actions .cta-main { display:none; }   /* diganti FAB di mobile */
+    .fab-add { display:inline-flex; }
+    .tab-btn { font-size:12.5px; }
+    .dk-v { font-size:28px; }
+    body { font-size:14px; }
+  }
+  @media (max-width:620px) {
+    .proj-tab { padding:15px; }
+    .dkpi { padding:16px; min-height:112px; }
+    .modal-box:not(.bd-modal) { padding:22px 18px; }
+  }
+</style>
+<style id="qa-layout-v2">
+  /* =====================================================================
+     LAYOUT V2 — header lengket & ramping, project = baris geser, unggah ringkas,
+     hero padat, grid dashboard adaptif
+     ===================================================================== */
+  @media (min-width:801px) {
+    header.top {
+      position:sticky; top:0; z-index:30;
+      padding:16px max(clamp(24px,4vw,64px), calc((100% - 1440px)/2 + clamp(24px,4vw,64px)));
+      background:color-mix(in srgb,var(--bg) 86%,transparent);
+      -webkit-backdrop-filter:saturate(1.4) blur(14px); backdrop-filter:saturate(1.4) blur(14px);
+    }
+    header.top h1 { font-size:24px; margin-top:4px; }
+    header.top .sub { display:none; }
+    .page-eyebrow { font-size:11px; }
+    .tab-panel.active { padding-top:30px; }
+  }
+
+  /* Hero lebih padat, tetap menonjol */
+  .hero { min-height:0; margin-bottom:36px; grid-template-columns:minmax(0,1.3fr) minmax(200px,.7fr); }
+  .hero-copy { padding:34px clamp(28px,3.6vw,52px); }
+  .hero h2 { font-size:clamp(26px,2.3vw,34px); margin:14px 0 10px; }
+  .hero p { margin-bottom:22px; font-size:14.5px; }
+  .hero-visual { min-height:220px; }
+  .orbit-two { display:none; }
+  .orbit-one { width:190px; height:190px; }
+  .hero-core { width:112px; height:112px; border-radius:32px; }
+
+  /* Dashboard: grid KPI adaptif */
+  .dash-kpis { grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); }
+  .dash-grid { grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr)); }
+
+  /* Kelola Bug: baris project yang bisa digeser, hemat tinggi layar */
+  .proj-picker { padding:22px 0 18px 24px; overflow:hidden; }
+  .proj-picker-head, .proj-summary { padding-right:24px; }
+  .proj-grid {
+    display:flex !important; grid-template-columns:none !important; gap:14px;
+    overflow-x:auto; overscroll-behavior-x:contain; scroll-snap-type:x proximity;
+    padding:4px 24px 14px 2px; margin-right:0; scrollbar-width:thin;
+  }
+  .proj-grid > * { flex:0 0 236px; scroll-snap-align:start; min-width:0; }
+  .proj-grid > .hint { flex:1 1 auto; }
+  .proj-grid::-webkit-scrollbar { height:8px; }
+  .proj-grid::-webkit-scrollbar-thumb { background:var(--border); border-radius:8px; }
+  .proj-tab, .add-proj-btn { min-height:140px; }
+
+  /* Area unggah: satu baris horizontal, bukan kotak besar */
+  .drop-zone {
+    display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; column-gap:18px;
+    text-align:left; padding:20px 24px; min-height:0;
+  }
+  .drop-zone .drop-icon { grid-row:1 / span 2; margin:0; }
+  .drop-zone > div:not(.drop-icon):not(.hint) { font-size:15px; }
+  .drop-zone .hint { margin:2px 0 0; }
+
+  /* Bar judul kartu (judul + aksi) lebih tertata */
+  .card > .row-flex.between:first-child { align-items:center; gap:16px; padding-bottom:18px; margin-bottom:20px !important; border-bottom:1px solid var(--border); }
+  .card > .row-flex.between:first-child > .row-flex { justify-content:flex-end; }
+  .bug-filters { position:sticky; top:68px; z-index:5; background:var(--surface); margin:0 -4px; padding:12px 4px 16px; }
+  .filter-search input { background:var(--surface-2); }
+
+  /* Papan bug: kolom lebih lega, tinggi menyesuaikan layar */
+  .board { grid-template-columns:repeat(5,minmax(224px,1fr)); min-width:1180px; gap:16px; }
+  .board-col { min-height:260px; border-radius:14px; }
+
+  /* Modal & form: kolom rapi */
+  .modal-box:not(.bd-modal) { max-width:560px; }
+
+
+  /* perbaikan padding input khusus (ikon di dalam kolom pencarian) */
+  label.filter-search input[type=text] { padding-left:42px; }
+  .gd-search input[type=text], .gd-search input { padding:10px 0; min-height:0; }
+  .command-search input[type=text], .command-search input { padding:0; min-height:30px; }
+  input[type=date] { width:auto; min-width:150px; }
+  .card > .row-flex.between:first-child > .row-flex { flex-wrap:wrap; }
+
+  @media (max-width:800px) {
+    .proj-picker { padding:18px 0 14px 16px; }
+    .proj-picker-head, .proj-summary { padding-right:16px; }
+    .proj-grid > * { flex-basis:200px; }
+    .proj-grid { padding-right:16px; }
+    .drop-zone { grid-template-columns:1fr; text-align:center; padding:24px 16px; }
+    .drop-zone .drop-icon { grid-row:auto; margin:0 auto 8px; }
+    .bug-filters { position:static; }
+    .hero { grid-template-columns:1fr; }
+    .dash-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  }
+</style>
+
+
+<style id="remind-css">
+  .tab-btn .rm-badge{ margin-left:auto; min-width:18px; height:18px; padding:0 5px; border-radius:9px; background:#e0363c; color:#fff; font-size:10.5px; font-weight:800; line-height:18px; text-align:center; display:none; box-shadow:0 0 0 0 rgba(224,54,60,.5); animation:rmPulse 2.2s infinite; }
+  @keyframes rmPulse{ 0%{box-shadow:0 0 0 0 rgba(224,54,60,.45);} 70%{box-shadow:0 0 0 7px rgba(224,54,60,0);} 100%{box-shadow:0 0 0 0 rgba(224,54,60,0);} }
+  .rm-wrap{ margin-bottom:18px; border-radius:20px; overflow:hidden; background:var(--card, rgba(128,128,128,.08)); border:1px solid rgba(128,128,128,.2); box-shadow:0 18px 40px rgba(26,34,94,.12); }
+  .rm-hero{ display:flex; align-items:center; gap:14px; padding:16px 18px; color:#fff; background:radial-gradient(ellipse at 100% -30%,#7b6bf0 0%,transparent 55%),linear-gradient(115deg,#172a4b,#251f55 60%,#3d327d); flex-wrap:wrap; }
+  .rm-bell{ width:46px; height:46px; border-radius:15px; display:grid; place-items:center; font-size:23px; background:rgba(255,255,255,.14); box-shadow:inset 0 0 0 1px rgba(255,255,255,.22); animation:rmRing 4s ease-in-out infinite; transform-origin:50% 12%; }
+  @keyframes rmRing{ 0%,88%,100%{transform:rotate(0);} 91%{transform:rotate(14deg);} 94%{transform:rotate(-12deg);} 97%{transform:rotate(7deg);} }
+  .rm-hero-tx{ flex:1; min-width:180px; }
+  .rm-kicker{ font-size:10.5px; letter-spacing:.16em; font-weight:800; opacity:.7; }
+  .rm-big{ font-size:21px; font-weight:800; line-height:1.2; margin-top:1px; }
+  .rm-sub2{ font-size:12px; opacity:.72; margin-top:2px; }
+  .rm-hide{ font-size:12px; padding:6px 12px; border-radius:999px; color:#fff; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.3); cursor:pointer; }
+  .rm-hide:hover{ background:rgba(255,255,255,.22); }
+  .rm-tabs{ display:flex; gap:8px; padding:12px 14px 4px; overflow-x:auto; scrollbar-width:thin; }
+  .rm-tab{ display:flex; align-items:center; gap:7px; padding:8px 12px; border-radius:14px; font-size:12.5px; font-weight:700; white-space:nowrap; cursor:pointer; color:inherit; background:rgba(128,128,128,.1); border:1px solid rgba(128,128,128,.22); transition:transform .15s, box-shadow .15s, background .15s; }
+  .rm-tab:hover{ transform:translateY(-1px); }
+  .rm-tab.on{ color:#fff; background:linear-gradient(135deg,var(--c),color-mix(in srgb,var(--c) 62%,#000)); border-color:transparent; box-shadow:0 8px 18px color-mix(in srgb,var(--c) 38%,transparent); }
+  .rm-tab.empty:not(.on){ opacity:.55; }
+  .rm-tc{ min-width:20px; padding:0 6px; border-radius:999px; font-size:11px; font-weight:800; text-align:center; background:rgba(128,128,128,.22); }
+  .rm-tab.on .rm-tc{ background:rgba(255,255,255,.28); }
+  .rm-ta{ min-width:18px; height:18px; padding:0 5px; border-radius:9px; font-size:10.5px; font-weight:800; line-height:18px; text-align:center; background:#e0363c; color:#fff; }
+  .rm-list{ display:grid; grid-template-columns:repeat(auto-fill,minmax(310px,1fr)); gap:10px; padding:12px 14px 14px; }
+  .rm-item{ display:flex; align-items:stretch; gap:12px; padding:10px 12px 10px 10px; border-radius:14px; cursor:pointer; background:rgba(128,128,128,.07); border:1px solid rgba(128,128,128,.18); border-left:5px solid var(--c); transition:transform .15s, box-shadow .15s; }
+  .rm-item:hover, .rm-item:focus-visible{ transform:translateY(-2px); box-shadow:0 10px 22px rgba(26,34,94,.14); outline:none; }
+  .rm-item.late{ background:rgba(214,40,57,.09); border-color:rgba(214,40,57,.35); border-left-color:#d62839; }
+  .rm-due{ flex:none; min-width:84px; padding:6px 8px; border-radius:11px; text-align:center; display:flex; flex-direction:column; justify-content:center; gap:1px; color:var(--d); background:color-mix(in srgb,var(--d) 13%,transparent); border:1px solid color-mix(in srgb,var(--d) 38%,transparent); }
+  .rm-due b{ font-size:12.5px; line-height:1.2; }
+  .rm-due small{ font-size:10.5px; opacity:.8; }
+  .rm-body{ flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center; gap:5px; }
+  .rm-title{ font-size:13.5px; font-weight:700; line-height:1.3; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .rm-meta{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  .rm-chip{ max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; background:rgba(128,128,128,.18); }
+  .rm-prio{ font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:999px; color:#fff; background:#7b8197; }
+  .rm-prio.p-Critical{ background:#d62839; } .rm-prio.p-High{ background:#e8590c; } .rm-prio.p-Medium{ background:#d9890b; } .rm-prio.p-Low{ background:#2f9e6b; }
+  .rm-hot{ font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:999px; color:#d62839; border:1px solid rgba(214,40,57,.45); background:rgba(214,40,57,.1); }
+  .rm-sub{ font-size:11.5px; opacity:.7; }
+  .rm-empty{ grid-column:1/-1; text-align:center; padding:18px; opacity:.6; font-size:13px; }
+  .rm-more{ padding:0 14px 14px; } .rm-more button{ font-size:12.5px; padding:7px 14px; border-radius:999px; }
+  .rm-mini{ display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:13px; margin-bottom:14px; } .rm-mini button{ font-size:12px; padding:5px 10px; }
+  @media (prefers-reduced-motion:reduce){ .rm-bell, .tab-btn .rm-badge{ animation:none; } .rm-tab, .rm-item{ transition:none; } }
+</style>
 </head>
 <body>
 
@@ -1183,6 +1505,7 @@
       <div class="sub">Semua temuan, progres, dan laporan dalam satu alur yang rapi.</div>
     </div>
     <div class="top-actions">
+      <button class="cta-main" id="headerCta" type="button" aria-label="Catat temuan baru"><span class="cta-plus">+</span>Catat temuan</button>
       <button class="quick-jump" id="quickJump" type="button" aria-label="Buka navigasi cepat"><span class="quick-search-icon">⌕</span><span>Jelajah cepat</span><span id="qjBadge" style="display:none;background:var(--danger);color:#fff;border-radius:20px;font-size:10px;font-weight:800;padding:1px 7px;margin-left:2px"></span><kbd>⌘ K</kbd></button>
       <button class="theme-toggle" id="themeToggle" type="button" aria-label="Ganti tema"><span id="themeIcon">☾</span><span id="themeLabel">Mode gelap</span></button>
       <button id="logoutBtn" type="button" aria-label="Keluar dari akun">Keluar</button>
@@ -1193,7 +1516,7 @@
   <div class="tabs" role="navigation" aria-label="Navigasi utama">
     <div class="sidebar-brand"><div class="brand-symbol"><span></span><span></span><span></span><span></span></div><div><strong>seleris<span> / qa</span></strong><small>Quality workspace</small></div></div>
     <div class="nav-section-label">WORKSPACE</div>
-    <button class="tab-btn active" data-tab="dash"><span class="nav-icon">◫</span><span>Dashboard</span></button>
+    <button class="tab-btn active" data-tab="dash"><span class="nav-icon">◫</span><span>Dashboard</span><span class="rm-badge" id="rmBadge" title="Pengingat yang perlu perhatian"></span></button>
     <button class="tab-btn" data-tab="manage"><span class="nav-icon">▦</span><span>Kelola Bug</span></button>
     <button class="tab-btn" data-tab="enh"><span class="nav-icon">✧</span><span>Enhancement</span></button>
     <button class="tab-btn" data-tab="mom"><span class="nav-icon">✎</span><span>Catatan Meeting</span></button>
@@ -5116,7 +5439,8 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
           if(e.desc) html += '<div class="exc">'+esc(e.desc)+'</div>';
           html += '<div class="enh-foot"><span class="enh-projchip" title="'+esc(enhProjName(e.projectId))+'">'+esc(enhProjName(e.projectId))+'</span>'+
                   '<span class="badge-priority '+(e.priority||"Medium")+'">'+(e.priority||"Medium")+'</span></div>';
-          html += '<div class="meta">'+fmtDate(e.date)+'</div>';
+          const enhLate = !!(e.dueDate && e.dueDate < todayStr() && (e.status==="Usulan" || e.status==="Dikerjakan"));
+          html += '<div class="meta">'+fmtDate(e.date)+(e.dueDate ? ' · <span style="'+(enhLate?'color:#b4232a; font-weight:800;':'')+'">Due '+fmtDate(e.dueDate)+(enhLate?' (lewat)':'')+'</span>' : '')+'</div>';
           html += '<div class="quick-status">'+ENH_STATUS.map(s=>'<button type="button" data-enh-quick="'+s+'" data-enh-id="'+e.id+'" class="'+(e.status===s?'active':'')+'" style="background:'+ENH_COLOR[s]+'; color:'+ENH_COLOR[s]+';" title="'+s+'" aria-label="Ubah status ke '+s+'"></button>').join('')+'</div>';
           html += '</div>';
         }
@@ -5182,6 +5506,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         '<label>Deskripsi</label><textarea id="enDesc" rows="4" placeholder="Apa yang ingin ditingkatkan dan kenapa?"></textarea>'+
         '<label>Prioritas</label><select id="enPrio">'+PRIORITY_OPTS.map(x=>'<option value="'+x+'">'+x+'</option>').join("")+'</select>'+
         '<label>Status</label><select id="enStatus">'+ENH_STATUS.map(x=>'<option value="'+x+'">'+x+'</option>').join("")+'</select>'+
+        '<label>Due date (opsional)</label><input type="date" id="enDue">'+
         '<label>Gambar (opsional)</label><div id="enImgWrap"></div>'+
         '<div class="row-flex" style="margin-top:6px;"><button type="button" id="enImgAdd"></button><button type="button" class="danger-outline" id="enImgRm">Hapus gambar</button></div>'+
         '<div class="modal-actions">'+(cur?'<button class="danger-outline" id="enDel" style="margin-right:auto;">Hapus</button>':'')+
@@ -5194,6 +5519,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     $f("#enDesc").value = d.desc || "";
     $f("#enPrio").value = d.priority || "Medium";
     $f("#enStatus").value = d.status || "Usulan";
+    $f("#enDue").value = d.dueDate || "";
     let img = d.imageData || null;
     function refreshImg(){
       $f("#enImgWrap").innerHTML = img ? '<img class="preview" src="'+img+'">' : '';
@@ -5220,7 +5546,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       if(!projectId){ toast("Isi nama project (Lainnya)."); return; }
       const data = {
         title, projectId, desc: $f("#enDesc").value.trim(),
-        priority: $f("#enPrio").value, status: $f("#enStatus").value, imageData: img
+        priority: $f("#enPrio").value, status: $f("#enStatus").value, dueDate: $f("#enDue").value || "", imageData: img
       };
       const btn = $f("#enSave"); btn.disabled = true;
       try{
@@ -6659,6 +6985,125 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     toast(pdfDownload(doc, "dashboard_qa_"+today+".pdf") ? "PDF dashboard berhasil dibuat." : "Gagal membuat PDF.");
   }
   document.getElementById("dashPdf").addEventListener("click", buildDashPdf);
+  // ===== Pusat pengingat dashboard (bertab): enhancement Dikerjakan & Usulan, input bug terakhir per project, ceklis scan AI =====
+  const REMIND = {
+    enhDays: { Critical:1, High:1, Medium:2, Low:3 },  // enhancement dianggap mendesak: H-1 / H-2 / H-3 menurut prioritas (termasuk yang lewat)
+    staleDays: 3,                                       // project dianggap "sepi" bila input bug terakhir >= 3 hari lalu
+    maxRows: 6                                          // baris per tab sebelum diringkas "+ n lainnya"
+  };
+  const RM_HIDE_KEY = "qa_remind_hidden_on";
+  const RM_PRIO = { Critical:0, High:1, Medium:2, Low:3 };
+  let rmTab = null;
+  const rmDaysBetween = (a,b)=>Math.round((new Date(b+"T00:00:00") - new Date(a+"T00:00:00"))/86400000);
+  const rmDueLabel = l=>l<0 ? "Lewat "+(-l)+" hari" : l===0 ? "Hari ini" : l===1 ? "Besok" : "H-"+l;
+  const rmSort = list=>list.slice().sort((a,b)=>{
+    const ad = a.dueDate||"9999-99-99", bd = b.dueDate||"9999-99-99";
+    return ad<bd ? -1 : ad>bd ? 1 : ((RM_PRIO[a.priority||"Medium"]-RM_PRIO[b.priority||"Medium"]) || ((b.createdAt||0)-(a.createdAt||0)));
+  });
+  function remindData(){
+    const today = todayStr();
+    const all = (typeof enhItems !== "undefined" ? enhItems : []);
+    const mapE = e=>{
+      const left = e.dueDate ? rmDaysBetween(today, e.dueDate) : null;
+      return { e, left, urgent: left !== null && left <= (REMIND.enhDays[e.priority||"Medium"] || 2) };
+    };
+    const wip = rmSort(all.filter(e=>e.status==="Dikerjakan")).map(mapE);
+    const usulan = rmSort(all.filter(e=>e.status==="Usulan")).map(mapE);
+    // input bug terakhir per project
+    const lastDay = {};
+    entries.forEach(e=>{ if(e.date && e.date > (lastDay[e.projectId]||"")) lastDay[e.projectId] = e.date; });
+    const stale = projects.map(p=>{
+      const last = lastDay[p.id] || "";
+      const created = p.createdAt ? (new Date(Number(p.createdAt))).toISOString().slice(0,10) : "";
+      const age = last ? rmDaysBetween(last, today) : (created ? rmDaysBetween(created, today) : 0);
+      return { p, last, age };
+    }).filter(x=>x.age >= REMIND.staleDays).sort((a,b)=>b.age-a.age);
+    const noBugToday = entries.length > 0 && !entries.some(e=>e.date===today);
+    // ceklis scan AI hari ini
+    const scanPending = [], scanFail = [];
+    projects.filter(p=>p.scanAi).forEach(p=>{
+      const st = scanState(scanChecks[scanKey(today,p.id)]);
+      if(st==="none") scanPending.push(p); else if(st==="fail") scanFail.push(p);
+    });
+    const urgentWip = wip.filter(x=>x.urgent).length, urgentUsulan = usulan.filter(x=>x.urgent).length;
+    const bugAlert = stale.length + (noBugToday?1:0), scanAlert = scanPending.length + scanFail.length;
+    return { today, wip, usulan, stale, noBugToday, scanPending, scanFail, urgentWip, urgentUsulan, bugAlert, scanAlert,
+             total: urgentWip + urgentUsulan + bugAlert + scanAlert };
+  }
+  let remindToastShown = false;
+  function reminderCenterHtml(){
+    const R = remindData();
+    const badge = document.getElementById("rmBadge");
+    if(badge){ badge.textContent = R.total > 99 ? "99+" : R.total; badge.style.display = R.total ? "" : "none"; }
+    const tabs = [
+      { id:"wip",    icon:"🛠", label:"Sedang dikerjakan", color:"#e08a1c", count:R.wip.length,    alert:R.urgentWip },
+      { id:"usulan", icon:"💡", label:"Usulan",            color:"#2f80ed", count:R.usulan.length, alert:R.urgentUsulan },
+      { id:"bug",    icon:"🐞", label:"Input bug",         color:"#7c5cff", count:R.bugAlert,      alert:R.bugAlert },
+      { id:"scan",   icon:"🤖", label:"Scan AI",           color:"#17a673", count:R.scanAlert,     alert:R.scanAlert }
+    ];
+    if(!tabs.some(t=>t.count)) return '<div id="rmCard"></div>';
+    if(!remindToastShown && R.total){
+      remindToastShown = true;
+      const parts = [];
+      if(R.urgentWip+R.urgentUsulan) parts.push((R.urgentWip+R.urgentUsulan)+" enhancement mendesak");
+      if(R.scanPending.length) parts.push(R.scanPending.length+" scan AI belum dicek");
+      toast("🔔 "+R.total+" pengingat"+(parts.length ? ": "+parts.join(", ") : "")+".");
+    }
+    let hidden = false; try{ hidden = localStorage.getItem(RM_HIDE_KEY) === R.today; }catch(_){}
+    if(hidden) return '<div id="rmCard"><div class="dcard rm-mini"><span>🔔 <b>'+R.total+' pengingat</b> disembunyikan untuk hari ini.</span><button type="button" data-remind-show>Tampilkan</button></div></div>';
+
+    if(!rmTab || !tabs.some(t=>t.id===rmTab && t.count)) rmTab = (tabs.find(t=>t.alert) || tabs.find(t=>t.count) || tabs[0]).id;
+    const cur = tabs.find(t=>t.id===rmTab);
+    const prName = id=>{ const p = projects.find(x=>x.id===id); return p ? p.name : "-"; };
+    const dueColor = x=>x.left===null ? "#7b8197" : x.left<0 ? "#d62839" : x.left===0 ? "#e8590c" : x.urgent ? "#d9890b" : "#3b82f6";
+    const M = REMIND.maxRows;
+    const enhItem = x=>{
+      const e = x.e, pr = e.priority || "Medium";
+      return '<div class="rm-item'+(x.left!==null && x.left<0 ? ' late' : '')+'" style="--c:'+cur.color+';" data-remind-go="enh" role="button" tabindex="0">'+
+        '<div class="rm-due" style="--d:'+dueColor(x)+';"><b>'+(x.left===null ? 'Tanpa due' : esc(rmDueLabel(x.left)))+'</b><small>'+(e.dueDate ? esc(fmtDate(e.dueDate)) : 'belum diisi')+'</small></div>'+
+        '<div class="rm-body"><div class="rm-title">'+esc(e.title||"(tanpa judul)")+'</div>'+
+        '<div class="rm-meta"><span class="rm-chip">'+esc(prName(e.projectId))+'</span><span class="rm-prio p-'+esc(pr)+'">'+esc(pr)+'</span>'+(x.urgent ? '<span class="rm-hot">mendesak</span>' : '')+'</div></div></div>';
+    };
+    const simpleItem = (big, small, color, title, meta, attrs)=>'<div class="rm-item" style="--c:'+cur.color+';" '+attrs+' role="button" tabindex="0">'+
+      '<div class="rm-due" style="--d:'+color+';"><b>'+esc(big)+'</b><small>'+esc(small)+'</small></div>'+
+      '<div class="rm-body"><div class="rm-title">'+esc(title)+'</div><div class="rm-meta"><span class="rm-sub">'+esc(meta)+'</span></div></div></div>';
+    let items = [], moreGo = "", emptyMsg = "";
+    if(cur.id==="wip"){ items = R.wip.map(enhItem); moreGo = "enh"; }
+    else if(cur.id==="usulan"){ items = R.usulan.map(enhItem); moreGo = "enh"; }
+    else if(cur.id==="bug"){
+      if(R.noBugToday) items.push(simpleItem("Hari ini","belum ada","#3b82f6","Belum ada input bug hari ini","Catat temuan baru bila ada",'data-remind-go="manage"'));
+      R.stale.forEach(x=>items.push(simpleItem(x.last ? x.age+" hari" : "Belum ada", x.last ? "tanpa input" : "input bug", x.age>=7 ? "#d62839" : "#d9890b", x.p.name, x.last ? "Terakhir input "+fmtDate(x.last) : "Belum pernah ada input bug", 'data-dash-proj="'+x.p.id+'"')));
+    } else {
+      R.scanFail.forEach(p=>items.push(simpleItem("Gagal","scan hari ini","#d62839",p.name,"Scan AI hari ini gagal, cek ulang",'data-remind-go="scan"')));
+      R.scanPending.forEach(p=>items.push(simpleItem("Belum","scan hari ini","#7b8197",p.name,"Ceklis scan AI hari ini belum diisi",'data-remind-go="scan"')));
+    }
+    const shown = items.slice(0,M).join("");
+    const more = items.length - M;
+    return '<div id="rmCard" class="rm-wrap">'+
+      '<div class="rm-hero"><div class="rm-bell">🔔</div>'+
+        '<div class="rm-hero-tx"><div class="rm-kicker">PUSAT PENGINGAT</div><div class="rm-big">'+(R.total ? R.total+' perlu perhatian' : 'Semua aman 🎉')+'</div>'+
+        '<div class="rm-sub2">Enhancement, input bug, dan ceklis scan AI hari ini</div></div>'+
+        '<button type="button" class="rm-hide" data-remind-hide title="Sembunyikan sampai besok">Sembunyikan hari ini</button></div>'+
+      '<div class="rm-tabs" role="tablist">'+tabs.map(t=>
+        '<button type="button" role="tab" aria-selected="'+(t.id===cur.id)+'" class="rm-tab'+(t.id===cur.id?' on':'')+(t.count?'':' empty')+'" style="--c:'+t.color+';" data-rm-tab="'+t.id+'">'+
+        '<span class="rm-ti">'+t.icon+'</span><span class="rm-tl">'+t.label+'</span><span class="rm-tc">'+t.count+'</span>'+(t.alert ? '<span class="rm-ta" title="'+t.alert+' mendesak">'+t.alert+'</span>' : '')+'</button>').join("")+'</div>'+
+      '<div class="rm-list" role="tabpanel">'+(shown || '<div class="rm-empty">Tidak ada item di tab ini.</div>')+'</div>'+
+      (more>0 ? '<div class="rm-more"><button type="button" data-remind-go="'+(moreGo||"dash")+'">+ '+more+' lainnya'+(moreGo?' · buka tab Enhancement':'')+'</button></div>' : '')+
+    '</div>';
+  }
+  function rmRefresh(){ const el = document.getElementById("rmCard"); if(el) el.outerHTML = reminderCenterHtml(); }
+  document.addEventListener("click", e=>{
+    const tb = e.target.closest("[data-rm-tab]");
+    if(tb){ rmTab = tb.dataset.rmTab; rmRefresh(); return; }
+    const go = e.target.closest("[data-remind-go]");
+    if(go){ navigateTo(go.dataset.remindGo); return; }
+    if(e.target.closest("[data-remind-hide]")){ try{ localStorage.setItem(RM_HIDE_KEY, todayStr()); }catch(_){} rmRefresh(); return; }
+    if(e.target.closest("[data-remind-show]")){ try{ localStorage.removeItem(RM_HIDE_KEY); }catch(_){} rmRefresh(); }
+  });
+  document.addEventListener("keydown", e=>{
+    if((e.key==="Enter" || e.key===" ") && e.target.classList && e.target.classList.contains("rm-item")){ e.preventDefault(); e.target.click(); }
+  });
+
   // ===== Pengingat due date: Critical/High H-1, Medium H-2, Low H-3 (termasuk yang sudah lewat) =====
   const DUE_REMIND_DAYS = { Critical:1, High:1, Medium:2, Low:3 };
   function dueReminders(today){
@@ -6711,7 +7156,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     const topUn = byProj.filter(x=>x.un>0).sort((a,b)=>b.un-a.un).slice(0,5);
 
     const kpi = (label, val, sub, color)=>'<div class="dkpi" style="--c:'+color+';"><div class="dk-l">'+label+'</div><div class="dk-v">'+val+'</div><div class="dk-s">'+sub+'</div></div>';
-    let html = dueReminderHtml()+'<div class="dash-kpis">'+
+    let html = reminderCenterHtml()+'<div class="dash-kpis">'+
       kpi("Belum selesai", unres.length, "Open "+nOpen+" · In Progress "+(unres.length-nOpen), "#e0363c")+
       kpi("Lewat due date", overdue.length, "belum selesai & terlambat", "#b4232a")+
       kpi("Critical / High", crit.length, "belum selesai", "#e08a1c")+
@@ -7974,6 +8419,13 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     "#qaDraftToast button{background:transparent;color:#a5b4fc;border:1px solid #a5b4fc;border-radius:6px;padding:3px 9px;font-size:12px;cursor:pointer}";
   document.head.appendChild(st);
 })();
+</script>
+<button class="fab-add" id="fabAdd" type="button" aria-label="Catat temuan baru"><span class="cta-plus">+</span>Catat temuan</button>
+<script>
+  (function(){
+    function go(){ var b=document.getElementById("heroAddBug"); if(b) b.click(); }
+    ["headerCta","fabAdd"].forEach(function(id){ var el=document.getElementById(id); if(el) el.addEventListener("click",go); });
+  })();
 </script>
 </body>
 </html>
