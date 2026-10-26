@@ -507,6 +507,20 @@
   .dlegend i { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
   .dtrend { width:100%; height:auto; display:block; color:var(--text-dim); }
   .dscan-bar { display:flex; height:10px; border-radius:6px; overflow:hidden; background:var(--surface-2); margin:10px 0 8px; }
+  .up-group { margin-top:18px; } .up-group:first-child { margin-top:4px; }
+  .up-row { display:flex; align-items:flex-start; gap:12px; padding:12px 14px; margin-bottom:8px; background:var(--surface); border:1px solid var(--border); border-radius:12px; }
+  .up-row.done { opacity:.72; }
+  .up-row.done .up-title { text-decoration:line-through; }
+  .up-check { flex:none; width:22px; height:22px; margin-top:1px; border-radius:50%; border:2px solid var(--border); background:transparent; padding:0; cursor:pointer; color:transparent; font-size:12px; line-height:1; display:flex; align-items:center; justify-content:center; }
+  .up-check:hover { border-color:var(--ok); }
+  .up-row.done .up-check { background:var(--ok); border-color:var(--ok); color:#fff; }
+  .up-main { flex:1; min-width:0; }
+  .up-title { font-weight:700; font-size:14px; word-break:break-word; }
+  .up-note { margin-top:3px; font-size:12.5px; color:var(--text-dim); white-space:pre-wrap; word-break:break-word; }
+  .up-meta { margin-top:6px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:11.5px; color:var(--text-dim); }
+  .up-tag { background:var(--surface-2); border-radius:20px; padding:2px 9px; font-weight:700; }
+  .up-actions { flex:none; display:flex; gap:6px; }
+  .up-actions button { padding:5px 9px; font-size:12px; }
   .mom-group { margin-top:18px; }
   .mom-group:first-child { margin-top:4px; }
   .mom-ghead { display:flex; align-items:center; gap:8px; margin:0 0 10px; font-size:13.5px; font-weight:800; }
@@ -1521,6 +1535,7 @@
     <button class="tab-btn" data-tab="enh"><span class="nav-icon">✧</span><span>Enhancement</span></button>
     <button class="tab-btn" data-tab="mom"><span class="nav-icon">✎</span><span>Catatan Meeting</span></button>
     <button class="tab-btn" data-tab="daily"><span class="nav-icon">▤</span><span>Laporan Harian</span></button>
+    <button class="tab-btn" data-tab="updates"><span class="nav-icon">⊕</span><span>Update Lainnya</span><span class="rm-badge" id="upBadge" style="display:none" title="Update yang masih berjalan"></span></button>
     <div class="nav-section-label nav-section-secondary">TOOLS</div>
     <button class="tab-btn" data-tab="scan"><span class="nav-icon">◎</span><span>Ceklis Scan AI</span></button>
     <button class="tab-btn" data-tab="akses"><span class="nav-icon">⌘</span><span>All Akses</span></button>
@@ -1646,6 +1661,23 @@
       </div>
       <div class="hint" style="margin:0 0 10px;">Usulan perbaikan atau fitur, dipisah dari bug. Tarik kartu antar kolom, atau klik titik warna di kartu, untuk mengganti status.</div>
       <div id="enhWrap"></div>
+    </div>
+  </div>
+
+  <!-- ===== TAB: UPDATE LAINNYA ===== -->
+  <div class="tab-panel" id="tab-updates">
+    <div class="card">
+      <div class="row-flex between" style="margin-bottom:10px;">
+        <h3 style="margin:0;">Update Lainnya</h3>
+        <div class="row-flex">
+          <select id="upProject" style="width:auto; min-width:160px;"><option value="">Semua Project</option></select>
+          <select id="upStatus" style="width:auto;"><option value="">Semua status</option><option value="Berjalan">Berjalan</option><option value="Selesai">Selesai</option></select>
+          <input type="text" id="upSearch" placeholder="Cari…" style="width:170px;">
+          <button class="primary" id="upAdd">+ Update Lainnya</button>
+        </div>
+      </div>
+      <div class="hint" style="margin:0 0 10px;">Pekerjaan atau update di luar bug report, misalnya testing rate EHD BPD Sumut. Yang berstatus <b>Berjalan</b> otomatis ikut di Teks Laporan hari-hari berikutnya sampai ditandai <b>Selesai</b>.</div>
+      <div id="upWrap"><div class="empty-state">Memuat data…</div></div>
     </div>
   </div>
 
@@ -2212,7 +2244,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       }catch(e){ note("⚠️", "Pratinjau gagal dimuat ("+e.message+"). Anda tetap bisa mengunduh file ini.", true); }
     }catch(e){ msg("Tidak bisa membuka link: "+e.message); }
   }
-  const AUDIT_MOD = { entries:"Bug", enhancements:"Enhancement", meetings:"Catatan Meeting", projects:"Project", accessProjects:"All Akses", knowledgeProducts:"Knowledge", driveItems:"Dokumen" };
+  const AUDIT_MOD = { entries:"Bug", enhancements:"Enhancement", meetings:"Catatan Meeting", projects:"Project", accessProjects:"All Akses", knowledgeProducts:"Knowledge", driveItems:"Dokumen", otherUpdates:"Update Lainnya" };
   const AUDIT_SAFE = ["status","priority","dueDate"];
   const _dbCol = db.collection.bind(db), _dbBatch = db.batch.bind(db);
   function auditWho(){ const u = firebase.auth().currentUser; return u ? (u.email || u.uid) : "-"; }
@@ -7286,6 +7318,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     { label:"Enhancement", note:"Ide perbaikan", icon:"✧", action:()=>navigateTo("enh") },
     { label:"Catatan Meeting", note:"MoM & action item", icon:"✎", action:()=>navigateTo("mom") },
     { label:"Laporan Harian", note:"Rekap & export", icon:"▤", action:()=>navigateTo("daily") },
+    { label:"Update Lainnya", note:"Di luar bug report", icon:"⊕", action:()=>navigateTo("updates") },
     { label:"Ceklis Scan AI", note:"Pemeriksaan harian", icon:"◎", action:()=>navigateTo("scan") },
     { label:"All Akses", note:"Akses project", icon:"⌘", action:()=>navigateTo("akses") },
     { label:"Knowledge", note:"Informasi produk", icon:"◇", action:()=>navigateTo("knowledge") },
@@ -7714,6 +7747,9 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       sum:"Mencatat hasil meeting per project: peserta, pembahasan, keputusan, dan action item.",
       steps:["Klik **+ Catatan Meeting**, lalu isi judul, tanggal, waktu, tempat, notulis, peserta, dan project.","Tulis pembahasan, keputusan, dan **action item**. Draf tersimpan otomatis saat Anda mengetik, setelah judul, tanggal, dan project terisi.","Klik **Simpan**. Tiap action item otomatis dibuatkan Enhancement. Mencentang action item selesai akan mengubah Enhancement-nya menjadi Selesai.","Buka sebuah catatan untuk mengunduh **PDF MoM** atau menyalin **teks** yang siap ditempel ke WhatsApp atau email.","**Export PDF** di toolbar merekap beberapa meeting sekaligus. Gunakan filter project dan kotak cari untuk mencari catatan."],
       tips:["Menghapus action item di catatan tidak menghapus Enhancement yang sudah terbuat."] },
+    { id:"updates", icon:"⊕", title:"Update Lainnya", tab:"updates",
+      sum:"Catat pekerjaan di luar bug report supaya ikut di Teks Laporan.",
+      steps:["Klik **+ Update Lainnya**, isi teks (mis. Testing rate EHD BPD Sumut), pilih project bila ada, lalu simpan.","Update berstatus **Berjalan** otomatis ikut di Teks Laporan hari-hari berikutnya sebagai *lanjutan*.","Klik lingkaran ✓ di kiri baris untuk menandai **Selesai**. Update tampil sekali lagi di laporan hari itu dengan tanda *selesai*.","Bisa juga menambah cepat langsung dari jendela **📝 Teks Laporan**."] },
     { id:"daily", icon:"▤", title:"Laporan Harian", tab:"daily",
       sum:"Rekap bug per tanggal, siap dikirim.",
       steps:["Pilih **Tanggal** dan **Project** (atau Semua Project). Centang **semua tanggal** untuk melihat semuanya.","Klik **📝 Teks Laporan** untuk mendapatkan teks yang bisa disalin dan dikirim ke atasan.","Klik **⬇ Export PDF** untuk laporan berformat PDF."],
@@ -7760,7 +7796,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     const gEsc = t=>esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>");
     const toc = document.getElementById("gdToc"), body = document.getElementById("gdBody"), q = document.getElementById("gdSearch");
     const hay = g=>(g.title+" "+g.sum+" "+g.steps.join(" ")+" "+(g.tips||[]).join(" ")+" "+(g.keys||[]).map(k=>k.join(" ")).join(" ")).toLowerCase();
-    const TAB_NAME = { dash:"Dashboard", manage:"Kelola Bug", enh:"Enhancement", mom:"Catatan Meeting", daily:"Laporan Harian", scan:"Ceklis Scan AI", akses:"All Akses", knowledge:"Knowledge", files:"Dokumen", ext:"Akses Eksternal", convert:"Konversi PDF", audit:"Riwayat" };
+    const TAB_NAME = { dash:"Dashboard", manage:"Kelola Bug", enh:"Enhancement", mom:"Catatan Meeting", daily:"Laporan Harian", updates:"Update Lainnya", scan:"Ceklis Scan AI", akses:"All Akses", knowledge:"Knowledge", files:"Dokumen", ext:"Akses Eksternal", convert:"Konversi PDF", audit:"Riwayat" };
     function draw(){
       const term = q.value.trim().toLowerCase(), list = GUIDE.filter(g=>!term || hay(g).includes(term));
       toc.innerHTML = list.map(g=>'<button type="button" data-gd="'+g.id+'"><span>'+g.icon+'</span><span>'+esc(g.title.split(":")[0])+'</span></button>').join("");
@@ -7855,6 +7891,97 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   document.getElementById("userAdd").addEventListener("click", ()=>userForm(null));
   _dbCol("users").orderBy("lastLogin","desc").onSnapshot(snap=>{ userRows = snap.docs.map(d=>({ id:d.id, ...d.data() })); renderUsers(); }, err=>{ const w = document.getElementById("usersWrap"); if(w) w.innerHTML = '<div class="empty-state">Gagal memuat pengguna: '+esc(err.message)+'</div>'; });
 
+  // ================= tab Update Lainnya =================
+  function upFiltered(){
+    const pid = document.getElementById("upProject").value, st = document.getElementById("upStatus").value;
+    const q = document.getElementById("upSearch").value.trim().toLowerCase();
+    return upItems.filter(u=>{
+      if(pid && u.projectId !== pid) return false;
+      if(st && (u.status==="Selesai" ? "Selesai" : "Berjalan") !== st) return false;
+      if(!q) return true;
+      return [u.title,u.note,upProjName(u.projectId)].join(" ").toLowerCase().includes(q);
+    });
+  }
+  function renderUpdates(){
+    const wrap = document.getElementById("upWrap"); if(!wrap) return;
+    const run = updatesRunningCount(), badge = document.getElementById("upBadge");
+    if(badge){ badge.textContent = run; badge.style.display = run ? "" : "none"; }
+    const sel = document.getElementById("upProject"), prev = sel.value;
+    sel.innerHTML = '<option value="">Semua Project</option>' + projects.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join("") + customProjOptions(upItems);
+    if(prev && (projects.find(p=>p.id===prev) || isOtherId(prev))) sel.value = prev;
+    const list = upFiltered();
+    if(!list.length){
+      wrap.innerHTML = '<div class="empty-state">'+(upItems.length ? "Tidak ada update yang cocok dengan filter." : 'Belum ada update. Klik "+ Update Lainnya" untuk mulai, misalnya "Testing rate EHD BPD Sumut".')+'</div>';
+      return;
+    }
+    const byNew = (a,b)=>(b.date||"").localeCompare(a.date||"") || (b.createdAt||0)-(a.createdAt||0);
+    const running = list.filter(u=>u.status!=="Selesai").sort(byNew), done = list.filter(u=>u.status==="Selesai").sort((a,b)=>(b.doneDate||b.date||"").localeCompare(a.doneDate||a.date||"") || (b.createdAt||0)-(a.createdAt||0));
+    const row = u=>{
+      const isDone = u.status==="Selesai", pn = upProjName(u.projectId);
+      return '<div class="up-row'+(isDone?' done':'')+'" data-up="'+u.id+'">'+
+        '<button type="button" class="up-check" data-up-toggle="'+u.id+'" title="'+(isDone?'Tandai berjalan lagi':'Tandai selesai')+'" aria-label="'+(isDone?'Tandai berjalan lagi':'Tandai selesai')+'">✓</button>'+
+        '<div class="up-main"><div class="up-title">'+esc(u.title||"(tanpa judul)")+'</div>'+
+          (u.note ? '<div class="up-note">'+esc(u.note)+'</div>' : '')+
+          '<div class="up-meta">'+(pn?'<span class="up-tag">'+esc(pn)+'</span>':'')+'<span>Dibuat '+esc(fmtDate(u.date))+'</span>'+(isDone && u.doneDate ? '<span>· Selesai '+esc(fmtDate(u.doneDate))+'</span>' : '')+'</div></div>'+
+        '<div class="up-actions"><button type="button" data-up-edit="'+u.id+'">Edit</button><button type="button" data-up-del="'+u.id+'" title="Hapus">✕</button></div>'+
+      '</div>';
+    };
+    wrap.innerHTML =
+      (running.length ? '<div class="up-group"><div class="mom-ghead">Berjalan<span class="n">'+running.length+'</span></div>'+running.map(row).join("")+'</div>' : '')+
+      (done.length ? '<div class="up-group"><div class="mom-ghead">Selesai<span class="n">'+done.length+'</span></div>'+done.map(row).join("")+'</div>' : '');
+  }
+  function upForm(u){
+    const overlay = document.createElement("div"); overlay.className = "modal-overlay";
+    u = u || { title:"", note:"", projectId:"", date:todayStr(), status:"Berjalan" };
+    overlay.innerHTML =
+      '<div class="modal-box" style="max-width:520px;">'+
+        '<h3 style="margin:0 0 8px;">'+(u.id?'Edit':'Tambah')+' Update Lainnya</h3>'+
+        '<label>Update</label><input type="text" id="upfTitle" placeholder="mis. Testing rate EHD BPD Sumut" value="'+esc(u.title)+'">'+
+        '<label>Project <span class="hint" style="font-weight:400;">(opsional)</span></label>'+
+        '<select id="upfProj"><option value="">— Tanpa project —</option>'+projects.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join("")+OTHER_OPT+'</select>'+projOtherInputHtml("upfProjOther")+
+        '<label>Tanggal</label><input type="date" id="upfDate" value="'+esc(u.date||todayStr())+'">'+
+        '<label>Status</label><select id="upfStatus"><option value="Berjalan">Berjalan</option><option value="Selesai">Selesai</option></select>'+
+        '<label>Catatan <span class="hint" style="font-weight:400;">(opsional)</span></label><textarea id="upfNote" rows="4" placeholder="Detail, hasil sementara, kendala…">'+esc(u.note||"")+'</textarea>'+
+        '<div class="modal-actions"><button id="upfCancel">Batal</button><button class="primary" id="upfSave">Simpan</button></div>'+
+      '</div>';
+    document.body.appendChild(overlay);
+    const $ = id=>overlay.querySelector("#"+id);
+    const sel = $("upfProj"), oth = $("upfProjOther");
+    if(u.projectId) projPickerInit(sel, oth, u.projectId); else projPickerInit(sel, oth, "");
+    $("upfStatus").value = u.status==="Selesai" ? "Selesai" : "Berjalan";
+    overlay.onclick = ev=>{ if(ev.target===overlay) overlay.remove(); };
+    $("upfCancel").onclick = ()=>overlay.remove();
+    $("upfTitle").focus();
+    $("upfSave").onclick = async ()=>{
+      const title = $("upfTitle").value.trim();
+      if(!title){ toast("Isi dulu teks update-nya."); $("upfTitle").focus(); return; }
+      if(sel.value===OTHER && !oth.value.trim()){ toast("Ketik nama project/topik atau pilih opsi lain."); oth.focus(); return; }
+      const projectId = sel.value==="" ? "" : projPickerValue(sel, oth);
+      const status = $("upfStatus").value, date = $("upfDate").value || todayStr();
+      const doneDate = status==="Selesai" ? (u.status==="Selesai" && u.doneDate ? u.doneDate : todayStr()) : "";
+      const data = { title, note:$("upfNote").value.trim(), projectId, date, status, doneDate };
+      try{
+        if(u.id) await db.collection("otherUpdates").doc(u.id).update(data);
+        else await db.collection("otherUpdates").add({ ...data, createdAt:Date.now(), createdBy:auditWho() });
+        overlay.remove(); toast("Update disimpan.");
+      }catch(err){ toast("Gagal: "+err.message); }
+    };
+  }
+  document.getElementById("upAdd").addEventListener("click", ()=>upForm(null));
+  ["upProject","upStatus"].forEach(id=>document.getElementById(id).addEventListener("change", renderUpdates));
+  document.getElementById("upSearch").addEventListener("input", renderUpdates);
+  document.getElementById("upWrap").addEventListener("click", async ev=>{
+    const t = ev.target.closest("[data-up-toggle],[data-up-edit],[data-up-del]"); if(!t) return;
+    const id = t.dataset.upToggle || t.dataset.upEdit || t.dataset.upDel, u = upItems.find(x=>x.id===id); if(!u) return;
+    try{
+      if(t.dataset.upToggle){
+        const toDone = u.status!=="Selesai";
+        await db.collection("otherUpdates").doc(id).update({ status: toDone?"Selesai":"Berjalan", doneDate: toDone?todayStr():"" });
+      }else if(t.dataset.upEdit) upForm(u);
+      else if(confirm('Hapus update "'+(u.title||"")+'"?')) await db.collection("otherUpdates").doc(id).delete();
+    }catch(err){ toast("Gagal: "+err.message); }
+  });
+
   // ================= generator teks laporan (untuk dikirim ke atasan) =================
   const REPORT_MENTIONS = "@\u2068~J\u2069 @\u2068SMI,-Fendy\u2069";
   function defaultGreeting(){
@@ -7870,6 +7997,28 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     });
     return projects.filter(p=>ids.has(p.id)).map(p=>p.name);
   }
+  // ---- "Update Lainnya": pekerjaan di luar bug report (mis. testing rate EHD BPD Sumut). Koleksi "otherUpdates" ----
+  let upItems = []; // {id,title,note,projectId,date,status:"Berjalan"|"Selesai",doneDate,createdAt}
+  db.collection("otherUpdates").orderBy("createdAt","desc").limit(500).onSnapshot(
+    snap=>{ upItems = snap.docs.map(d=>({ id:d.id, ...d.data() })); renderUpdates(); if(typeof window.__rtRefresh === "function") window.__rtRefresh(); },
+    err=>toast("Gagal memuat Update Lainnya: "+err.message)
+  );
+  function upProjName(id){ if(!id) return ""; if(isOtherId(id)) return id.slice(OTHER_PREFIX.length); const p = projects.find(x=>x.id===id); return p ? p.name : "(project dihapus)"; }
+  // Item yang ikut di laporan tanggal tsb: dibuat tanggal itu, selesai tanggal itu, atau masih berjalan dari tanggal sebelumnya (lanjutan)
+  function reportUpdateItems(date){
+    const out = [];
+    upItems.forEach(u=>{
+      if(u.date === date) out.push({ u, tag: u.status==="Selesai" ? "selesai" : "" });
+      else if(u.status==="Selesai" && u.doneDate===date) out.push({ u, tag:"selesai" });
+      else if(u.status!=="Selesai" && u.date < date) out.push({ u, tag:"lanjutan" });
+    });
+    return out.sort((a,b)=>(a.u.date||"").localeCompare(b.u.date||"") || (a.u.createdAt||0)-(b.u.createdAt||0));
+  }
+  function reportUpdateLine(x){
+    const pn = upProjName(x.u.projectId);
+    return (pn ? pn+": " : "") + (x.u.title||"") + (x.tag ? " ("+x.tag+")" : "");
+  }
+  function updatesRunningCount(){ return upItems.filter(u=>u.status!=="Selesai").length; }
   function buildReportText(greet, names, date){
     date = date || todayStr();
     const day = entries.filter(e=>e.date===date);
@@ -7895,6 +8044,8 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     if(scanP.length) L.push("", "*Ceklis Scan AI*", "Sukses "+sc.success+" | Gagal "+sc.fail+" | Belum dicek "+sc.none+" (dari "+scanP.length+" project)");
     const moms = (typeof momItems !== "undefined" ? momItems : []).filter(m=>m.date===date);
     if(moms.length) L.push("", "*Catatan meeting hari ini*", ...moms.map(m=>"- "+(m.title||"(tanpa judul)")));
+    const extras = reportUpdateItems(date);
+    if(extras.length) L.push("", "*Update lainnya*", ...extras.map((x,i)=>(i+1)+". "+reportUpdateLine(x)));
     L.push("", "sekian laporan untuk hari ini, dokumen bug report terlampir. Terima kasih.");
     return L.join("\n");
   }
@@ -7918,10 +8069,14 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     overlay.innerHTML =
       '<div class="modal-box" style="max-width:520px;">'+
         '<h3 style="margin:0 0 4px;">Teks Laporan — '+fmtDate(date)+'</h3>'+
-        '<div class="hint" style="margin:0 0 6px;">Berisi project yang bug-nya diinput pada tanggal ini. Teks bisa diedit sebelum disalin.</div>'+
+        '<div class="hint" style="margin:0 0 6px;">Berisi project yang bug-nya diinput pada tanggal ini, plus Update Lainnya. Teks bisa diedit sebelum disalin.</div>'+
         '<label>Salam</label>'+
         '<select id="rtGreet">'+greets.map(g=>'<option value="'+g+'" '+(g===curGreet?'selected':'')+'>Selamat '+g+'</option>').join('')+'</select>'+
         '<label class="opt-check"><input type="checkbox" id="rtCarry"> Sertakan project yang hanya carry-over</label>'+
+        '<label>Update lainnya <span class="hint" style="font-weight:400;">(di luar bug report, mis. testing rate EHD BPD Sumut)</span></label>'+
+        '<div id="rtExtraList" style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px;"></div>'+
+        '<div style="display:flex;gap:6px;"><input type="text" id="rtExtraInput" placeholder="Ketik update lalu Enter, mis. Testing rate EHD BPD Sumut" style="flex:1;"><button type="button" id="rtExtraAdd">+ Tambah</button></div>'+
+        '<div class="hint" style="margin:4px 0 0;">Kelola lengkap (project, catatan, tandai selesai) di tab <b>Update Lainnya</b>. Yang masih berjalan ikut otomatis sebagai lanjutan.</div>'+
         '<label>Teks</label>'+
         '<textarea id="rtText" rows="11" style="min-height:220px;"></textarea>'+
         '<div class="modal-actions">'+
@@ -7931,12 +8086,30 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       '</div>';
     document.body.appendChild(overlay);
     const greetEl = overlay.querySelector("#rtGreet"), carryEl = overlay.querySelector("#rtCarry"), textEl = overlay.querySelector("#rtText");
+    const exListEl = overlay.querySelector("#rtExtraList"), exInEl = overlay.querySelector("#rtExtraInput");
     function regen(){ textEl.value = buildReportText(greetEl.value, reportProjectNames(date, carryEl.checked), date); }
+    let lastSig = "";
+    function renderExtras(){
+      const items = reportUpdateItems(date); lastSig = JSON.stringify(items.map(x=>[x.u.id,x.u.title,x.u.status,x.tag,x.u.projectId]));
+      exListEl.innerHTML = items.length ? items.map(x=>'<div style="font-size:13px;display:flex;gap:6px;align-items:baseline;"><span>•</span><span>'+esc(reportUpdateLine(x))+'</span></div>').join("") : '<div class="hint" style="margin:0;">Belum ada update lainnya untuk tanggal ini.</div>';
+    }
+    async function addExtra(){
+      const t = exInEl.value.trim(); if(!t) return;
+      exInEl.value = "";
+      try{ await db.collection("otherUpdates").add({ title:t, note:"", projectId:"", date, status:"Berjalan", doneDate:"", createdAt:Date.now(), createdBy:auditWho() }); }
+      catch(err){ toast("Gagal menyimpan: "+err.message); return; }
+      exInEl.focus();
+    }
+    overlay.querySelector("#rtExtraAdd").onclick = addExtra;
+    exInEl.addEventListener("keydown", ev=>{ if(ev.key==="Enter"){ ev.preventDefault(); addExtra(); } });
     greetEl.addEventListener("change", regen);
     carryEl.addEventListener("change", regen);
-    regen();
-    overlay.onclick = ev=>{ if(ev.target===overlay) overlay.remove(); };
-    overlay.querySelector("#rtClose").onclick = ()=>overlay.remove();
+    renderExtras(); regen();
+    // kalau data dari Firebase baru masuk saat modal terbuka, segarkan daftar (tanpa menimpa teks yang sedang diedit manual jika tidak ada perubahan update lainnya)
+    window.__rtRefresh = ()=>{ if(!overlay.isConnected) return; const sig = JSON.stringify(reportUpdateItems(date).map(x=>[x.u.id,x.u.title,x.u.status,x.tag,x.u.projectId])); if(sig!==lastSig){ renderExtras(); regen(); } };
+    function closeRt(){ window.__rtRefresh = null; overlay.remove(); }
+    overlay.onclick = ev=>{ if(ev.target===overlay) closeRt(); };
+    overlay.querySelector("#rtClose").onclick = closeRt;
     overlay.querySelector("#rtCopy").onclick = async ()=>{
       try{ await copyText(textEl.value); toast("Teks laporan disalin."); }
       catch(err){ textEl.select(); toast("Gagal menyalin otomatis — teks sudah terpilih, tekan Ctrl/Cmd+C."); }
