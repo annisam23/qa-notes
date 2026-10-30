@@ -1037,6 +1037,13 @@
   .dv-menu button { display:block; width:100%; text-align:left; border:none; background:transparent; padding:8px 10px; border-radius:8px; font-size:13px; }
   .dv-menu button:hover { background:var(--surface-2); } .dv-menu button.danger { color:var(--danger); }
   .dv-menu hr { border:0; border-top:1px solid var(--border); margin:5px 0; }
+  .bd-nav { position:fixed; top:50%; transform:translateY(-50%); width:48px; height:48px; border-radius:50%; font-size:22px; font-weight:800; padding:0; z-index:2; display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow-lift); background:var(--surface); border:1px solid var(--accent); color:var(--accent); cursor:pointer; }
+  .bd-nav:hover:not(:disabled) { background:var(--accent); color:#fff; }
+  .bd-nav:disabled { opacity:.35; cursor:default; border-color:var(--border); color:var(--text-dim); }
+  .bd-nav.next { right:max(14px, calc(50% - 560px)); }
+  .bd-nav.prev { left:max(14px, calc(50% - 560px)); }
+  .bd-nav small { position:absolute; top:100%; margin-top:4px; font-size:10px; font-weight:700; white-space:nowrap; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,.6); }
+  @media (max-width:900px){ .bd-nav { top:auto; bottom:92px; transform:none; width:40px; height:40px; } .bd-nav small { display:none; } }
   .dv-nav { position:fixed; top:50%; transform:translateY(-50%); width:44px; height:44px; border-radius:50%; font-size:22px; padding:0; z-index:1; }
   .dv-pv iframe.dv-doc { background:#fff; }
   .dv-lnk { display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; background:var(--surface-2); margin:4px 0; font-size:12.5px; }
@@ -1631,7 +1638,7 @@
           <label class="row-flex" style="font-size:12.5px; color:var(--text-dim); font-weight:600;">
             <input type="checkbox" id="showAllDates" style="width:auto;"> semua tanggal
           </label>
-          <button id="btnBulk" type="button" title="Pilih beberapa bug lalu pindahkan sekaligus ke project lain">☑ Pilih beberapa</button>
+          <button id="btnBulk" type="button" title="Pilih beberapa bug lalu ubah status / pindahkan / duplikat sekaligus">☑ Pilih beberapa</button>
           <div class="view-toggle">
             <button id="btnViewBoard" class="active">Papan</button>
             <button id="btnViewTable">Tabel</button>
@@ -1939,6 +1946,8 @@
   <span class="bulk-count"><b id="bulkCount">0</b> dipilih</span>
   <button type="button" id="bulkAll">Pilih semua yang tampil</button>
   <button type="button" id="bulkNone">Kosongkan</button>
+  <select id="bulkStatus" aria-label="Status tujuan"></select>
+  <button type="button" class="primary" id="bulkStatusGo" disabled title="Ubah status semua bug terpilih sekaligus">Ubah status</button>
   <select id="bulkTarget" aria-label="Project tujuan"></select>
   <button type="button" class="primary" id="bulkMove" disabled>Pindahkan</button>
   <button type="button" id="bulkDup" disabled title="Salin bug terpilih ke satu atau beberapa project lain (bug asli tetap di sini)">⧉ Duplikat…</button>
@@ -2810,6 +2819,9 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       document.getElementById("bulkCount").textContent = bulkSel.size;
       document.getElementById("bulkMove").disabled = !(bulkSel.size && sel.value);
       document.getElementById("bulkDup").disabled = !bulkSel.size;
+      const bst = document.getElementById("bulkStatus");
+      if(!bst.options.length) bst.innerHTML = '<option value="">Ubah status ke…</option>'+STATUS_OPTS.map(s=>'<option value="'+s+'">'+s+'</option>').join("");
+      document.getElementById("bulkStatusGo").disabled = !(bulkSel.size && bst.value);
     }
     bulkPaint();
   }
@@ -2830,6 +2842,28 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       setBulkMode(false);
     }catch(err){ toast("Gagal memindahkan: "+err.message); }
   }
+  async function bulkSetStatus(){
+    const st = document.getElementById("bulkStatus").value;
+    if(!st || !STATUS_OPTS.includes(st)) return;
+    const ids = [...bulkSel].filter(id=>entries.some(e=>e.id===id));
+    if(!ids.length) return;
+    const changing = ids.filter(id=>{ const e = entries.find(x=>x.id===id); return e && e.status !== st; });
+    if(!changing.length){ toast("Semua bug terpilih sudah berstatus "+st+"."); return; }
+    if(!(await confirmDialog("Ubah status "+changing.length+" bug menjadi \""+st+"\"?", "Ubah status"))) return;
+    try{
+      const today = todayStr();
+      for(let i=0;i<changing.length;i+=400){
+        const batch = db.batch();
+        changing.slice(i,i+400).forEach(id=>batch.update(db.collection("entries").doc(id), { status:st, statusChangedDate:today }));
+        await batch.commit();
+      }
+      toast(changing.length+" bug diubah ke "+st+".");
+      document.getElementById("bulkStatus").value = "";
+      bulkSel.clear(); bulkRefresh();
+    }catch(err){ toast("Gagal mengubah status: "+err.message); }
+  }
+  document.getElementById("bulkStatus").addEventListener("change", ()=>bulkRefresh());
+  document.getElementById("bulkStatusGo").addEventListener("click", bulkSetStatus);
   // ---- duplikat bug ke project lain (project mirip-mirip) ----
   function dupDoc(e, tid, over){
     const o = over || {}, d = todayStr(), prio = o.priority || e.priority || "Medium";
@@ -3139,9 +3173,14 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   document.getElementById("bugPriority").addEventListener("change", renderManagePanel);
 
   // ================= entry detail modal =================
-  function openEntryModal(id){
+  function openEntryModal(id, navIds){
     const e = entries.find(x=>x.id===id);
     if(!e) return;
+    if(!navIds){
+      const cp = currentProject();
+      const base0 = (cp && cp.id===e.projectId) ? filteredEntries() : entries.filter(x=>x.projectId===e.projectId);
+      navIds = base0.filter(x=>x.status==="Open" || x.id===id).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(x=>x.id);
+    }
     const proj = projects.find(p=>p.id===e.projectId);
     const PRIO_COL = { Critical:"#e0363c", High:"#e08a1c", Medium:"#6d5ef5", Low:"#6c6f85" };
     const curPrio = e.priority || "Medium";
@@ -3198,6 +3237,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
           '<span class="bd-foot-r"><button type="button" id="mCancel">Tutup</button><button type="button" class="primary" id="mSave" title="Simpan (Ctrl/⌘ + Enter)">Simpan</button></span>'+
         '</div>'+
       '</div>';
+    overlay.insertAdjacentHTML("beforeend", '<button type="button" class="bd-nav prev" id="mPrev" title="Bug Open sebelumnya (Alt + ←)" aria-label="Bug Open sebelumnya">‹<small>Sebelumnya</small></button><button type="button" class="bd-nav next" id="mNext" title="Bug Open berikutnya (Alt + →)" aria-label="Bug Open berikutnya">›<small>Berikutnya</small></button>');
     document.body.appendChild(overlay);
     const $m = q=>overlay.querySelector(q);
     let pendingExpectedImage; // undefined = tidak berubah; null = hapus; string = ganti
@@ -3208,10 +3248,28 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       if(document.body.lastElementChild !== overlay) return; // ada dialog lain di atasnya
       if(ev.key==="Escape"){ ev.preventDefault(); tryClose(); }
       else if((ev.metaKey||ev.ctrlKey) && ev.key==="Enter"){ ev.preventDefault(); $m("#mSave").click(); }
+      else if(ev.altKey && ev.key==="ArrowRight"){ ev.preventDefault(); goOpen(1); }
+      else if(ev.altKey && ev.key==="ArrowLeft"){ ev.preventDefault(); goOpen(-1); }
     }
     const close = ()=>{ overlay.remove(); document.removeEventListener("keydown", onKey); };
     const tryClose = async ()=>{ if(snap()!==base && !(await confirmDialog("Perubahan belum disimpan. Tutup tanpa menyimpan?", "Tutup"))) return; close(); };
     document.addEventListener("keydown", onKey);
+
+    // lanjut ke bug Open berikutnya / sebelumnya (urutan sama dengan kolom Open di papan)
+    const findOpen = dir=>{
+      const i = navIds.indexOf(id);
+      for(let k=i+dir; k>=0 && k<navIds.length; k+=dir){ const x = entries.find(z=>z.id===navIds[k]); if(x && x.status==="Open") return x.id; }
+      return null;
+    };
+    const refreshNav = ()=>{ $m("#mPrev").disabled = !findOpen(-1); $m("#mNext").disabled = !findOpen(1); };
+    async function goOpen(dir){
+      const t = findOpen(dir);
+      if(!t){ toast(dir>0 ? "Tidak ada bug Open berikutnya." : "Tidak ada bug Open sebelumnya."); return; }
+      if(snap()!==base && !(await confirmDialog("Perubahan belum disimpan. Lanjut tanpa menyimpan?", "Lanjut"))) return;
+      close(); openEntryModal(t, navIds);
+    }
+    $m("#mPrev").onclick = ()=>goOpen(-1); $m("#mNext").onclick = ()=>goOpen(1);
+    refreshNav();
 
     // gambar existing -> perbesar
     const exShot = $m("#mExistingImg"); if(exShot && e.imageData) exShot.onclick = ()=>showLightbox(e.imageData);
