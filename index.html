@@ -533,6 +533,33 @@
   .up-tag { background:var(--surface-2); border-radius:20px; padding:2px 9px; font-weight:700; }
   .up-actions { flex:none; display:flex; gap:6px; }
   .up-actions button { padding:5px 9px; font-size:12px; }
+  /* ---- Update Lainnya: papan 3 kolom (Update / Kendala / To-do) ---- */
+  .up-board { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; align-items:start; margin-top:14px; }
+  @media (max-width:1180px){ .up-board { grid-template-columns:1fr; } }
+  .up-col { --col:var(--accent); background:var(--surface-2); border:1px solid var(--border); border-top:3px solid var(--col); border-radius:16px; padding:14px 14px 8px; min-width:0; }
+  .up-col.k-kendala { --col:#e0363c; } .up-col.k-todo { --col:#e08a1c; }
+  .up-col-h { display:flex; align-items:center; gap:9px; }
+  .up-col-h .ic { flex:none; width:30px; height:30px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800; color:var(--col); background:color-mix(in srgb, var(--col) 15%, transparent); }
+  .up-col-h h4 { margin:0; font-size:14.5px; font-weight:800; }
+  .up-col-h .n { margin-left:auto; font-size:11.5px; font-weight:800; color:var(--col); background:color-mix(in srgb, var(--col) 13%, transparent); border-radius:20px; padding:2px 10px; }
+  .up-col-sub { margin:4px 0 12px; font-size:12px; color:var(--text-dim); }
+  .up-quick { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px; }
+  .up-quick input[type=text] { flex:1 1 140px; min-width:0; }
+  .up-quick select { width:auto; }
+  .up-quick button { white-space:nowrap; }
+  .up-more { display:block; margin:0 0 12px; padding:0; border:none; background:none; box-shadow:none; font-size:11.5px; font-weight:700; color:var(--col); cursor:pointer; }
+  .up-more:hover { text-decoration:underline; }
+  .up-col .up-row { padding:10px 12px; margin-bottom:8px; border-radius:12px; }
+  .up-col .up-row:hover { border-color:var(--col); }
+  .up-col .up-check:hover { border-color:var(--col); }
+  .up-col .up-actions { opacity:0; transition:opacity .15s; }
+  .up-col .up-row:hover .up-actions, .up-col .up-row:focus-within .up-actions { opacity:1; }
+  @media (hover:none){ .up-col .up-actions { opacity:1; } }
+  .up-col .up-group { margin-top:14px; } .up-col .up-group:first-child { margin-top:0; }
+  .up-empty { text-align:center; color:var(--text-dim); font-size:12.5px; padding:20px 10px; margin-bottom:10px; border:1.5px dashed var(--border); border-radius:12px; }
+  .up-tag.late { background:color-mix(in srgb, #e0363c 16%, transparent); color:#e0363c; }
+  .up-tag.today { background:color-mix(in srgb, #e08a1c 18%, transparent); color:#c9760f; }
+  .up-tag.soon { background:color-mix(in srgb, var(--accent) 16%, transparent); color:var(--accent); }
   .mom-group { margin-top:18px; }
   .mom-group:first-child { margin-top:4px; }
   .mom-ghead { display:flex; align-items:center; gap:8px; margin:0 0 10px; font-size:13.5px; font-weight:800; }
@@ -1554,7 +1581,7 @@
     <button class="tab-btn" data-tab="enh"><span class="nav-icon">✧</span><span>Enhancement</span></button>
     <button class="tab-btn" data-tab="mom"><span class="nav-icon">✎</span><span>Catatan Meeting</span></button>
     <button class="tab-btn" data-tab="daily"><span class="nav-icon">▤</span><span>Laporan Harian</span></button>
-    <button class="tab-btn" data-tab="updates"><span class="nav-icon">⊕</span><span>Update Lainnya</span><span class="rm-badge" id="upBadge" style="display:none" title="Update yang masih berjalan"></span></button>
+    <button class="tab-btn" data-tab="updates"><span class="nav-icon">⊕</span><span>Update Lainnya</span><span class="rm-badge" id="upBadge" style="display:none" title="Update, kendala, dan to-do yang belum selesai"></span></button>
     <div class="nav-section-label nav-section-secondary">TOOLS</div>
     <button class="tab-btn" data-tab="scan"><span class="nav-icon">◎</span><span>Ceklis Scan AI</span></button>
     <button class="tab-btn" data-tab="akses"><span class="nav-icon">⌘</span><span>All Akses</span></button>
@@ -1686,17 +1713,40 @@
   <!-- ===== TAB: UPDATE LAINNYA ===== -->
   <div class="tab-panel" id="tab-updates">
     <div class="card">
-      <div class="row-flex between" style="margin-bottom:10px;">
-        <h3 style="margin:0;">Update Lainnya</h3>
+      <div class="row-flex between" style="margin-bottom:4px; flex-wrap:wrap; gap:10px;">
+        <div>
+          <h3 style="margin:0;">Update Lainnya</h3>
+          <div class="hint" style="margin:3px 0 0;">Update pekerjaan, kendala, dan to-do untuk besok. Semuanya ikut otomatis di <b>Teks Laporan</b>.</div>
+        </div>
         <div class="row-flex">
           <select id="upProject" style="width:auto; min-width:160px;"><option value="">Semua Project</option></select>
-          <select id="upStatus" style="width:auto;"><option value="">Semua status</option><option value="Berjalan">Berjalan</option><option value="Selesai">Selesai</option></select>
+          <select id="upStatus" style="width:auto;"><option value="">Semua status</option><option value="Berjalan">Belum selesai</option><option value="Selesai">Selesai</option></select>
           <input type="text" id="upSearch" placeholder="Cari…" style="width:170px;">
-          <button class="primary" id="upAdd">+ Update Lainnya</button>
         </div>
       </div>
-      <div class="hint" style="margin:0 0 10px;">Pekerjaan atau update di luar bug report, misalnya testing rate EHD BPD Sumut. Yang berstatus <b>Berjalan</b> otomatis ikut di Teks Laporan hari-hari berikutnya sampai ditandai <b>Selesai</b>.</div>
-      <div id="upWrap"><div class="empty-state">Memuat data…</div></div>
+      <div class="up-board" id="upWrap">
+        <section class="up-col k-update">
+          <div class="up-col-h"><span class="ic">⊕</span><h4>Update</h4><span class="n" id="upCnt_update">0</span></div>
+          <p class="up-col-sub">Pekerjaan di luar bug report. Yang masih berjalan jadi <i>lanjutan</i> di laporan berikutnya.</p>
+          <div class="up-quick"><input type="text" id="upQ_update" data-up-input="update" placeholder="mis. Testing rate EHD BPD Sumut"><button type="button" class="primary" data-up-quick="update">+ Tambah</button></div>
+          <button type="button" class="up-more" data-up-detail="update">Isi detail lengkap…</button>
+          <div id="upList_update"><div class="empty-state">Memuat data…</div></div>
+        </section>
+        <section class="up-col k-kendala">
+          <div class="up-col-h"><span class="ic">⚠</span><h4>Kendala</h4><span class="n" id="upCnt_kendala">0</span></div>
+          <p class="up-col-sub">Hambatan saat testing. Yang belum teratasi tampil di bagian <i>Kendala</i> pada laporan.</p>
+          <div class="up-quick"><input type="text" id="upQ_kendala" data-up-input="kendala" placeholder="mis. Server UAT TSS sering timeout"><button type="button" class="primary" data-up-quick="kendala">+ Tambah</button></div>
+          <button type="button" class="up-more" data-up-detail="kendala">Isi detail lengkap…</button>
+          <div id="upList_kendala"></div>
+        </section>
+        <section class="up-col k-todo">
+          <div class="up-col-h"><span class="ic">☑</span><h4>To-do</h4><span class="n" id="upCnt_todo">0</span></div>
+          <p class="up-col-sub">Rencana kerja, otomatis untuk besok. To-do besok tampil di <i>Rencana besok</i> pada laporan.</p>
+          <div class="up-quick"><input type="text" id="upQ_todo" data-up-input="todo" placeholder="mis. Retest bug deteksi TSS"><select id="upQDay" title="Untuk tanggal"><option value="1">Besok</option><option value="0">Hari ini</option><option value="2">Lusa</option></select><button type="button" class="primary" data-up-quick="todo">+ Tambah</button></div>
+          <button type="button" class="up-more" data-up-detail="todo">Isi detail lengkap…</button>
+          <div id="upList_todo"></div>
+        </section>
+      </div>
     </div>
   </div>
 
@@ -3159,8 +3209,8 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       const cur = entries.find(x=>x.id===id);
       if(!cur || cur.status !== patch.status) patch.statusChangedDate = todayStr();
     }
-    try{ await db.collection("entries").doc(id).update(patch); }
-    catch(e){ toast("Gagal menyimpan perubahan."); }
+    try{ await db.collection("entries").doc(id).update(patch); return true; }
+    catch(e){ toast("Gagal menyimpan perubahan."); return false; }
   }
   async function deleteEntry(id){
     try{ await db.collection("entries").doc(id).delete(); }
@@ -3232,6 +3282,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
               '<div class="bd-field"><label class="bd-lbl" for="mProject">Project</label><select id="mProject">'+projects.map(p=>'<option value="'+esc(p.id)+'" '+(e.projectId===p.id?'selected':'')+'>'+esc(p.name)+'</option>').join('')+(isOtherId(e.projectId) ? '<option value="'+esc(e.projectId)+'" selected>'+esc(e.projectId.slice(OTHER_PREFIX.length))+' (lainnya)</option>' : '')+'</select>'+
                 '<div class="bd-hint" id="mProjectHint" style="display:none;">Bug akan dipindahkan ke project ini saat disimpan.</div></div>'+
               '<div class="bd-field"><span class="bd-lbl" style="display:block;margin-bottom:6px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);">Status</span><div class="bd-seg" id="mStatusSeg">'+segHtml(STATUS_OPTS, e.status, s=>STATUS_COLOR[s])+'</div>'+
+                '<div class="bd-hint">✓ Tersimpan otomatis saat dipilih</div>'+
                 '<select id="mStatus" hidden>'+STATUS_OPTS.map(s=>'<option value="'+s+'" '+(e.status===s?'selected':'')+'>'+s+'</option>').join('')+'</select></div>'+
               '<div class="bd-field"><span class="bd-lbl" style="display:block;margin-bottom:6px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);">Priority</span><div class="bd-seg" id="mPrioSeg">'+segHtml(PRIORITY_OPTS, curPrio, s=>PRIO_COL[s])+'</div>'+
                 '<select id="mPriority" hidden>'+PRIORITY_OPTS.map(p=>'<option value="'+p+'" '+(curPrio===p?'selected':'')+'>'+p+'</option>').join('')+'</select></div>'+
@@ -3249,19 +3300,22 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
           '<span class="bd-foot-r"><button type="button" id="mCancel">Tutup</button><button type="button" class="primary" id="mSave" title="Simpan (Ctrl/⌘ + Enter)">Simpan</button></span>'+
         '</div>'+
       '</div>';
-    overlay.insertAdjacentHTML("beforeend", '<button type="button" class="bd-nav prev" id="mPrev" title="Bug Open sebelumnya (Alt + ←)" aria-label="Bug Open sebelumnya">‹<small>Sebelumnya</small></button><button type="button" class="bd-nav next" id="mNext" title="Bug Open berikutnya (Alt + →)" aria-label="Bug Open berikutnya">›<small>Berikutnya</small></button>');
+    overlay.insertAdjacentHTML("beforeend", '<button type="button" class="bd-nav prev" id="mPrev" title="Bug Open sebelumnya (tombol ← atau Alt + ←)" aria-label="Bug Open sebelumnya">‹<small>Sebelumnya</small></button><button type="button" class="bd-nav next" id="mNext" title="Bug Open berikutnya (tombol → atau Alt + →)" aria-label="Bug Open berikutnya">›<small>Berikutnya</small></button>');
     document.body.appendChild(overlay);
     const $m = q=>overlay.querySelector(q);
     let pendingExpectedImage; // undefined = tidak berubah; null = hapus; string = ganti
-    const snap = ()=>JSON.stringify([$m("#mExisting").value, $m("#mExpected").value, $m("#mStatus").value, $m("#mPriority").value, $m("#mDueDate").value, $m("#mDate").value, $m("#mProject").value, pendingExpectedImage===undefined ? 0 : 1]);
+    const snap = ()=>JSON.stringify([$m("#mExisting").value, $m("#mExpected").value, $m("#mPriority").value, $m("#mDueDate").value, $m("#mDate").value, $m("#mProject").value, pendingExpectedImage===undefined ? 0 : 1]);
     let base = "";
     const refreshDirty = ()=>{ $m("#mDirty").style.display = snap()!==base ? "" : "none"; };
+    const isTyping = t=>!!t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
     function onKey(ev){
       if(document.body.lastElementChild !== overlay) return; // ada dialog lain di atasnya
       if(ev.key==="Escape"){ ev.preventDefault(); tryClose(); }
       else if((ev.metaKey||ev.ctrlKey) && ev.key==="Enter"){ ev.preventDefault(); $m("#mSave").click(); }
-      else if(ev.altKey && ev.key==="ArrowRight"){ ev.preventDefault(); goOpen(1); }
-      else if(ev.altKey && ev.key==="ArrowLeft"){ ev.preventDefault(); goOpen(-1); }
+      // ← / → pindah bug Open (saat tidak sedang mengetik); Alt + ←/→ tetap bisa dipakai kapan saja
+      else if((ev.key==="ArrowRight" || ev.key==="ArrowLeft") && !ev.metaKey && !ev.ctrlKey && !ev.shiftKey && (ev.altKey || !isTyping(ev.target))){
+        ev.preventDefault(); if(!ev.repeat) goOpen(ev.key==="ArrowRight" ? 1 : -1);
+      }
     }
     const close = ()=>{ overlay.remove(); document.removeEventListener("keydown", onKey); };
     const tryClose = async ()=>{ if(snap()!==base && !(await confirmDialog("Perubahan belum disimpan. Tutup tanpa menyimpan?", "Tutup"))) return; close(); };
@@ -3296,6 +3350,19 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       selEl.value = b.dataset.v; seg.querySelectorAll("[data-v]").forEach(x=>{ x.classList.toggle("on", x===b); x.setAttribute("aria-pressed", x===b); });
       selEl.dispatchEvent(new Event("change", { bubbles:true })); }); };
     bindSeg("#mStatusSeg", mStatusSel); bindSeg("#mPrioSeg", mPrioSel);
+    // status otomatis tersimpan saat dipilih (tanpa klik Simpan)
+    let savedStatus = e.status;
+    const setStatusUI = v=>{
+      mStatusSel.value = v;
+      $m("#mStatusSeg").querySelectorAll("[data-v]").forEach(x=>{ const on = x.dataset.v===v; x.classList.toggle("on", on); x.setAttribute("aria-pressed", on); });
+      mStatusBadge.className = "badge "+v.replace(" ","-"); mStatusBadge.textContent = v;
+    };
+    mStatusSel.addEventListener("change", async ()=>{
+      const ns = mStatusSel.value; if(ns===savedStatus) return;
+      const prev = savedStatus; savedStatus = ns;
+      const ok = await updateEntry(id, { status: ns });
+      if(ok) toast("Status → "+ns+" tersimpan."); else { savedStatus = prev; setStatusUI(prev); }
+    });
     // project
     const mProjSel = $m("#mProject"), mProjHint = $m("#mProjectHint");
     mProjSel.addEventListener("change", ()=>{ mProjHint.style.display = mProjSel.value!==e.projectId ? "" : "none"; });
@@ -7971,7 +8038,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       tips:["Menghapus action item di catatan tidak menghapus Enhancement yang sudah terbuat."] },
     { id:"updates", icon:"⊕", title:"Update Lainnya", tab:"updates",
       sum:"Catat pekerjaan di luar bug report supaya ikut di Teks Laporan.",
-      steps:["Klik **+ Update Lainnya**, isi teks (mis. Testing rate EHD BPD Sumut), pilih project bila ada, lalu simpan.","Update berstatus **Berjalan** otomatis ikut di Teks Laporan hari-hari berikutnya sebagai *lanjutan*.","Klik lingkaran ✓ di kiri baris untuk menandai **Selesai**. Update tampil sekali lagi di laporan hari itu dengan tanda *selesai*.","Bisa juga menambah cepat langsung dari jendela **📝 Teks Laporan**."] },
+      steps:["Tab ini punya tiga kolom: **Update**, **Kendala**, dan **To-do**. Ketik di kolom yang sesuai lalu tekan Enter (mis. Testing rate EHD BPD Sumut). Tombol **Isi detail lengkap…** membuka form dengan project, tanggal, dan catatan.","Update berstatus **Berjalan** otomatis ikut di Teks Laporan hari-hari berikutnya sebagai *lanjutan*.","Klik lingkaran ✓ di kiri baris untuk menandai **Selesai**. Update tampil sekali lagi di laporan hari itu dengan tanda *selesai*.","Bisa juga menambah cepat langsung dari jendela **📝 Teks Laporan**.","**Kendala** yang belum teratasi tampil di bagian *Kendala* pada Teks Laporan, dan **To-do** untuk besok tampil di bagian *Rencana besok*."] },
     { id:"daily", icon:"▤", title:"Laporan Harian", tab:"daily",
       sum:"Rekap bug per tanggal, siap dikirim.",
       steps:["Pilih **Tanggal** dan **Project** (atau Semua Project). Centang **semua tanggal** untuk melihat semuanya.","Klik **📝 Teks Laporan** untuk mendapatkan teks yang bisa disalin dan dikirim ke atasan.","Klik **⬇ Export PDF** untuk laporan berformat PDF."],
@@ -8114,93 +8181,149 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   _dbCol("users").orderBy("lastLogin","desc").onSnapshot(snap=>{ userRows = snap.docs.map(d=>({ id:d.id, ...d.data() })); renderUsers(); }, err=>{ const w = document.getElementById("usersWrap"); if(w) w.innerHTML = '<div class="empty-state">Gagal memuat pengguna: '+esc(err.message)+'</div>'; });
 
   // ================= tab Update Lainnya =================
-  function upFiltered(){
+  const UP_KINDS = {
+    update:{ label:"Update", run:"Berjalan", done:"Selesai", ph:"mis. Testing rate EHD BPD Sumut", noteLbl:"Catatan", notePh:"Detail, hasil sementara, kendala…", toDone:"Tandai selesai", toRun:"Tandai berjalan lagi",
+      empty:'Belum ada update. Ketik di atas lalu Enter, mis. "Testing rate EHD BPD Sumut".' },
+    kendala:{ label:"Kendala", run:"Belum teratasi", done:"Teratasi", ph:"mis. Server UAT TSS sering timeout", noteLbl:"Detail kendala", notePh:"Apa yang terhambat, dampaknya, butuh bantuan siapa…", toDone:"Tandai teratasi", toRun:"Tandai belum teratasi",
+      empty:"Belum ada kendala. Catat hambatan testing di sini supaya ikut di laporan." },
+    todo:{ label:"To-do", run:"Belum dikerjakan", done:"Selesai", ph:"mis. Retest bug deteksi TSS", noteLbl:"Catatan", notePh:"Langkah atau detail yang perlu diingat…", toDone:"Tandai selesai", toRun:"Tandai belum selesai",
+      empty:"Belum ada to-do. Tulis rencana kerja untuk besok di sini." }
+  };
+  const upKind = u=>(u && (u.kind==="kendala" || u.kind==="todo")) ? u.kind : "update";
+  function upDayLabel(d){ const t = todayStr(); if(d===t) return "Hari ini"; if(d===addDays(t,1)) return "Besok"; if(d===addDays(t,-1)) return "Kemarin"; return fmtDate(d); }
+  function upFiltered(kind){
     const pid = document.getElementById("upProject").value, st = document.getElementById("upStatus").value;
     const q = document.getElementById("upSearch").value.trim().toLowerCase();
     return upItems.filter(u=>{
+      if(kind && upKind(u) !== kind) return false;
       if(pid && u.projectId !== pid) return false;
       if(st && (u.status==="Selesai" ? "Selesai" : "Berjalan") !== st) return false;
       if(!q) return true;
       return [u.title,u.note,upProjName(u.projectId)].join(" ").toLowerCase().includes(q);
     });
   }
+  function upRowHtml(u){
+    const isDone = u.status==="Selesai", pn = upProjName(u.projectId), k = upKind(u), cfg = UP_KINDS[k], t = todayStr();
+    let meta = pn ? '<span class="up-tag">'+esc(pn)+'</span>' : "";
+    if(k==="todo"){
+      const late = !isDone && u.date < t;
+      meta += '<span class="up-tag '+(late ? "late" : u.date===t ? "today" : u.date===addDays(t,1) ? "soon" : "")+'">'+(late ? "Terlewat · " : "")+esc(upDayLabel(u.date))+'</span>';
+    } else meta += '<span>'+(k==="kendala" ? "Dicatat " : "Dibuat ")+esc(fmtDate(u.date))+'</span>';
+    if(isDone && u.doneDate) meta += '<span>· '+cfg.done+' '+esc(fmtDate(u.doneDate))+'</span>';
+    const tip = isDone ? cfg.toRun : cfg.toDone;
+    return '<div class="up-row'+(isDone?' done':'')+'" data-up="'+u.id+'">'+
+      '<button type="button" class="up-check" data-up-toggle="'+u.id+'" title="'+tip+'" aria-label="'+tip+'">✓</button>'+
+      '<div class="up-main"><div class="up-title">'+esc(u.title||"(tanpa judul)")+'</div>'+
+        (u.note ? '<div class="up-note">'+esc(u.note)+'</div>' : '')+
+        '<div class="up-meta">'+meta+'</div></div>'+
+      '<div class="up-actions"><button type="button" data-up-edit="'+u.id+'">Edit</button><button type="button" data-up-del="'+u.id+'" title="Hapus">✕</button></div>'+
+    '</div>';
+  }
+  function renderUpCol(kind){
+    const el = document.getElementById("upList_"+kind), cnt = document.getElementById("upCnt_"+kind); if(!el) return;
+    const cfg = UP_KINDS[kind], list = upFiltered(kind), t = todayStr();
+    const open = list.filter(u=>u.status!=="Selesai"), done = list.filter(u=>u.status==="Selesai");
+    if(cnt) cnt.textContent = open.length;
+    if(!list.length){ el.innerHTML = '<div class="up-empty">'+(upItems.some(u=>upKind(u)===kind) ? "Tidak ada yang cocok dengan filter." : cfg.empty)+'</div>'; return; }
+    const byNew = (a,b)=>(b.date||"").localeCompare(a.date||"") || (b.createdAt||0)-(a.createdAt||0);
+    const byDone = (a,b)=>(b.doneDate||b.date||"").localeCompare(a.doneDate||a.date||"") || (b.createdAt||0)-(a.createdAt||0);
+    const group = (label, arr)=>arr.length ? '<div class="up-group"><div class="mom-ghead">'+label+'<span class="n">'+arr.length+'</span></div>'+arr.map(upRowHtml).join("")+'</div>' : "";
+    let html = "";
+    if(kind==="todo"){
+      const byDate = (a,b)=>(a.date||"").localeCompare(b.date||"") || (a.createdAt||0)-(b.createdAt||0), tm = addDays(t,1);
+      html += group("Terlewat", open.filter(u=>(u.date||"")<t).sort(byDate));
+      html += group("Hari ini", open.filter(u=>u.date===t).sort(byDate));
+      html += group("Besok", open.filter(u=>u.date===tm).sort(byDate));
+      html += group("Nanti", open.filter(u=>(u.date||"")>tm).sort(byDate));
+    } else html += group(cfg.run, open.sort(byNew));
+    html += group(cfg.done, done.sort(byDone));
+    el.innerHTML = html;
+  }
   function renderUpdates(){
-    const wrap = document.getElementById("upWrap"); if(!wrap) return;
+    if(!document.getElementById("upWrap")) return;
     const run = updatesRunningCount(), badge = document.getElementById("upBadge");
     if(badge){ badge.textContent = run; badge.style.display = run ? "" : "none"; }
     const sel = document.getElementById("upProject"), prev = sel.value;
     sel.innerHTML = '<option value="">Semua Project</option>' + projects.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join("") + customProjOptions(upItems);
     if(prev && (projects.find(p=>p.id===prev) || isOtherId(prev))) sel.value = prev;
-    const list = upFiltered();
-    if(!list.length){
-      wrap.innerHTML = '<div class="empty-state">'+(upItems.length ? "Tidak ada update yang cocok dengan filter." : 'Belum ada update. Klik "+ Update Lainnya" untuk mulai, misalnya "Testing rate EHD BPD Sumut".')+'</div>';
-      return;
-    }
-    const byNew = (a,b)=>(b.date||"").localeCompare(a.date||"") || (b.createdAt||0)-(a.createdAt||0);
-    const running = list.filter(u=>u.status!=="Selesai").sort(byNew), done = list.filter(u=>u.status==="Selesai").sort((a,b)=>(b.doneDate||b.date||"").localeCompare(a.doneDate||a.date||"") || (b.createdAt||0)-(a.createdAt||0));
-    const row = u=>{
-      const isDone = u.status==="Selesai", pn = upProjName(u.projectId);
-      return '<div class="up-row'+(isDone?' done':'')+'" data-up="'+u.id+'">'+
-        '<button type="button" class="up-check" data-up-toggle="'+u.id+'" title="'+(isDone?'Tandai berjalan lagi':'Tandai selesai')+'" aria-label="'+(isDone?'Tandai berjalan lagi':'Tandai selesai')+'">✓</button>'+
-        '<div class="up-main"><div class="up-title">'+esc(u.title||"(tanpa judul)")+'</div>'+
-          (u.note ? '<div class="up-note">'+esc(u.note)+'</div>' : '')+
-          '<div class="up-meta">'+(pn?'<span class="up-tag">'+esc(pn)+'</span>':'')+'<span>Dibuat '+esc(fmtDate(u.date))+'</span>'+(isDone && u.doneDate ? '<span>· Selesai '+esc(fmtDate(u.doneDate))+'</span>' : '')+'</div></div>'+
-        '<div class="up-actions"><button type="button" data-up-edit="'+u.id+'">Edit</button><button type="button" data-up-del="'+u.id+'" title="Hapus">✕</button></div>'+
-      '</div>';
-    };
-    wrap.innerHTML =
-      (running.length ? '<div class="up-group"><div class="mom-ghead">Berjalan<span class="n">'+running.length+'</span></div>'+running.map(row).join("")+'</div>' : '')+
-      (done.length ? '<div class="up-group"><div class="mom-ghead">Selesai<span class="n">'+done.length+'</span></div>'+done.map(row).join("")+'</div>' : '');
+    ["update","kendala","todo"].forEach(renderUpCol);
   }
-  function upForm(u){
+  function upForm(u, kind){
     const overlay = document.createElement("div"); overlay.className = "modal-overlay";
-    u = u || { title:"", note:"", projectId:"", date:todayStr(), status:"Berjalan" };
+    kind = (u && u.kind) ? upKind(u) : (kind || "update");
+    const cfg = UP_KINDS[kind];
+    u = u || { title:"", note:"", projectId:"", status:"Berjalan" };
+    if(!u.date) u = { ...u, date: kind==="todo" ? addDays(todayStr(),1) : todayStr() };
     overlay.innerHTML =
       '<div class="modal-box" style="max-width:520px;">'+
-        '<h3 style="margin:0 0 8px;">'+(u.id?'Edit':'Tambah')+' Update Lainnya</h3>'+
-        '<label>Update</label><input type="text" id="upfTitle" placeholder="mis. Testing rate EHD BPD Sumut" value="'+esc(u.title)+'">'+
+        '<h3 style="margin:0 0 8px;">'+(u.id?'Edit':'Tambah')+' '+cfg.label+'</h3>'+
+        '<label>'+cfg.label+'</label><input type="text" id="upfTitle" placeholder="'+esc(cfg.ph)+'" value="'+esc(u.title)+'">'+
         '<label>Project <span class="hint" style="font-weight:400;">(opsional)</span></label>'+
         '<select id="upfProj"><option value="">— Tanpa project —</option>'+projects.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join("")+OTHER_OPT+'</select>'+projOtherInputHtml("upfProjOther")+
-        '<label>Tanggal</label><input type="date" id="upfDate" value="'+esc(u.date||todayStr())+'">'+
-        '<label>Status</label><select id="upfStatus"><option value="Berjalan">Berjalan</option><option value="Selesai">Selesai</option></select>'+
-        '<label>Catatan <span class="hint" style="font-weight:400;">(opsional)</span></label><textarea id="upfNote" rows="4" placeholder="Detail, hasil sementara, kendala…">'+esc(u.note||"")+'</textarea>'+
+        '<label>'+(kind==="todo" ? "Dikerjakan tanggal" : "Tanggal")+'</label><input type="date" id="upfDate" value="'+esc(u.date)+'">'+
+        (kind==="todo" ? '<div class="row-flex" style="gap:6px; margin-top:6px;"><button type="button" data-upd="0">Hari ini</button><button type="button" data-upd="1">Besok</button><button type="button" data-upd="2">Lusa</button></div>' : '')+
+        '<label>Status</label><select id="upfStatus"><option value="Berjalan">'+cfg.run+'</option><option value="Selesai">'+cfg.done+'</option></select>'+
+        '<label>'+cfg.noteLbl+' <span class="hint" style="font-weight:400;">(opsional)</span></label><textarea id="upfNote" rows="4" placeholder="'+esc(cfg.notePh)+'">'+esc(u.note||"")+'</textarea>'+
         '<div class="modal-actions"><button id="upfCancel">Batal</button><button class="primary" id="upfSave">Simpan</button></div>'+
       '</div>';
     document.body.appendChild(overlay);
     const $ = id=>overlay.querySelector("#"+id);
     const sel = $("upfProj"), oth = $("upfProjOther");
-    if(u.projectId) projPickerInit(sel, oth, u.projectId); else projPickerInit(sel, oth, "");
+    projPickerInit(sel, oth, u.projectId || "");
     $("upfStatus").value = u.status==="Selesai" ? "Selesai" : "Berjalan";
+    overlay.querySelectorAll("[data-upd]").forEach(b=>b.onclick = ()=>{ $("upfDate").value = addDays(todayStr(), +b.dataset.upd); });
     overlay.onclick = ev=>{ if(ev.target===overlay) overlay.remove(); };
     $("upfCancel").onclick = ()=>overlay.remove();
     $("upfTitle").focus();
+    $("upfTitle").addEventListener("keydown", ev=>{ if(ev.key==="Enter"){ ev.preventDefault(); $("upfSave").click(); } });
     $("upfSave").onclick = async ()=>{
       const title = $("upfTitle").value.trim();
-      if(!title){ toast("Isi dulu teks update-nya."); $("upfTitle").focus(); return; }
+      if(!title){ toast("Isi dulu teksnya."); $("upfTitle").focus(); return; }
       if(sel.value===OTHER && !oth.value.trim()){ toast("Ketik nama project/topik atau pilih opsi lain."); oth.focus(); return; }
       const projectId = sel.value==="" ? "" : projPickerValue(sel, oth);
-      const status = $("upfStatus").value, date = $("upfDate").value || todayStr();
+      const status = $("upfStatus").value, date = $("upfDate").value || u.date;
       const doneDate = status==="Selesai" ? (u.status==="Selesai" && u.doneDate ? u.doneDate : todayStr()) : "";
-      const data = { title, note:$("upfNote").value.trim(), projectId, date, status, doneDate };
+      const data = { title, note:$("upfNote").value.trim(), projectId, date, status, doneDate, kind };
       try{
         if(u.id) await db.collection("otherUpdates").doc(u.id).update(data);
         else await db.collection("otherUpdates").add({ ...data, createdAt:Date.now(), createdBy:auditWho() });
-        overlay.remove(); toast("Update disimpan.");
+        overlay.remove(); toast(cfg.label+" disimpan.");
       }catch(err){ toast("Gagal: "+err.message); }
     };
   }
-  document.getElementById("upAdd").addEventListener("click", ()=>upForm(null));
+  // tambah cepat dari kolom (ketik + Enter)
+  function upQuickDate(kind){ return kind==="todo" ? addDays(todayStr(), +document.getElementById("upQDay").value) : todayStr(); }
+  async function upQuickAdd(kind){
+    const inp = document.getElementById("upQ_"+kind), title = inp.value.trim();
+    if(!title){ inp.focus(); return; }
+    inp.value = ""; inp.dispatchEvent(new Event("input", { bubbles:true }));
+    const projectId = document.getElementById("upProject").value || "";
+    try{ await db.collection("otherUpdates").add({ title, note:"", projectId, date:upQuickDate(kind), status:"Berjalan", doneDate:"", kind, createdAt:Date.now(), createdBy:auditWho() }); }
+    catch(err){ toast("Gagal: "+err.message); inp.value = title; return; }
+    inp.focus();
+  }
   ["upProject","upStatus"].forEach(id=>document.getElementById(id).addEventListener("change", renderUpdates));
   document.getElementById("upSearch").addEventListener("input", renderUpdates);
+  document.getElementById("upWrap").addEventListener("keydown", ev=>{
+    if(ev.key==="Enter" && ev.target.matches && ev.target.matches("[data-up-input]")){ ev.preventDefault(); upQuickAdd(ev.target.dataset.upInput); }
+  });
   document.getElementById("upWrap").addEventListener("click", async ev=>{
+    const qa = ev.target.closest("[data-up-quick],[data-up-detail]");
+    if(qa){
+      if(qa.dataset.upQuick){ upQuickAdd(qa.dataset.upQuick); return; }
+      const k = qa.dataset.upDetail, inp = document.getElementById("upQ_"+k), title = inp.value.trim();
+      inp.value = ""; inp.dispatchEvent(new Event("input", { bubbles:true }));
+      upForm({ title, note:"", projectId:document.getElementById("upProject").value || "", date:upQuickDate(k), status:"Berjalan" }, k);
+      return;
+    }
     const t = ev.target.closest("[data-up-toggle],[data-up-edit],[data-up-del]"); if(!t) return;
     const id = t.dataset.upToggle || t.dataset.upEdit || t.dataset.upDel, u = upItems.find(x=>x.id===id); if(!u) return;
     try{
       if(t.dataset.upToggle){
         const toDone = u.status!=="Selesai";
         await db.collection("otherUpdates").doc(id).update({ status: toDone?"Selesai":"Berjalan", doneDate: toDone?todayStr():"" });
-      }else if(t.dataset.upEdit) upForm(u);
-      else if(confirm('Hapus update "'+(u.title||"")+'"?')) await db.collection("otherUpdates").doc(id).delete();
+      }else if(t.dataset.upEdit) upForm(u, upKind(u));
+      else if(confirm('Hapus "'+(u.title||"")+'"?')) await db.collection("otherUpdates").doc(id).delete();
     }catch(err){ toast("Gagal: "+err.message); }
   });
 
@@ -8230,6 +8353,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   function reportUpdateItems(date){
     const out = [];
     upItems.forEach(u=>{
+      if(upKind(u) !== "update") return;
       if(u.date === date) out.push({ u, tag: u.status==="Selesai" ? "selesai" : "" });
       else if(u.status==="Selesai" && u.doneDate===date) out.push({ u, tag:"selesai" });
       else if(u.status!=="Selesai" && u.date < date) out.push({ u, tag:"lanjutan" });
@@ -8240,7 +8364,28 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     const pn = upProjName(x.u.projectId);
     return (pn ? pn+": " : "") + (x.u.title||"") + (x.tag ? " ("+x.tag+")" : "");
   }
-  function updatesRunningCount(){ return upItems.filter(u=>u.status!=="Selesai").length; }
+  // Kendala yang belum teratasi (sampai tanggal laporan) + yang teratasi pada tanggal itu
+  function reportKendalaItems(date){
+    const out = [];
+    upItems.forEach(u=>{
+      if(upKind(u) !== "kendala") return;
+      if(u.status!=="Selesai" && (u.date||"") <= date) out.push({ u, tag:"" });
+      else if(u.status==="Selesai" && u.doneDate===date) out.push({ u, tag:"teratasi" });
+    });
+    return out.sort((a,b)=>(a.u.date||"").localeCompare(b.u.date||"") || (a.u.createdAt||0)-(b.u.createdAt||0));
+  }
+  // To-do untuk besok (tanggal laporan + 1) + yang terlewat dan belum selesai
+  function reportTodoItems(date){
+    const tm = addDays(date,1), out = [];
+    upItems.forEach(u=>{
+      if(upKind(u) !== "todo" || u.status==="Selesai") return;
+      if(u.date === tm) out.push({ u, tag:"" });
+      else if((u.date||"") <= date) out.push({ u, tag:"terlewat" });
+    });
+    return out.sort((a,b)=>(a.u.date||"").localeCompare(b.u.date||"") || (a.u.createdAt||0)-(b.u.createdAt||0));
+  }
+  const reportExtraSig = date=>JSON.stringify([reportUpdateItems(date), reportKendalaItems(date), reportTodoItems(date)].map(arr=>arr.map(x=>[x.u.id,x.u.title,x.u.status,x.tag,x.u.projectId,x.u.date])));
+  function updatesRunningCount(){ const t = todayStr(); return upItems.filter(u=>u.status!=="Selesai" && (upKind(u)!=="todo" || (u.date||"") <= t)).length; }
   function buildReportText(greet, names, date){
     date = date || todayStr();
     const day = entries.filter(e=>e.date===date);
@@ -8268,6 +8413,10 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     if(moms.length) L.push("", "*Catatan meeting hari ini*", ...moms.map(m=>"- "+(m.title||"(tanpa judul)")));
     const extras = reportUpdateItems(date);
     if(extras.length) L.push("", "*Update lainnya*", ...extras.map((x,i)=>(i+1)+". "+reportUpdateLine(x)));
+    const kend = reportKendalaItems(date);
+    if(kend.length) L.push("", "*Kendala*", ...kend.map((x,i)=>(i+1)+". "+reportUpdateLine(x)));
+    const tds = reportTodoItems(date);
+    if(tds.length) L.push("", "*Rencana besok*", ...tds.map((x,i)=>(i+1)+". "+reportUpdateLine(x)));
     L.push("", "sekian laporan untuk hari ini, dokumen bug report terlampir. Terima kasih.");
     return L.join("\n");
   }
@@ -8291,14 +8440,14 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     overlay.innerHTML =
       '<div class="modal-box" style="max-width:520px;">'+
         '<h3 style="margin:0 0 4px;">Teks Laporan — '+fmtDate(date)+'</h3>'+
-        '<div class="hint" style="margin:0 0 6px;">Berisi project yang bug-nya diinput pada tanggal ini, plus Update Lainnya. Teks bisa diedit sebelum disalin.</div>'+
+        '<div class="hint" style="margin:0 0 6px;">Berisi project yang bug-nya diinput pada tanggal ini, plus Update Lainnya, Kendala, dan Rencana besok. Teks bisa diedit sebelum disalin.</div>'+
         '<label>Salam</label>'+
         '<select id="rtGreet">'+greets.map(g=>'<option value="'+g+'" '+(g===curGreet?'selected':'')+'>Selamat '+g+'</option>').join('')+'</select>'+
         '<label class="opt-check"><input type="checkbox" id="rtCarry"> Sertakan project yang hanya carry-over</label>'+
         '<label>Update lainnya <span class="hint" style="font-weight:400;">(di luar bug report, mis. testing rate EHD BPD Sumut)</span></label>'+
         '<div id="rtExtraList" style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px;"></div>'+
         '<div style="display:flex;gap:6px;"><input type="text" id="rtExtraInput" placeholder="Ketik update lalu Enter, mis. Testing rate EHD BPD Sumut" style="flex:1;"><button type="button" id="rtExtraAdd">+ Tambah</button></div>'+
-        '<div class="hint" style="margin:4px 0 0;">Kelola lengkap (project, catatan, tandai selesai) di tab <b>Update Lainnya</b>. Yang masih berjalan ikut otomatis sebagai lanjutan.</div>'+
+        '<div class="hint" style="margin:4px 0 0;">Kelola lengkap (project, catatan, kendala, to-do besok) di tab <b>Update Lainnya</b>. Yang masih berjalan ikut otomatis sebagai lanjutan.</div>'+
         '<label>Teks</label>'+
         '<textarea id="rtText" rows="11" style="min-height:220px;"></textarea>'+
         '<div class="modal-actions">'+
@@ -8312,7 +8461,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     function regen(){ textEl.value = buildReportText(greetEl.value, reportProjectNames(date, carryEl.checked), date); }
     let lastSig = "";
     function renderExtras(){
-      const items = reportUpdateItems(date); lastSig = JSON.stringify(items.map(x=>[x.u.id,x.u.title,x.u.status,x.tag,x.u.projectId]));
+      const items = reportUpdateItems(date); lastSig = reportExtraSig(date);
       exListEl.innerHTML = items.length ? items.map(x=>'<div style="font-size:13px;display:flex;gap:6px;align-items:baseline;"><span>•</span><span>'+esc(reportUpdateLine(x))+'</span></div>').join("") : '<div class="hint" style="margin:0;">Belum ada update lainnya untuk tanggal ini.</div>';
     }
     async function addExtra(){
@@ -8328,7 +8477,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     carryEl.addEventListener("change", regen);
     renderExtras(); regen();
     // kalau data dari Firebase baru masuk saat modal terbuka, segarkan daftar (tanpa menimpa teks yang sedang diedit manual jika tidak ada perubahan update lainnya)
-    window.__rtRefresh = ()=>{ if(!overlay.isConnected) return; const sig = JSON.stringify(reportUpdateItems(date).map(x=>[x.u.id,x.u.title,x.u.status,x.tag,x.u.projectId])); if(sig!==lastSig){ renderExtras(); regen(); } };
+    window.__rtRefresh = ()=>{ if(!overlay.isConnected) return; const sig = reportExtraSig(date); if(sig!==lastSig){ renderExtras(); regen(); } };
     function closeRt(){ window.__rtRefresh = null; overlay.remove(); }
     overlay.onclick = ev=>{ if(ev.target===overlay) closeRt(); };
     overlay.querySelector("#rtClose").onclick = closeRt;
