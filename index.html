@@ -8395,28 +8395,18 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       return (i+1)+". "+n+(es.length ? " - "+es.length+" temuan ("+STATUS_OPTS.filter(st=>cnt(es,"status",st)).map(st=>st+" "+cnt(es,"status",st)).join(", ")+")" : "");
     }).join("\n") : "(belum ada project)";
     const L = ["Selamat "+greet+" semuanya "+REPORT_MENTIONS+" , izin melaporkan progress hari ini ("+fmtDate(date)+").", "", "Tim QA sudah melakukan testing untuk project berikut:", "", list];
-    if(day.length){
-      L.push("", "*Ringkasan temuan hari ini* (total "+day.length+")");
-      L.push(STATUS_OPTS.filter(st=>cnt(day,"status",st)).map(st=>st+": "+cnt(day,"status",st)).join(" | "));
-      L.push("Prioritas: "+PRIORITY_OPTS.filter(pr=>cnt(day,"priority",pr)).map(pr=>pr+" "+cnt(day,"priority",pr)).join(", "));
-    }
-    const rem = dueReminders(date), late = rem.filter(x=>x.left<0), soon = rem.filter(x=>x.left>=0);
-    if(late.length || soon.length){
-      L.push("", "*Perlu perhatian*");
-      if(late.length) L.push("Lewat due date: "+late.length+" temuan");
-      if(soon.length) L.push("Mendekati due date (Critical/High H-1, Medium H-2, Low H-3): "+soon.length+" temuan");
-    }
     const scanP = projects.filter(p=>p.scanAi), sc = { success:0, fail:0, none:0 };
     scanP.forEach(p=>{ sc[scanProjState(date,p)]++; });
     if(scanP.length) L.push("", "*Ceklis Scan AI*", "Sukses "+sc.success+" | Gagal "+sc.fail+" | Belum dicek "+sc.none+" (dari "+scanP.length+" project)");
     const moms = (typeof momItems !== "undefined" ? momItems : []).filter(m=>m.date===date);
     if(moms.length) L.push("", "*Catatan meeting hari ini*", ...moms.map(m=>"- "+(m.title||"(tanpa judul)")));
-    const extras = reportUpdateItems(date);
-    if(extras.length) L.push("", "*Update lainnya*", ...extras.map((x,i)=>(i+1)+". "+reportUpdateLine(x)));
-    const kend = reportKendalaItems(date);
-    if(kend.length) L.push("", "*Kendala*", ...kend.map((x,i)=>(i+1)+". "+reportUpdateLine(x)));
-    const tds = reportTodoItems(date);
-    if(tds.length) L.push("", "*Rencana besok*", ...tds.map((x,i)=>(i+1)+". "+reportUpdateLine(x)));
+    const extras = reportUpdateItems(date), kend = reportKendalaItems(date), tds = reportTodoItems(date);
+    if(extras.length || kend.length || tds.length){
+      L.push("", "*Update lainnya*");
+      if(extras.length) L.push(...extras.map((x,i)=>(i+1)+". "+reportUpdateLine(x)));
+      if(kend.length) L.push(...(extras.length ? [""] : []), "Kendala:", ...kend.map((x,i)=>(i+1)+". "+reportUpdateLine(x)));
+      if(tds.length) L.push(...(extras.length || kend.length ? [""] : []), "To-do besok:", ...tds.map((x,i)=>(i+1)+". "+reportUpdateLine(x)));
+    }
     L.push("", "sekian laporan untuk hari ini, dokumen bug report terlampir. Terima kasih.");
     return L.join("\n");
   }
@@ -8440,7 +8430,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     overlay.innerHTML =
       '<div class="modal-box" style="max-width:520px;">'+
         '<h3 style="margin:0 0 4px;">Teks Laporan — '+fmtDate(date)+'</h3>'+
-        '<div class="hint" style="margin:0 0 6px;">Berisi project yang bug-nya diinput pada tanggal ini, plus Update Lainnya, Kendala, dan Rencana besok. Teks bisa diedit sebelum disalin.</div>'+
+        '<div class="hint" style="margin:0 0 6px;">Berisi project yang bug-nya diinput pada tanggal ini, plus Update Lainnya (termasuk Kendala dan To-do besok). Teks bisa diedit sebelum disalin.</div>'+
         '<label>Salam</label>'+
         '<select id="rtGreet">'+greets.map(g=>'<option value="'+g+'" '+(g===curGreet?'selected':'')+'>Selamat '+g+'</option>').join('')+'</select>'+
         '<label class="opt-check"><input type="checkbox" id="rtCarry"> Sertakan project yang hanya carry-over</label>'+
@@ -8461,8 +8451,10 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     function regen(){ textEl.value = buildReportText(greetEl.value, reportProjectNames(date, carryEl.checked), date); }
     let lastSig = "";
     function renderExtras(){
-      const items = reportUpdateItems(date); lastSig = reportExtraSig(date);
-      exListEl.innerHTML = items.length ? items.map(x=>'<div style="font-size:13px;display:flex;gap:6px;align-items:baseline;"><span>•</span><span>'+esc(reportUpdateLine(x))+'</span></div>').join("") : '<div class="hint" style="margin:0;">Belum ada update lainnya untuk tanggal ini.</div>';
+      const items = reportUpdateItems(date), kend = reportKendalaItems(date), tds = reportTodoItems(date); lastSig = reportExtraSig(date);
+      const row = (x,lbl)=>'<div style="font-size:13px;display:flex;gap:6px;align-items:baseline;"><span>•</span><span>'+(lbl ? '<b>'+lbl+':</b> ' : '')+esc(reportUpdateLine(x))+'</span></div>';
+      const html = items.map(x=>row(x,"")).concat(kend.map(x=>row(x,"Kendala")), tds.map(x=>row(x,"To-do besok"))).join("");
+      exListEl.innerHTML = html || '<div class="hint" style="margin:0;">Belum ada update lainnya untuk tanggal ini.</div>';
     }
     async function addExtra(){
       const t = exInEl.value.trim(); if(!t) return;
