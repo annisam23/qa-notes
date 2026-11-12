@@ -1526,6 +1526,7 @@
   .rt{ min-height:96px; padding:12px 14px; font-size:14.5px; line-height:1.6; color:var(--text); outline:none; word-break:break-word; }
   .rt p{ margin:0 0 6px; } .rt h3{ font-size:17px; margin:12px 0 6px; }
   .rt ul,.rt ol{ margin:2px 0 8px; padding-left:24px; } .rt li{ margin:2px 0; }
+  .rt table{ border-collapse:collapse; width:100%; margin:6px 0 10px; font-size:14px; } .rt th,.rt td{ border:1px solid var(--line,#e3e5f0); padding:5px 8px; vertical-align:top; text-align:left; } .rt th{ background:rgba(109,94,245,.10); font-weight:700; } .rt td p,.rt th p{ margin:0; }
   .rt a{ color:var(--accent); text-decoration:underline; cursor:pointer; }
   .rt.is-empty::before{ content:attr(data-ph); color:var(--text-dim); pointer-events:none; position:absolute; }
   .rt.is-empty{ position:relative; }
@@ -6215,7 +6216,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   }
   // ================= editor teks kaya (bullet, bold, italic, heading, link) =================
   const RT = (function(){
-    const OK = {B:1,STRONG:1,I:1,EM:1,U:1,UL:1,OL:1,LI:1,P:1,BR:1,H3:1,A:1};
+    const OK = {B:1,STRONG:1,I:1,EM:1,U:1,UL:1,OL:1,LI:1,P:1,BR:1,H3:1,A:1,TABLE:1,THEAD:1,TBODY:1,TR:1,TD:1,TH:1};
     const MAP = {DIV:"P",H1:"H3",H2:"H3",H4:"H3",H5:"H3",H6:"H3"};
     function clean(html){
       const t = document.createElement("template"); t.innerHTML = html||"";
@@ -6264,6 +6265,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         const tg = n.tagName;
         if(tg==="UL"||tg==="OL"){ flush(); list(n, 0); }
         else if(tg==="P"||tg==="H3"||tg==="DIV"){ flush(); const v = inline(n).replace(/ /g," ").trim(); if(v) lines.push(v); }
+        else if(tg==="TABLE"){ flush(); n.querySelectorAll("tr").forEach(tr=>{ const v = Array.from(tr.children).map(c=>c.textContent.replace(/\s+/g," ").trim()).join(" | "); if(v.replace(/[|\s]/g,"")) lines.push(v); }); }
         else if(tg==="BR"){ flush(); }
         else run += inline(n);
       });
@@ -6457,7 +6459,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
             '<span class="mm-rec-time" id="mmRecTime">00:00</span>'+
             '<select id="mmRecLang" title="Bahasa pembicaraan"><option value="id-ID">Indonesia</option><option value="en-US">English</option></select>'+
             '<button type="button" class="primary" id="mmRecBtn">🎙 Mulai rekam</button></div>'+
-          '<div class="mm-rec-live" id="mmRecLive">Klik <b>Mulai rekam</b>, izinkan mikrofon, lalu bicara. Hasil ucapan otomatis masuk ke kolom <b>Pembahasan</b> dan bisa kamu edit. Mode ini hanya mendengar suara kamu.</div>'+
+          '<div class="mm-rec-live" id="mmRecLive">Klik <b>Mulai rekam</b>, izinkan mikrofon, lalu bicara. Hasil ucapan otomatis masuk ke kolom <b>Transkrip AI</b> (di bawah Pembahasan) dan bisa kamu edit. Mode ini hanya mendengar suara kamu.</div>'+
           '</div>'+
           '<div id="mmRecMeet" style="display:none;">'+
             '<div class="mm-rec-head"><span class="mm-rec-dot" id="mmMeetDot"></span><b>Rekam rapat</b>'+
@@ -6471,7 +6473,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
           '</div>'+
         '</div>'+
         '<label>Pembahasan</label>'+RT.field("mmDisc","Ringkasan diskusi. Pilih teks untuk tebal, miring, link, atau bullet.")+''+
-        '<details id="mmTransBox" class="mm-trans"><summary>Transkrip lengkap rapat (dari rekaman AI)</summary><textarea id="mmTrans" rows="8" placeholder="Muncul di sini setelah rekaman rapat diproses"></textarea><div class="row-flex" style="margin-top:6px;"><button type="button" id="mmTransDl">⬇ Unduh transkrip (.txt)</button></div></details>'+
+        '<details id="mmTransBox" class="mm-trans"><summary>Transkrip AI (lengkap rapat, dari rekaman)</summary><textarea id="mmTrans" rows="8" placeholder="Muncul di sini setelah rekaman rapat diproses"></textarea><div class="row-flex" style="margin-top:6px;"><button type="button" id="mmTransDl">⬇ Unduh transkrip (.txt)</button></div></details>'+
         '<div id="mmAudio"></div>'+
         '<label>Keputusan</label>'+RT.field("mmDec","Hal yang disepakati")+''+
         '<label>Action items</label><div id="mmAis"></div>'+
@@ -6579,11 +6581,17 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       }
       let rec = null, on = false, tick = null, t0 = 0, restartT = null;
       const fmt = ms=>{ const t = Math.floor(ms/1000); return String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0"); };
+      let newSess = true;   // true = hasil pertama sejak rekaman dimulai (dipisah dari transkrip yang sudah ada)
       function appendText(t){
         t = (t||"").trim(); if(!t) return;
         t = t.charAt(0).toUpperCase() + t.slice(1);
         if(!/[.!?]$/.test(t)) t += ".";
-        RT.appendText(disc, t);   // juga memicu simpan otomatis
+        // hasil ucapan masuk ke kolom Transkrip AI (bukan Pembahasan); Pembahasan diisi manual / dari ringkasan AI
+        const tr = $f("#mmTrans"), cur = tr.value.replace(/\s+$/, "");
+        tr.value = !cur ? t : newSess ? cur + "\n\n" + t : cur + " " + t;
+        newSess = false;
+        $f("#mmTransBox").open = true; tr.scrollTop = tr.scrollHeight;
+        tr.dispatchEvent(new Event("input", { bubbles:true }));   // memicu simpan otomatis
       }
       function ui(){
         box.classList.toggle("on", on);
@@ -6615,7 +6623,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         rec.start();
       }
       function start(){
-        on = true; t0 = Date.now(); timeEl.textContent = "00:00"; live.textContent = "Mendengarkan…"; ui();
+        on = true; newSess = true; t0 = Date.now(); timeEl.textContent = "00:00"; live.textContent = "Mendengarkan…"; ui();
         try{ begin(); }catch(e){ on = false; ui(); live.textContent = "Gagal memulai rekaman."; return; }
         clearInterval(tick);
         tick = setInterval(()=>{ if(!overlay.isConnected){ recStop(); return; } timeEl.textContent = fmt(Date.now()-t0); setRecTitle("🔴 "+timeEl.textContent+" Merekam"); }, 500);
@@ -6623,7 +6631,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       function stop(){
         const was = on; on = false; clearInterval(tick); clearTimeout(restartT); resetRecTitle();
         try{ if(rec) rec.stop(); }catch(e){}
-        ui(); if(was) live.innerHTML = "Rekaman dihentikan ("+timeEl.textContent+"). Periksa dan rapikan teks di kolom Pembahasan.";
+        ui(); if(was) live.innerHTML = "Rekaman dihentikan ("+timeEl.textContent+"). Periksa dan rapikan teks di kolom Transkrip AI.";
       }
       recStop = stop; micOn = ()=>on; micStopFn = stop;
       btn.onclick = ()=>{ on ? stop() : start(); };
@@ -7239,6 +7247,109 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       alternateRowStyles:{ fillColor:[248,248,252] }
     };
 
+
+    // ---- render isi editor (HTML) ke PDF: judul, tebal/miring, daftar bertingkat, tabel ----
+    function rich(html, plain, size){
+      size = size || 10.5;
+      if(!(html||"").trim()){ if((plain||"").trim()) lines(plain.trim(), size); return; }
+      const lh = size*0.5, tpl = document.createElement("template"); tpl.innerHTML = html;
+      const fstyle = st=>st.b && st.i ? "bolditalic" : st.b ? "bold" : st.i ? "italic" : "normal";
+      function runsOf(node, st, out){
+        node.childNodes.forEach(c=>{
+          if(c.nodeType===3){ out.push({ t:c.nodeValue.replace(/\s+/g," "), st }); return; }
+          if(c.nodeType!==1) return;
+          const tg = c.tagName;
+          if(tg==="BR"){ out.push({ br:true }); return; }
+          if(tg==="UL" || tg==="OL" || tg==="TABLE") return;
+          const ns = { b: st.b || tg==="B" || tg==="STRONG" || tg==="H3", i: st.i || tg==="I" || tg==="EM", u: st.u || tg==="U", a: tg==="A" ? c.getAttribute("href") : st.a };
+          runsOf(c, ns, out);
+          if(tg==="P" || tg==="H3" || tg==="DIV") out.push({ br:true });
+        });
+      }
+      // tulis satu paragraf bergaya campuran, dibungkus per kata
+      function para(runs, x0, w, opt){
+        opt = opt || {};
+        const fs = opt.size || size, l = fs*0.5;
+        const toks = [];
+        runs.forEach(r=>{ if(r.br){ toks.push({ br:true }); return; } pdfText(r.t).split(/(\s+)/).forEach(p=>{ if(p) toks.push({ t:p, st:r.st, sp:/^\s+$/.test(p) }); }); });
+        while(toks.length && (toks[toks.length-1].br || toks[toks.length-1].sp)) toks.pop();
+        while(toks.length && (toks[0].br || toks[0].sp)) toks.shift();
+        if(!toks.length) return false;
+        let line = [], lw = 0, first = true;
+        const flushLine = ()=>{
+          while(line.length && line[line.length-1].sp) line.pop();
+          if(!line.length){ return; }
+          ensure(l);
+          if(first && opt.marker){ doc.setFont("helvetica","normal"); doc.setFontSize(fs); doc.setTextColor(...C.accent); doc.text(opt.marker, x0 - opt.markerGap, y); }
+          let cx = x0;
+          line.forEach(tk=>{
+            const st = { b: tk.st.b || opt.bold, i: tk.st.i, u: tk.st.u, a: tk.st.a };
+            doc.setFont("helvetica", fstyle(st)); doc.setFontSize(fs); doc.setTextColor(...(st.a ? C.chipText : (opt.color || C.body)));
+            doc.text(tk.t, cx, y);
+            const tw = doc.getTextWidth(tk.t);
+            if((st.u || st.a) && !tk.sp){ doc.setDrawColor(...(st.a ? C.chipText : (opt.color || C.body))); doc.setLineWidth(0.2); doc.line(cx, y+0.7, cx+tw, y+0.7); }
+            cx += tw;
+          });
+          y += l; first = false; line = []; lw = 0;
+        };
+        toks.forEach(tk=>{
+          if(tk.br){ flushLine(); return; }
+          doc.setFont("helvetica", fstyle({ b: tk.st.b || opt.bold, i: tk.st.i })); doc.setFontSize(fs);
+          const tw = doc.getTextWidth(tk.t);
+          if(!tk.sp && lw + tw > w && line.length){ flushLine(); }
+          if(tk.sp && !line.length) return;
+          line.push(tk); lw += tw;
+        });
+        flushLine();
+        return true;
+      }
+      function table(tbl){
+        const rows = Array.from(tbl.querySelectorAll("tr")).map(tr=>({ th: Array.from(tr.children).every(c=>c.tagName==="TH"), cells: Array.from(tr.children).map(c=>{ const ta = document.createElement("textarea"); ta.innerHTML = c.innerHTML.replace(/<\/(p|li|div|h3)>/gi,"\n").replace(/<br\s*\/?>/gi,"\n").replace(/<[^>]+>/g,""); return pdfText(ta.value).replace(/[ \t]*\n[ \t]*/g,"\n").trim(); }) })).filter(r=>r.cells.some(Boolean));
+        if(!rows.length) return;
+        const hasHead = rows[0].th, ncol = Math.max(...rows.map(r=>r.cells.length));
+        const norm = r=>{ const c = r.cells.slice(); while(c.length < ncol) c.push(""); return c; };
+        ensure(18); y += 1;
+        doc.autoTable({
+          ...tableStyle,
+          startY: y,
+          margin:{ left:mx, right:mx, top:top, bottom:24 },
+          tableWidth: availW,
+          styles:{ ...tableStyle.styles, fontSize:9.5, valign:"top" },
+          head: hasHead ? [norm(rows[0])] : undefined,
+          body: rows.slice(hasHead ? 1 : 0).map(norm),
+          columnStyles: ncol > 1 ? { 0:{ fontStyle:"bold", cellWidth:Math.min(40, availW/ncol) } } : {}
+        });
+        y = doc.lastAutoTable.finalY + 4;
+      }
+      function list(l, depth){
+        let n = 0;
+        Array.from(l.children).forEach(li=>{
+          if(li.tagName==="UL" || li.tagName==="OL"){ list(li, depth+1); return; }
+          if(li.tagName!=="LI") return;
+          n++;
+          const runs = []; runsOf(li, {}, runs);
+          const ind = 5 + depth*5;
+          para(runs, mx + ind + 3, availW - ind - 3, { marker: l.tagName==="OL" ? n+"." : (depth ? "-" : "\u2022"), markerGap: l.tagName==="OL" ? 5.2 : 3.6 });
+          y += 0.8;
+          li.childNodes.forEach(c=>{ if(c.nodeType===1){ if(c.tagName==="UL" || c.tagName==="OL") list(c, depth+1); else if(c.tagName==="TABLE") table(c); } });
+        });
+      }
+      let buf = [];
+      const flushBuf = ()=>{ if(buf.length){ if(para(buf, mx, availW)) y += 1.6; buf = []; } };
+      tpl.content.childNodes.forEach(n=>{
+        if(n.nodeType===3){ buf.push({ t:n.nodeValue.replace(/\s+/g," "), st:{} }); return; }
+        if(n.nodeType!==1) return;
+        const tg = n.tagName;
+        if(tg==="UL" || tg==="OL"){ flushBuf(); list(n, 0); y += 1.6; }
+        else if(tg==="TABLE"){ flushBuf(); table(n); }
+        else if(tg==="H3"){ flushBuf(); ensure(lh*3); y += 2; const r = []; runsOf(n, {}, r); para(r, mx, availW, { size: size+1, bold:true, color:C.ink }); y += 1.4; }
+        else if(tg==="P" || tg==="DIV"){ flushBuf(); const r = []; runsOf(n, {}, r); if(para(r, mx, availW)) y += 1.6; }
+        else if(tg==="BR"){ flushBuf(); }
+        else runsOf({ childNodes:[n] }, {}, buf);
+      });
+      flushBuf();
+    }
+
     function drawMeeting(m){
       const bh = pdfBanner(doc, "MINUTES OF MEETING", m.title || "(tanpa judul)", null, pageW);
       y = bh + 9;
@@ -7247,9 +7358,9 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       infoCard((m.place || m.notulis) ? [row1, row2] : [row1]);
       const att = momAttendees(m);
       if(att.length){ heading("Peserta ("+att.length+")"); chips(att); }
-      if((m.agenda||"").trim()){ heading("Agenda"); lines(m.agenda.trim(), 10.5); }
-      if((m.discussion||"").trim()){ heading("Pembahasan"); lines(m.discussion.trim(), 10.5); }
-      if((m.decisions||"").trim()){ heading("Keputusan"); callout(m.decisions.trim(), C.okSoft, C.ok); }
+      if((m.agenda||"").trim()){ heading("Agenda"); rich(m.agendaHtml, m.agenda); }
+      if((m.discussion||"").trim()){ heading("Pembahasan"); rich(m.discussionHtml, m.discussion); }
+      if((m.decisions||"").trim()){ heading("Keputusan"); rich(m.decisionsHtml, m.decisions); }
       const ai = withAi ? momAiList(m) : [];
       if(ai.length){
         const open = ai.filter(a=>!a.done).length;
