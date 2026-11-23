@@ -2122,7 +2122,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   const db = firebase.firestore();
   // ===== Riwayat perubahan (audit log): mencatat siapa mengubah apa dan kapan. Nilai field TIDAK disimpan (All Akses berisi password). =====
   // ===== Halaman publik link berbagi (?share=TOKEN): tanpa login, hanya tampil tombol unduh =====
-  const __dvSid = new URLSearchParams(location.search).get("share");
+  const __dvSid = (new URLSearchParams(location.search).get("share")||"").replace(/\.pdf$/i,"");
   if(__dvSid){ dvShareView(__dvSid); throw new Error("share-view"); }
   const __dvDevId = new URLSearchParams(location.search).get("dev");
   if(__dvDevId){ devView(__dvDevId); throw new Error("dev-view"); }
@@ -3126,6 +3126,8 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       onData(nd);
     }, e=>fatal("⚠️","Tidak bisa membuka link.", e.message, true));
   }
+  // Link berbagi berakhiran .pdf (router & Worker menerima "ID.pdf"; lihat share-worker.js untuk respons PDF langsung)
+  function shareUrl(id){ return location.origin+location.pathname+"?share="+id+".pdf"; }
   async function dvShareView(sid){
     const E = t=>String(t==null?"":t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
     document.body.innerHTML = '<style>'+
@@ -6097,7 +6099,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       try{
         const s = await db.collection("driveShares").where("fid","==",it.id).get();
         box.innerHTML = s.docs.length ? s.docs.map(d=>{ const x = d.data(), exp = x.expiresAt && Date.now()>x.expiresAt;
-          return '<div class="dv-lnk" data-id="'+d.id+'"><span title="'+esc(location.origin+location.pathname+"?share="+d.id)+'">'+(exp?'⛔ Kedaluwarsa · ':'🔗 ')+(x.expiresAt?'sampai '+esc(new Date(x.expiresAt).toLocaleString("id-ID")):'tanpa batas')+'</span><button data-cp>Salin</button><button data-rv class="danger-outline">Cabut</button></div>'; }).join("") : '<div class="hint">Belum ada link.</div>';
+          return '<div class="dv-lnk" data-id="'+d.id+'"><span title="'+esc(shareUrl(d.id))+'">'+(exp?'⛔ Kedaluwarsa · ':'🔗 ')+(x.expiresAt?'sampai '+esc(new Date(x.expiresAt).toLocaleString("id-ID")):'tanpa batas')+'</span><button data-cp>Salin</button><button data-rv class="danger-outline">Cabut</button></div>'; }).join("") : '<div class="hint">Belum ada link.</div>';
       }catch(e){ box.textContent = "Gagal memuat: "+e.message; }
     };
     ov.querySelector("#shMk").onclick = async ()=>{
@@ -6107,7 +6109,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     };
     ov.querySelector("#shList").onclick = async e=>{
       const row = e.target.closest("[data-id]"); if(!row) return;
-      if(e.target.closest("[data-cp]")){ const url = location.origin+location.pathname+"?share="+row.dataset.id; try{ await navigator.clipboard.writeText(url); toast("Link disalin."); }catch(_){ window.prompt("Salin link:", url); } }
+      if(e.target.closest("[data-cp]")){ const url = shareUrl(row.dataset.id); try{ await navigator.clipboard.writeText(url); toast("Link disalin."); }catch(_){ window.prompt("Salin link:", url); } }
       else if(e.target.closest("[data-rv]")){ await db.collection("driveShares").doc(row.dataset.id).delete(); load(); }
     };
     load();
@@ -6536,15 +6538,15 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       box.innerHTML = rows.length ? rows.map(x=>{ const off = x.expiresAt && Date.now()>x.expiresAt;
         return '<div class="ext-link'+(off?' is-off':'')+'" data-id="'+esc(x.id)+'"><div class="ext-ico">'+extFileIcon(x.name)+'</div><div class="ext-main"><div class="ext-name">'+esc(x.name||"(file)")+'<span class="ext-pill '+(off?'off':'ok')+'">'+(off?'Kedaluwarsa':'Aktif')+'</span></div>'+
           '<div class="ext-meta">'+(x.size ? esc(x.size>=1048576 ? (x.size/1048576).toFixed(1)+" MB" : (x.size/1024).toFixed(0)+" KB")+' · ' : '')+(x.expiresAt?'Berlaku sampai '+esc(new Date(x.expiresAt).toLocaleString("id-ID")):'Tanpa batas waktu')+(x.by?' · oleh '+esc(x.by):'')+'</div></div>'+
-          '<div class="ext-acts"><button class="primary" data-cp title="'+esc(location.origin+location.pathname+"?share="+x.id)+'">Salin link</button><button data-op title="Buka seperti yang dilihat penerima">↗ Buka</button><button data-ed>✎ Edit</button><button data-rv class="danger-outline">Cabut</button></div></div>'; }).join("")
+          '<div class="ext-acts"><button class="primary" data-cp title="'+esc(shareUrl(x.id))+'">Salin link</button><button data-op title="Buka seperti yang dilihat penerima">↗ Buka</button><button data-ed>✎ Edit</button><button data-rv class="danger-outline">Cabut</button></div></div>'; }).join("")
         : '<div class="ext-empty"><b>📎</b>Belum ada link dokumen.<br>Buka tab Dokumen, klik kanan file, lalu pilih Bagikan link.</div>';
     }catch(err){ box.innerHTML = '<div class="ext-empty"><b>⚠️</b>Gagal memuat: '+esc(err.message)+'</div>'; }
   }
   $ext("#extShares").addEventListener("click", async e=>{
     const row = e.target.closest("[data-id]"); if(!row) return;
-    if(e.target.closest("[data-cp]")){ const url = location.origin+location.pathname+"?share="+row.dataset.id; try{ await navigator.clipboard.writeText(url); toast("Link disalin."); }catch(_){ window.prompt("Salin link:", url); } }
+    if(e.target.closest("[data-cp]")){ const url = shareUrl(row.dataset.id); try{ await navigator.clipboard.writeText(url); toast("Link disalin."); }catch(_){ window.prompt("Salin link:", url); } }
     else if(e.target.closest("[data-ed]")) extEditShare(row.dataset.id);
-    else if(e.target.closest("[data-op]")) window.open(location.origin+location.pathname+"?share="+row.dataset.id, "_blank", "noopener");
+    else if(e.target.closest("[data-op]")) window.open(shareUrl(row.dataset.id), "_blank", "noopener");
     else if(e.target.closest("[data-rv]")){ if(await confirmDialog("Cabut link dokumen ini? Orang yang punya link tidak bisa mengunduh lagi.", "Cabut")){ try{ await db.collection("driveShares").doc(row.dataset.id).delete(); toast("Link dicabut."); }catch(err){ toast("Gagal: "+err.message); } extLoadShares(); } }
   });
   $ext("#extSharesRefresh").onclick = extLoadShares;
