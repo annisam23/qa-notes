@@ -968,6 +968,12 @@
   .cv-file small { color:var(--text-dim); font-size:11.5px; display:block; }
   .cv-frame { width:100%; height:80vh; border:1px solid var(--border); border-radius:12px; background:var(--surface-2); display:block; }
   .cv-chk { display:flex; align-items:center; gap:8px; font-size:13px; margin:7px 0; cursor:pointer; }
+  .cv-hist { overflow-x:auto; }
+  .cv-hist table { width:100%; border-collapse:collapse; font-size:13px; }
+  .cv-hist th, .cv-hist td { padding:8px 10px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; }
+  .cv-hist th { font-size:11.5px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.04em; }
+  .cv-modes button { display:block; width:100%; text-align:left; margin-bottom:8px; line-height:1.45; }
+  .cv-modes small { display:block; font-weight:400; opacity:.85; }
   .cv-chk input { width:auto; }
   .cv-two { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .cv-opts .ext-field-l { margin-top:14px; }
@@ -2000,7 +2006,7 @@
     </div>
     <div id="cvDrop" class="cv-drop" tabindex="0" role="button" aria-label="Pilih file Excel, CSV, atau PDF">
       <div class="big">📊</div><b>Tarik file ke sini, atau klik untuk memilih</b>
-      <small>Format .xlsx, .xls, .csv, .pdf · maksimal 10 MB<br>PDF harus berisi teks (bukan hasil scan). Tabelnya dibaca otomatis.<br>Judul, baris header, kolom status, dan kelompok dideteksi otomatis, dan bisa Anda atur sendiri.</small>
+      <small>Format .xlsx, .xls, .csv, .pdf · maksimal 10 MB<br>PDF harus berisi teks (bukan hasil scan). Untuk PDF data, tabelnya dibaca otomatis. Untuk dokumen review (gambar + keterangan), pilih mode <b>tampilan asli</b>.<br>Judul, baris header, kolom status, dan kelompok dideteksi otomatis, dan bisa Anda atur sendiri.</small>
     </div>
     <input type="file" id="cvFile" accept=".xlsx,.xls,.csv,.pdf" hidden>
     <div id="cvWork" style="display:none;">
@@ -2033,6 +2039,29 @@
           <div class="ext-sub" style="margin:10px 0 0;">Pratinjau tidak tampil di browser Anda? Klik <b>Unduh PDF</b>. Hasil unduhan sama persis.</div>
         </div>
       </div>
+    </div>
+    <div id="cvMirror" style="display:none;">
+      <div class="cv-grid">
+        <div class="card cv-opts">
+          <div class="ext-sec-h"><h3>Tampilan asli + ungu</h3></div>
+          <div class="cv-file"><span style="font-size:24px">📕</span><div style="flex:1;min-width:0"><div class="nm" id="mrName">-</div><small id="mrMeta"></small></div><button type="button" id="mrReplace">Ganti</button></div>
+          <label class="ext-field-l" for="mrLabel">Label atas</label><input type="text" id="mrLabel" placeholder="mis. REVIEW">
+          <label class="ext-field-l" for="mrTitle">Judul</label><input type="text" id="mrTitle">
+          <label class="ext-field-l" for="mrSub">Subjudul</label><input type="text" id="mrSub" placeholder="Opsional">
+          <label class="cv-chk"><input type="checkbox" id="mrBanner" checked> Banner ungu di halaman pertama</label>
+          <label class="cv-chk"><input type="checkbox" id="mrPack"> Padatkan: beberapa bagian dalam satu halaman</label>
+          <div class="row-flex" style="gap:8px;margin-top:14px;"><button type="button" id="mrTable">⇄ Konversi sebagai tabel</button></div>
+        </div>
+        <div class="card">
+          <div class="ext-sec-h"><h3>Pratinjau PDF</h3><span class="row-flex" style="gap:8px;"><span class="ext-count" id="mrInfo"></span><button type="button" class="primary" id="mrDl">⬇ Unduh PDF</button></span></div>
+          <iframe class="cv-frame" id="mrFrame" title="Pratinjau PDF"></iframe>
+          <div class="ext-sub" style="margin:10px 0 0;">Isi halaman sama persis dengan file asli (gambar, teks, centang). Yang ditambah hanya banner, garis, dan footer ungu.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <div class="ext-sec-h"><h3>Riwayat konversi</h3><span class="ext-count" id="cvHistCount"></span></div>
+      <div class="cv-hist" id="cvHistWrap"><div class="empty-state">Belum ada riwayat.</div></div>
     </div>
   </div>
 
@@ -9348,7 +9377,117 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     const $c = id=>document.getElementById(id);
     const cv = { wb:null, name:"", sheet:"", rows:[], off:0, cw:[], an:null, doc:null, url:null, timer:null };
     const drop = $c("cvDrop"), fileIn = $c("cvFile"), work = $c("cvWork");
-    const showDrop = on=>{ drop.style.display = on ? "" : "none"; work.style.display = on ? "none" : ""; };
+    const showDrop = on=>{ drop.style.display = on ? "" : "none"; work.style.display = on ? "none" : ""; $c("cvMirror").style.display = "none"; };
+    // ---- riwayat dokumen yang pernah dikonversi (disimpan di auditLog, modul "Konversi PDF") ----
+    function cvLog(name, mode, detail){
+      try{ _dbCol("auditLog").add({ at:Date.now(), by:auditWho(), action:"konversi", coll:"convert", module:"Konversi PDF", docId:"", label:String(name||"-").slice(0,120), fields:[], detail:mode+(detail ? " · "+detail : "") }); }catch(e){}
+    }
+    window.__cvHist = rows=>{
+      const wrap = $c("cvHistWrap"); if(!wrap) return;
+      const list = (rows||[]).filter(r=>r.module==="Konversi PDF").slice(0,50);
+      $c("cvHistCount").textContent = list.length ? list.length+" terakhir" : "";
+      if(!list.length){ wrap.innerHTML = '<div class="empty-state">Belum ada riwayat. Dokumen yang diunduh lewat tab ini akan tercatat di sini.</div>'; return; }
+      const fmt = t=>new Intl.DateTimeFormat("id-ID",{ timeZone:"Asia/Jakarta", day:"numeric", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit", hour12:false }).format(new Date(t)).replace(/\./g,":");
+      wrap.innerHTML = '<table><thead><tr><th>Waktu (WIB)</th><th>Oleh</th><th>Dokumen</th><th>Mode dan detail</th></tr></thead><tbody>'+
+        list.map(r=>'<tr><td style="white-space:nowrap;">'+esc(fmt(r.at))+'</td><td>'+esc(r.by)+'</td><td><b>'+esc(r.label||"-")+'</b></td><td style="color:var(--text-dim);">'+esc(r.detail||"-")+'</td></tr>').join("")+'</tbody></table>';
+    };
+    // ---- mode "tampilan asli + ungu" untuk PDF dokumen review ----
+    const mr = { file:null, name:"", pages:[], W:0, url:null, doc:null, timer:null };
+    function askPdfMode(){
+      return new Promise(res=>{
+        const ov = document.createElement("div"); ov.className = "modal-overlay";
+        ov.innerHTML = '<div class="modal-box" style="max-width:480px;"><h3 style="margin:0 0 4px;">Konversi PDF ini sebagai…</h3><div class="hint" style="margin:0 0 12px;">Pilih sesuai isi dokumen.</div>'+
+          '<div class="cv-modes"><button type="button" class="primary" id="pmMirror">🖼 Tampilan asli + aksen ungu<small>Untuk dokumen review atau yang berisi gambar. Susunan halaman sama seperti file aslinya.</small></button>'+
+          '<button type="button" id="pmTable">▦ Tabel<small>Untuk PDF berisi data baris dan kolom.</small></button></div>'+
+          '<div class="modal-actions"><button type="button" id="pmX">Batal</button></div></div>';
+        document.body.appendChild(ov);
+        const done = v=>{ ov.remove(); res(v); };
+        ov.onclick = e=>{ if(e.target===ov) done(null); };
+        ov.querySelector("#pmMirror").onclick = ()=>done("mirror");
+        ov.querySelector("#pmTable").onclick = ()=>done("table");
+        ov.querySelector("#pmX").onclick = ()=>done(null);
+      });
+    }
+    function mrBuild(){
+      const { jsPDF } = window.jspdf, C = PDF_C;
+      const doc = new jsPDF({ unit:"mm", format:"a4", orientation:"portrait" });
+      const pageW = 210, pageH = 297, mx = 12, availW = pageW - mx*2, topY = 16, botY = pageH - 17;
+      const title = $c("mrTitle").value.trim() || "Dokumen", label = $c("mrLabel").value.trim() || "DOKUMEN", sub = $c("mrSub").value.trim();
+      const banner = $c("mrBanner").checked, pack = $c("mrPack").checked;
+      let y = topY;
+      if(banner) y = pdfBanner(doc, label, title, sub, pageW) + 7;
+      mr.pages.forEach((p, i)=>{
+        let w = availW, h = p.h * availW / mr.W;
+        if(i > 0){ if(pack) y += 4; else { doc.addPage(); y = topY; } }
+        const rem = botY - y;
+        if(h > rem && y > topY + 0.5){
+          if(rem >= h*0.7){ const k = rem/h; w *= k; h = rem; } else { doc.addPage(); y = topY; }
+        }
+        if(h > botY - y){ const k = (botY - y)/h; w *= k; h = botY - y; }
+        doc.addImage(p.url, "JPEG", mx + (availW - w)/2, y, w, h);
+        y += h;
+      });
+      const n = doc.getNumberOfPages();
+      for(let i = banner ? 2 : 1; i <= n; i++){ doc.setPage(i); doc.setFillColor(...C.accent); doc.rect(0, 0, pageW, 2.4, "F"); }
+      pdfFooter(doc, title, mx);
+      return doc;
+    }
+    function mrRefresh(){
+      clearTimeout(mr.timer);
+      if(!mr.pages.length) return;
+      try{
+        const doc = mrBuild(); mr.doc = doc;
+        if(mr.url) URL.revokeObjectURL(mr.url);
+        mr.url = URL.createObjectURL(doc.output("blob"));
+        $c("mrFrame").src = mr.url + "#view=FitH";
+        $c("mrInfo").textContent = doc.getNumberOfPages()+" halaman";
+      }catch(err){ console.error(err); toast("Gagal membuat PDF: "+err.message); }
+    }
+    const mrSchedule = ms=>{ clearTimeout(mr.timer); mr.timer = setTimeout(mrRefresh, ms==null ? 350 : ms); };
+    async function mirrorLoad(f){
+      if(!window.jspdf){ toast("Library PDF gagal dimuat."); return; }
+      try{
+        toast("Membaca halaman PDF…");
+        const lib = await cvLoadPdfJs();
+        const pdf = await lib.getDocument({ data:new Uint8Array(await f.arrayBuffer()) }).promise;
+        if(pdf.numPages > 40) throw new Error("PDF terlalu panjang untuk mode tampilan asli (maks. 40 halaman).");
+        const raw = [];
+        for(let pn = 1; pn <= pdf.numPages; pn++){
+          const page = await pdf.getPage(pn), vp = page.getViewport({ scale:2 });
+          const cn = document.createElement("canvas"); cn.width = Math.ceil(vp.width); cn.height = Math.ceil(vp.height);
+          const cx = cn.getContext("2d", { willReadFrequently:true });
+          cx.fillStyle = "#fff"; cx.fillRect(0, 0, cn.width, cn.height);
+          await page.render({ canvasContext:cx, viewport:vp }).promise;
+          const W = cn.width, H = cn.height, d = cx.getImageData(0, 0, W, H).data;
+          let t = H, b = -1, l = W, r = -1;
+          for(let y = 0; y < H; y++){
+            let has = false; const o = y*W*4;
+            for(let x = 0; x < W; x++){ const i = o + x*4; if(d[i] < 244 || d[i+1] < 244 || d[i+2] < 244){ has = true; if(x < l) l = x; if(x > r) r = x; } }
+            if(has){ if(y < t) t = y; b = y; }
+          }
+          if(b >= 0) raw.push({ cn, t, b, l, r });
+        }
+        if(!raw.length) throw new Error("Halaman PDF kosong.");
+        const pad = 14;
+        const gl = Math.max(0, Math.min(...raw.map(p=>p.l)) - pad), gr = Math.min(raw[0].cn.width, Math.max(...raw.map(p=>p.r)) + pad);
+        const pages = raw.map(p=>{
+          const t = Math.max(0, p.t - pad), b = Math.min(p.cn.height, p.b + pad), w = gr - gl, h = b - t;
+          const out = document.createElement("canvas"); out.width = w; out.height = h;
+          const oc = out.getContext("2d"); oc.fillStyle = "#fff"; oc.fillRect(0, 0, w, h);
+          oc.drawImage(p.cn, gl, t, w, h, 0, 0, w, h);
+          return { url:out.toDataURL("image/jpeg", 0.88), w, h };
+        });
+        mr.pages = pages; mr.W = gr - gl; mr.file = f; mr.name = f.name;
+        const base = f.name.replace(/\.[^.]+$/, "");
+        $c("mrName").textContent = f.name;
+        $c("mrMeta").textContent = pdf.numPages + " halaman asli";
+        $c("mrLabel").value = "REVIEW";
+        $c("mrTitle").value = base.replace(/_/g, " ");
+        $c("mrSub").value = "Sumber: " + f.name + "  |  " + pdf.numPages + " halaman";
+        drop.style.display = "none"; work.style.display = "none"; $c("cvMirror").style.display = "";
+        mrRefresh();
+      }catch(err){ console.error(err); toast("Gagal membaca PDF: " + err.message); }
+    }
     function refresh(){
       clearTimeout(cv.timer);
       if(!cv.an) return;
@@ -9397,11 +9536,16 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       cv.cw = (ws["!cols"]||[]).map(c=>c ? (c.wch || (c.wpx ? c.wpx/7 : 0)) : 0).slice(rng.s.c);
       fill(null, true); return true;
     }
-    async function loadFile(f){
+    async function loadFile(f, forceMode){
       if(!f) return;
       if(!/\.(xlsx|xls|csv|pdf)$/i.test(f.name)){ toast("Format belum didukung. Pakai .xlsx, .xls, .csv, atau .pdf."); return; }
       if(f.size > 10*1048576){ toast("File terlalu besar (maks. 10 MB)."); return; }
       if(!window.XLSX){ toast("Library Excel gagal dimuat."); return; }
+      if(/\.pdf$/i.test(f.name)){
+        const mode = forceMode || await askPdfMode();
+        if(!mode) return;
+        if(mode === "mirror"){ await mirrorLoad(f); return; }
+      }
       try{
         let wb;
         if(/\.pdf$/i.test(f.name)){
@@ -9427,6 +9571,17 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     drop.addEventListener("drop", e=>loadFile(e.dataTransfer.files && e.dataTransfer.files[0]));
     fileIn.addEventListener("change", ()=>{ loadFile(fileIn.files[0]); fileIn.value = ""; });
     $c("cvReplace").addEventListener("click", ()=>fileIn.click());
+    $c("mrReplace").addEventListener("click", ()=>fileIn.click());
+    $c("mrTable").addEventListener("click", ()=>{ if(mr.file) loadFile(mr.file, "table"); });
+    $c("cvMirror").addEventListener("input", ()=>mrSchedule());
+    $c("cvMirror").addEventListener("change", ()=>mrSchedule());
+    $c("mrDl").addEventListener("click", ()=>{
+      mrRefresh(); if(!mr.doc) return;
+      const fn = (mr.name.replace(/\.[^.]+$/,"") || "dokumen").replace(/[^\w\-]+/g,"_").replace(/_+/g,"_") + "_ungu.pdf";
+      const ok = pdfDownload(mr.doc, fn);
+      toast(ok ? "PDF berhasil dibuat." : "Gagal membuat PDF.");
+      if(ok) cvLog(mr.name, "Tampilan asli + ungu", mr.doc.getNumberOfPages()+" halaman");
+    });
     $c("cvSheet").addEventListener("change", e=>{ e.stopPropagation(); useSheet($c("cvSheet").value); });
     $c("cvHdr").addEventListener("change", e=>{ e.stopPropagation(); const n = parseInt($c("cvHdr").value,10); if(n>0) fill(n-1-cv.off, false); });
     $c("cvAuto").addEventListener("click", ()=>{ if(cv.rows.length) fill(null, true); });
@@ -9443,7 +9598,9 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     $c("cvDl").addEventListener("click", ()=>{
       refresh(); if(!cv.doc) return;
       const fn = (cv.name.replace(/\.[^.]+$/,"") || "dokumen").replace(/[^\w\-]+/g,"_").replace(/_+/g,"_")+".pdf";
-      toast(pdfDownload(cv.doc, fn) ? "PDF berhasil dibuat." : "Gagal membuat PDF.");
+      const ok = pdfDownload(cv.doc, fn);
+      toast(ok ? "PDF berhasil dibuat." : "Gagal membuat PDF.");
+      if(ok) cvLog(cv.name, "Tabel", cv.an.data.length+" baris");
     });
   })();
 
@@ -9574,7 +9731,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     snap=>{ auditRows = snap.docs.map(d=>d.data());
       [["auditFWho","by"],["auditFMod","module"]].forEach(([id,k])=>{ const el = document.getElementById(id), cur = el.value, first = el.options[0].outerHTML;
         el.innerHTML = first + [...new Set(auditRows.map(r=>r[k]).filter(Boolean))].sort().map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join(""); el.value = cur; });
-      renderAudit(); renderUsers(); },
+      renderAudit(); renderUsers(); if(window.__cvHist) window.__cvHist(auditRows); },
     err=>{ document.getElementById("auditWrap").innerHTML = '<div class="empty-state">Gagal memuat riwayat: '+esc(err.message)+'</div>'; }
   );
   document.getElementById("auditSearch").addEventListener("input", renderAudit);
@@ -9942,11 +10099,17 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     const from = defaults.from || todayStr();
     const to = defaults.to || from;
     const preStatuses = defaults.statuses || STATUS_OPTS;
+    let tplPref = "1"; try{ tplPref = localStorage.getItem("qa_pdf_tpl") === "2" ? "2" : "1"; }catch(_){}
     const overlay = document.createElement("div");
     overlay.className = "modal-overlay";
     overlay.innerHTML =
       '<div class="modal-box">'+
         '<h3 style="margin:0 0 4px;">Opsi Export PDF</h3>'+
+        '<label>Template PDF</label>'+
+        '<div class="col-picker-list" style="grid-template-columns:1fr;">'+
+          '<label><input type="radio" name="cpTpl" value="1" '+(tplPref==="2"?'':'checked')+'> Template 1 — Tabel (ringkas, gambar kecil)</label>'+
+          '<label><input type="radio" name="cpTpl" value="2" '+(tplPref==="2"?'checked':'')+'> Template 2 — Gambar besar (per bug, teks di bawah gambar)</label>'+
+        '</div>'+
         '<label>Status yang di-export</label>'+
         '<div class="col-picker-list">'+
           STATUS_OPTS.map(s=>'<label><input type="checkbox" data-status="'+s+'" '+(preStatuses.includes(s)?'checked':'')+'> '+s+'</label>').join('')+
@@ -9996,8 +10159,10 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       }
       const selected = {};
       overlay.querySelectorAll("[data-col]").forEach(cb=>{ selected[cb.dataset.col] = cb.checked; });
+      const tplEl = overlay.querySelector('[name="cpTpl"]:checked'), tpl = tplEl && tplEl.value === "2" ? "2" : "1";
+      try{ localStorage.setItem("qa_pdf_tpl", tpl); }catch(_){}
       overlay.remove();
-      onConfirm(selected, { statuses, allDates, from:f, to:t, carry: carryCb.checked, ai: overlay.querySelector("#cpAi").checked });
+      onConfirm(selected, { statuses, allDates, from:f, to:t, carry: carryCb.checked, ai: overlay.querySelector("#cpAi").checked, tpl });
     };
   }
 
@@ -10058,14 +10223,15 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   }
 
   // ================= PDF export (jsPDF + AutoTable) =================
-  async function buildAndSavePdf(title, rows, includeProjectCol, filenameBase, selectedCols, aiRows){
+  async function buildAndSavePdf(title, rows, includeProjectCol, filenameBase, selectedCols, aiRows, tpl){
+    tpl = tpl === "2" ? "2" : "1";
     if(!window.jspdf){ toast("Library PDF gagal dimuat."); return; }
     const { jsPDF } = window.jspdf;
     const C = PDF_C;
     const cols = selectedCols || { project:true, existingImg:true, existing:true, expected:true, expectedImg:true, priority:true, dueDate:true, status:true, date:true };
     const activeColCount = Object.keys(cols).filter(k=>cols[k] && (k!=="project" || includeProjectCol)).length;
     // Sedikit isian & kolom -> potrait cukup. Banyak isian atau banyak kolom -> landscape biar tidak sempit.
-    const orientation = (rows.length <= 8 && activeColCount <= 5) ? "portrait" : "landscape";
+    const orientation = tpl === "2" ? "portrait" : ((rows.length <= 8 && activeColCount <= 5) ? "portrait" : "landscape");
     const doc = new jsPDF({ unit:"mm", format:"a4", orientation });
 
     const loadImgs = (need, field)=> need ? Promise.all(rows.map(async r=>{
@@ -10128,7 +10294,86 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     const columnStyles = {};
     colDefs.forEach((c,i)=>{ columnStyles[i] = { cellWidth: c.width || textW }; if(c.key==="no") columnStyles[i].halign = "center"; });
 
-    if(rows.length) doc.autoTable({
+
+    // ---- Template 2: gambar besar per bug (gambar di atas, teks di bawah gambar) ----
+    let v2Y = headerBottom;
+    if(rows.length && tpl === "2"){
+      const botLimit = pageH - 17, topY = 16, bandH = 12;
+      const ensure = need=>{ if(v2Y + need > botLimit){ doc.addPage(); v2Y = topY; } };
+      const blk = (x, w, label, col, txt, info)=>{
+        doc.setFont("helvetica","normal"); doc.setFontSize(10.5);
+        let lines = doc.splitTextToSize(pdfText(txt) || "-", w);
+        if(lines.length > 40) lines = lines.slice(0,40).concat(["..."]);
+        const room = (botLimit - topY) - bandH - 14 - lines.length*4.8;
+        const maxH = Math.max(40, Math.min(125, room));
+        let dw = 0, dh = 0;
+        if(info){ const sc = Math.min(w/info.w, maxH/info.h); dw = info.w*sc; dh = info.h*sc; }
+        const h = 6 + (info ? dh + 3 : 0) + lines.length*4.8 + 3;
+        return { h, draw:y=>{
+          doc.setFont("helvetica","bold"); doc.setFontSize(8.5); doc.setTextColor(...col);
+          doc.text(label.toUpperCase(), x, y + 3.5);
+          let yy = y + 6;
+          if(info){
+            const dx = x + (w - dw)/2;
+            try{ doc.addImage(info.dataUrl, "JPEG", dx, yy, dw, dh); }catch(e){}
+            doc.setDrawColor(...C.line); doc.setLineWidth(0.3); doc.roundedRect(dx, yy, dw, dh, 1, 1, "S");
+            yy += dh + 3;
+          }
+          doc.setFont("helvetica","normal"); doc.setFontSize(10.5); doc.setTextColor(...C.body);
+          lines.forEach((l,i)=>doc.text(l, x, yy + 3.8 + i*4.8));
+          doc.setTextColor(0,0,0);
+        } };
+      };
+      rows.forEach((r, ri)=>{
+        const eInfo = cols.existingImg ? existingImgs[ri] : null, xInfo = cols.expectedImg ? expectedImgs[ri] : null;
+        const showE = cols.existing || eInfo, showX = cols.expected || xInfo;
+        const blocks = [];
+        if(showE && showX && eInfo && xInfo){
+          const cw = (availW - 6)/2;
+          const a = blk(mx, cw, "Existing", C.bad, cols.existing ? r.existing : "", eInfo);
+          const b = blk(mx + cw + 6, cw, "Expected", C.ok, cols.expected ? r.expected : "", xInfo);
+          blocks.push({ h: Math.max(a.h, b.h), draw:y=>{ a.draw(y); b.draw(y); } });
+        } else {
+          if(showE) blocks.push(blk(mx, availW, "Existing", C.bad, cols.existing ? r.existing : "", eInfo));
+          if(showX) blocks.push(blk(mx, availW, "Expected", C.ok, cols.expected ? r.expected : "", xInfo));
+        }
+        ensure(bandH + 4 + (blocks[0] ? blocks[0].h : 0));
+        // band judul bug
+        doc.setFillColor(...C.soft); doc.setDrawColor(...C.line); doc.setLineWidth(0.3);
+        doc.roundedRect(mx, v2Y, availW, bandH, 2, 2, "FD");
+        doc.setFillColor(...C.accent); doc.roundedRect(mx, v2Y, 2.2, bandH, 1.1, 1.1, "F");
+        const left = ["#" + (ri+1)].concat(includeProjectCol && cols.project ? [pdfText(r.projectName) || "-"] : []).join("   ");
+        doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(...C.ink);
+        doc.text(left, mx + 6, v2Y + 5);
+        const meta = [];
+        if(cols.dueDate && r.dueDate) meta.push("Due " + fmtDate(r.dueDate));
+        if(cols.date) meta.push(fmtDate(r.date) + (r.isCarryOver ? " (carry-over)" : ""));
+        if(meta.length){
+          const overdue = cols.dueDate && r.dueDate && r.dueDate < todayStr() && UNRESOLVED_STATUSES.includes(r.status);
+          doc.setFont("helvetica", overdue ? "bold" : "normal"); doc.setFontSize(8.5);
+          doc.setTextColor(...(overdue ? C.bad : C.dim));
+          doc.text(meta.join("   |   "), mx + 6, v2Y + 9.4);
+        }
+        let px = mx + availW - 28;
+        if(cols.status){ pdfPill(doc, { x:px, y:v2Y, width:28, height:bandH }, r.status || "-", pdfHex(STATUS_COLOR[r.status] || "#6c6f85")); px -= 28; }
+        if(cols.priority){ pdfPill(doc, { x:px, y:v2Y, width:28, height:bandH }, r.priority || "Medium", pdfHex(PRIORITY_COLOR[r.priority || "Medium"] || "#6c6f85")); }
+        doc.setTextColor(0,0,0);
+        v2Y += bandH + 4;
+        blocks.forEach((b, bi)=>{
+          if(bi > 0) ensure(b.h);
+          b.draw(v2Y);
+          v2Y += b.h + 3;
+        });
+        // pemisah antar bug
+        if(ri < rows.length - 1){
+          ensure(8);
+          doc.setDrawColor(...C.line); doc.setLineWidth(0.3); doc.line(mx, v2Y + 1, mx + availW, v2Y + 1);
+          v2Y += 7;
+        }
+      });
+    }
+
+    if(rows.length && tpl !== "2") doc.autoTable({
       ...PDF_TABLE,
       startY: headerBottom,
       margin: { left: mx, right: mx, top: 16, bottom: 17 },
@@ -10153,7 +10398,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
 
     // ---- Section: Hasil Test AI ----
     if(aiRows && aiRows.length){
-      let y2 = (rows.length && doc.lastAutoTable) ? doc.lastAutoTable.finalY + 14 : headerBottom + 4;
+      let y2 = (tpl === "2" && rows.length) ? v2Y + 8 : ((rows.length && doc.lastAutoTable) ? doc.lastAutoTable.finalY + 14 : headerBottom + 4);
       if(y2 > pageH - 75){ doc.addPage(); y2 = 22; }
       pdfSectionTitle(doc, "Hasil Test AI", mx, y2);
       const ac = { success:0, fail:0, none:0 };
@@ -10200,7 +10445,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     }
 
     pdfFooter(doc, T.main.replace(" \u2014 ", " - "), mx);
-    toast(pdfDownload(doc, filenameBase + ".pdf") ? "PDF berhasil dibuat." : "Gagal membuat PDF.");
+    toast(pdfDownload(doc, filenameBase + (tpl === "2" ? "_v2" : "") + ".pdf") ? "PDF berhasil dibuat." : "Gagal membuat PDF.");
   }
 
   document.getElementById("btnExportProj").addEventListener("click", ()=>{
@@ -10214,7 +10459,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       if(!list.length && !(aiRows && aiRows.length)){ toast("Tidak ada data untuk diekspor dengan opsi ini."); return; }
       const title = { main:"Bug/Task Report — " + proj.name, meta:exportMetaLines(o) };
       const filenameBase = "report_" + proj.name.replace(/\W+/g,"_") + "_" + (o.allDates ? "all" : (o.from===o.to ? o.from : o.from+"_sd_"+o.to));
-      await buildAndSavePdf(title, list, false, filenameBase, selectedCols, aiRows);
+      await buildAndSavePdf(title, list, false, filenameBase, selectedCols, aiRows, o.tpl);
     }, { from:dateFilter, to:dateFilter, all:showAll });
   });
 
@@ -10233,7 +10478,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       const periodFile = o.allDates ? "semua_tanggal" : (o.from===o.to ? o.from : o.from+"_sd_"+o.to);
       const filenameBase = "laporan_" + (projectFilter?projLabel.replace(/\W+/g,"_")+"_":"") + periodFile +
         (o.statuses.length===STATUS_OPTS.length ? "" : "_"+o.statuses.join("_").replace(/\W+/g,"_"));
-      await buildAndSavePdf(title, list, !projectFilter, filenameBase, selectedCols, aiRows);
+      await buildAndSavePdf(title, list, !projectFilter, filenameBase, selectedCols, aiRows, o.tpl);
     }, { from:date, to:date, all:showAllDates, statuses: dailyStatusFilter ? [dailyStatusFilter] : null });
   });
 
