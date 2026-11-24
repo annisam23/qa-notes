@@ -3431,13 +3431,33 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     });
   }
   async function fileToStoredImage(file){
-    // Try progressively smaller/lower quality until it comfortably fits a Firestore doc (~900KB budget).
-    const attempts = [[900,0.65],[700,0.55],[500,0.45],[380,0.35]];
-    for(const [w,q] of attempts){
-      const dataUrl = await compressImage(file, w, q);
-      if(dataUrl.length < 900000) return dataUrl;
+    // Mode HD: coba resolusi asli (maks. 2000 px) dengan kualitas tinggi dulu, lalu turun bertahap sampai muat.
+    // Batas ~450 KB per gambar, supaya gambar existing + expected + teks tetap muat di satu dokumen Firestore (1 MiB).
+    const LIMIT = 450000;
+    const img = await new Promise((res, rej)=>{
+      const u = URL.createObjectURL(file), im = new Image();
+      im.onload = ()=>{ URL.revokeObjectURL(u); res(im); };
+      im.onerror = e=>{ URL.revokeObjectURL(u); rej(e); };
+      im.src = u;
+    });
+    const nw = img.naturalWidth || img.width, nh = img.naturalHeight || img.height;
+    if(!nw || !nh) return null;
+    const seen = new Set();
+    for(const mw of [2000, 1600, 1400, 1200, 1000, 800, 640, 480, 380]){
+      const w = Math.min(nw, mw);
+      if(seen.has(w)) continue; seen.add(w);
+      const h = Math.max(1, Math.round(nh * w / nw));
+      const canvas = document.createElement("canvas"); canvas.width = w; canvas.height = h;
+      const cx = canvas.getContext("2d");
+      cx.fillStyle = "#fff"; cx.fillRect(0, 0, w, h);   // PNG transparan jangan jadi hitam
+      cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = "high";
+      cx.drawImage(img, 0, 0, w, h);
+      for(const q of [0.88, 0.8, 0.72, 0.64]){
+        const dataUrl = canvas.toDataURL("image/jpeg", q);
+        if(dataUrl.length < LIMIT) return dataUrl;
+      }
     }
-    return null; // too large even after heavy compression
+    return null; // terlalu besar walau sudah dikompres maksimal
   }
   const STATUS_OPTS = ["Open","In Progress","Fixed","Rejected","Update"];
   const STATUS_COLOR = {"Open":"#e0363c","In Progress":"#e08a1c","Fixed":"#17a673","Rejected":"#6c6f85","Update":"#2f80ed"};
