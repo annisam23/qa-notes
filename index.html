@@ -457,6 +457,7 @@
   .kn-dsec h4 { margin:0 0 8px; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-dim); font-weight:800; display:flex; align-items:center; gap:7px; }
   .kn-dsec h4 .n { font-size:10px; padding:1px 8px; border-radius:20px; background:var(--surface-2); border:1px solid var(--border); letter-spacing:0; }
   .kn-text { font-size:13px; line-height:1.65; white-space:pre-wrap; }
+  .kn-text p, .kn-text ul, .kn-text ol, .kn-note p { margin:0 0 4px; white-space:normal; }
   .kn-chips { display:flex; flex-wrap:wrap; gap:6px; }
   .kn-chip { font-size:12.5px; font-weight:600; padding:5px 11px; border-radius:10px; background:var(--surface-2); border:1px solid var(--border); line-height:1.35; }
   .kn-chip.feat { border-left:3px solid var(--co); }
@@ -1631,6 +1632,7 @@
     <button class="tab-btn" data-tab="akses"><span class="nav-icon">⌘</span><span>All Akses</span></button>
     <button class="tab-btn" data-tab="knowledge"><span class="nav-icon">◇</span><span>Knowledge</span></button>
     <button class="tab-btn" data-tab="files"><span class="nav-icon">▣</span><span>Dokumen</span></button>
+    <button class="tab-btn" data-tab="docupd"><span class="nav-icon">▥</span><span>Dokumen Update</span></button>
     <button class="tab-btn" data-tab="convert"><span class="nav-icon">⇄</span><span>Konversi PDF</span></button>
     <button class="tab-btn" data-tab="audit"><span class="nav-icon">☰</span><span>Riwayat</span></button>
     <button class="tab-btn" data-tab="users"><span class="nav-icon">◎</span><span>Pengguna</span></button>
@@ -1658,6 +1660,9 @@
         <option value="lastweek">Minggu lalu</option>
         <option value="d7">7 hari terakhir</option>
         <option value="d30">30 hari terakhir</option>
+        <option value="month">Bulan ini</option>
+        <option value="d90">90 hari terakhir</option>
+        <option value="all">Semua waktu</option>
       </select></div>
     </div>
     <div id="dashWrap"></div>
@@ -1997,6 +2002,30 @@
         <div class="ext-sec-sub">Link yang dibagikan dari tab Dokumen. Penerima bisa meninjau file dulu, lalu mengunduhnya. Untuk membuat link baru: Dokumen → klik kanan file → Bagikan link.</div>
         <div id="extShares"><div class="hint">Memuat…</div></div>
       </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-docupd">
+    <div class="ext-hero">
+      <div><h2>Dokumen Update</h2><p>Susun dokumen update berisi gambar dan keterangan. Tambah gambar (pilih file atau tempel dengan Ctrl+V), tulis keterangan dengan format teks (bold, bullet, nomor, link), atur urutan, lalu unduh sebagai PDF bergaya ungu. Draft tersimpan otomatis di browser ini.</p></div>
+    </div>
+    <div style="max-width:900px;">
+      <label>Judul dokumen</label><input type="text" id="duTitle" placeholder="mis. Update Perbaikan Modul Pembayaran">
+      <div class="mom-form-row" style="margin-top:8px;">
+        <div><label>Project / label</label><input type="text" id="duLabel" placeholder="mis. Project Alpha"></div>
+        <div><label>Tanggal</label><input type="date" id="duDate"></div>
+      </div>
+      <label style="margin-top:8px;">Pengantar <span class="hint" style="font-weight:400;">(opsional)</span></label>
+      <div id="duIntroHost"></div>
+      <div id="duItems" style="margin-top:14px;"></div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
+        <button type="button" id="duAdd">＋ Tambah gambar + keterangan</button>
+        <button type="button" id="duAddText">＋ Tambah teks saja</button>
+        <span style="flex:1"></span>
+        <button type="button" class="danger-outline" id="duReset">Kosongkan</button>
+        <button type="button" class="primary" id="duPdf">Unduh PDF</button>
+      </div>
+      <div class="hint" id="duStat" style="margin-top:6px;"></div>
     </div>
   </div>
 
@@ -4163,6 +4192,224 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       toast("Bug manual ditambahkan.");
     }catch(e){ toast("Gagal menambah bug."); }
   }
+  // ================= impor bug lama dari PDF / teks (dikelompokkan per tanggal & project) =================
+  (function bugImportInit(){
+    const norm = t=>String(t||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+    const clean = t=>String(t||"").replace(/[​-‏⁠﻿]/g,"").replace(/ /g," ").replace(/\s+/g," ").trim();
+    // lines: [{x, text}] ; x dipakai untuk membedakan judul (rata kiri) dan lanjutan kalimat (menjorok)
+    function parseBugLines(lines){
+      const out = []; let date = "", proj = "", flag = "", cur = null, stop = false;
+      const minX = Math.min(...lines.map(l=>l.x).filter(v=>isFinite(v)), 1e9);
+      const IGN = /^(bug report all product|april|mei|juni|juli|agustus|maret|februari|januari|bug report|report)$/i;
+      for(const L of lines){
+        const t = clean(L.text); if(!t) continue;
+        if(/^[-•\s=_*]*={3,}[-•\s=_*]*$/.test(t)){ cur = null; continue; }
+        if(/^(awal\s+juli|report all product)/i.test(t)){ stop = true; }
+        if(stop) break;
+        const dm = /^date\s*:?\s*(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/i.exec(t);
+        if(dm){ date = dm[3]+"-"+dm[2].padStart(2,"0")+"-"+dm[1].padStart(2,"0"); flag = ""; cur = null; continue; }
+        const bm = /^[-•▪*·]+\s*(.*)$/.exec(t);
+        if(bm){
+          const body = clean(bm[1].replace(/^[-•▪*·\s]+/,""));
+          if(!body || /^[-=_\s]+$/.test(body)){ continue; }
+          cur = { date, proj, flag, text: body }; out.push(cur); continue;
+        }
+        const isHead = isFinite(L.x) ? L.x <= minX + 4 : true;
+        if(isHead || !cur){
+          if(IGN.test(t)){ cur = null; continue; }
+          if(/^enhancement$/i.test(t)){ flag = "Enhancement"; cur = null; continue; }
+          if(/^masih\s*pr$/i.test(t)){ proj = proj || "-"; flag = "Masih PR"; cur = null; continue; }
+          proj = t.replace(/[:\s]+$/,""); flag = ""; cur = null; continue;
+        }
+        cur.text += " " + t;   // lanjutan kalimat sebelumnya
+      }
+      return out.filter(x=>x.date && x.proj);
+    }
+    async function pdfToLines(buf){
+      const lib = await cvLoadPdfJs();
+      const pdf = await lib.getDocument({ data:new Uint8Array(buf) }).promise, lines = [];
+      for(let p=1; p<=Math.min(pdf.numPages,150); p++){
+        const tc = await (await pdf.getPage(p)).getTextContent(), rows = {};
+        tc.items.forEach(it=>{ if(!it.str && !it.hasEOL) return; const y = Math.round(it.transform[5]/2); (rows[y] = rows[y] || []).push({ x:it.transform[4], w:it.width||0, s:it.str }); });
+        Object.keys(rows).map(Number).sort((a,b)=>b-a).forEach(y=>{
+          const r = rows[y].sort((a,b)=>a.x-b.x); let s = "", end = null;
+          r.forEach(i=>{ if(end!==null && i.x-end > 0.8 && !/^\s/.test(i.s) && !/\s$/.test(s)) s += " "; s += i.s; end = i.x + i.w; });
+          lines.push({ x:r[0].x, text:s });
+        });
+      }
+      return lines;
+    }
+    // ---- format tabel: kolom Attachment (gambar) | Description | Status, satu baris tabel = satu bug ----
+    async function pdfImageData(page, lib){
+      const ops = await page.getOperatorList(), OPS = lib.OPS, found = [];
+      let ctm = [1,0,0,1,0,0]; const stack = [];
+      const mul = (m,n)=>[m[0]*n[0]+m[2]*n[1], m[1]*n[0]+m[3]*n[1], m[0]*n[2]+m[2]*n[3], m[1]*n[2]+m[3]*n[3], m[0]*n[4]+m[2]*n[5]+m[4], m[1]*n[4]+m[3]*n[5]+m[5]];
+      for(let i=0; i<ops.fnArray.length; i++){
+        const fn = ops.fnArray[i], a = ops.argsArray[i];
+        if(fn===OPS.save) stack.push(ctm.slice());
+        else if(fn===OPS.restore) ctm = stack.pop() || ctm;
+        else if(fn===OPS.transform) ctm = mul(ctm, a);
+        else if(fn===OPS.paintImageXObject){ found.push({ id:a[0], top:Math.max(ctm[5], ctm[5]+ctm[3]), bot:Math.min(ctm[5], ctm[5]+ctm[3]), x:ctm[4], w:Math.abs(ctm[0]) }); }
+      }
+      const res = [];
+      for(const f of found){
+        const store = /^g_/.test(f.id) ? page.commonObjs : page.objs;
+        const img = await Promise.race([ new Promise(r=>{ try{ store.get(f.id, r); }catch(e){ r(null); } }), new Promise(r=>setTimeout(()=>r(null), 8000)) ]);
+        if(!img || !img.width) continue;
+        const cv = document.createElement("canvas"); cv.width = img.width; cv.height = img.height; const cx = cv.getContext("2d");
+        if(img.bitmap) cx.drawImage(img.bitmap, 0, 0);
+        else if(img.data){
+          const id = cx.createImageData(img.width, img.height), d = img.data, o = id.data, n = img.width*img.height;
+          if(d.length===n*4) o.set(d);
+          else if(d.length===n*3){ for(let i=0,j=0;i<n;i++){ o[j++]=d[i*3]; o[j++]=d[i*3+1]; o[j++]=d[i*3+2]; o[j++]=255; } }
+          else if(d.length===n){ for(let i=0,j=0;i<n;i++){ o[j++]=d[i]; o[j++]=d[i]; o[j++]=d[i]; o[j++]=255; } }
+          else continue;
+          cx.putImageData(id,0,0);
+        } else continue;
+        let q = 0.85, url = cv.toDataURL("image/jpeg", q);
+        while(url.length > 450000 && q > 0.45){ q -= 0.1; url = cv.toDataURL("image/jpeg", q); }
+        if(url.length > 450000){ const c2 = document.createElement("canvas"); c2.width = Math.round(img.width*0.6); c2.height = Math.round(img.height*0.6); c2.getContext("2d").drawImage(cv,0,0,c2.width,c2.height); url = c2.toDataURL("image/jpeg", 0.7); }
+        res.push({ ...f, url });
+      }
+      return res;
+    }
+    async function stitchImgs(urls){
+      if(urls.length===1) return urls[0];
+      const ims = await Promise.all(urls.map(u=>new Promise(r=>{ const im = new Image(); im.onload = ()=>r(im); im.onerror = ()=>r(null); im.src = u; })));
+      const ok = ims.filter(Boolean); if(!ok.length) return urls[0];
+      const h = Math.max(...ok.map(i=>i.naturalHeight)), W = ok.reduce((a,i)=>a+Math.round(i.naturalWidth*h/i.naturalHeight)+8, -8);
+      const cv = document.createElement("canvas"); cv.width = W; cv.height = h; const cx = cv.getContext("2d"); cx.fillStyle = "#fff"; cx.fillRect(0,0,W,h);
+      let x = 0; ok.forEach(i=>{ const w = Math.round(i.naturalWidth*h/i.naturalHeight); cx.drawImage(i, x, 0, w, h); x += w + 8; });
+      let q = 0.85, url = cv.toDataURL("image/jpeg", q); while(url.length > 450000 && q > 0.45){ q -= 0.1; url = cv.toDataURL("image/jpeg", q); }
+      return url;
+    }
+    async function pdfToTable(buf){
+      const lib = await cvLoadPdfJs();
+      const pdf = await lib.getDocument({ data:new Uint8Array(buf) }).promise, out = []; let dX = null, sX = null, hit = false;
+      for(let p=1; p<=Math.min(pdf.numPages,150); p++){
+        const page = await pdf.getPage(p), tc = await page.getTextContent();
+        const its = tc.items.filter(i=>clean(i.str)).map(i=>({ s:clean(i.str), x:i.transform[4], y:i.transform[5] }));
+        const hd = its.filter(i=>/^description$/i.test(i.s)), hs = its.filter(i=>/^status$/i.test(i.s)), ha = its.filter(i=>/^attachment$/i.test(i.s));
+        if(hd.length && hs.length && ha.length){ dX = (ha[0].x + hd[0].x)/2; sX = (hd[0].x + hs[0].x)/2; hit = true; }   // judul kolom rata tengah, jadi batas kolom = titik tengah antar judul
+        if(!hit) { if(p>=2) return null; continue; }
+        const hy = hd.length ? hd[0].y : 1e9;
+        const imgs = (await pdfImageData(page, lib)).filter(i=>i.x < dX).sort((a,b)=>b.top-a.top || a.x-b.x);
+        if(!imgs.length) continue;
+        const rows = [];   // gambar dengan tinggi atas sama = satu baris tabel (bisa lebih dari satu gambar)
+        imgs.forEach(i=>{ const R = rows.find(q=>Math.min(q.img.top, i.top) - Math.max(q.bot, i.bot) > 4); if(R){ R.urls.push(i.url); R.bot = Math.min(R.bot, i.bot); } else rows.push({ img:i, bot:i.bot, urls:[i.url], desc:[], st:[] }); });
+        its.filter(i=>i.y < hy - 4 && i.x >= dX - 3).sort((a,b)=>b.y-a.y || a.x-b.x).forEach(i=>{
+          let r = null; rows.forEach(R=>{ if(i.y <= R.img.top + 22) r = R; });
+          if(!r) return;
+          if(i.x >= sX) r.st.push(i.s); else if(i.x >= dX) r.desc.push(i);
+        });
+        for(const R of rows){
+          const byY = []; R.desc.forEach(i=>{ const l = byY.find(q=>Math.abs(q.y-i.y)<2.5); if(l) l.p.push(i); else byY.push({ y:i.y, p:[i] }); });
+          let text = ""; byY.sort((a,b)=>b.y-a.y).forEach(l=>{ const t = l.p.sort((a,b)=>a.x-b.x).map(q=>q.s).join(" "); text += (text && /^(\d+[.)]|[-•])\s*/.test(t) ? "\n" : (text ? " " : "")) + t; });
+          text = text.replace(/\s+\n/g,"\n").trim();
+          if(text) out.push({ text, status:clean(R.st.join(" ")), img:await stitchImgs(R.urls) });
+        }
+      }
+      return hit ? out : null;
+    }
+    function textToLines(txt){
+      const raw = String(txt||"").replace(/\r/g,"").split("\n");
+      return raw.map(l=>({ x:(/^\s*/.exec(l)[0].length), text:l }));
+    }
+    function matchProject(name){
+      const n = norm(name); if(!n) return "";
+      let hit = projects.find(p=>norm(p.name)===n);
+      if(!hit) hit = projects.find(p=>{ const q = norm(p.name); return q.length>=4 && n.length>=4 && (n.startsWith(q) || q.startsWith(n)); });
+      return hit ? hit.id : "";
+    }
+    function openImport(){
+      const ov = document.createElement("div"); ov.className = "modal-overlay";
+      ov.innerHTML = '<div class="modal-box" style="max-width:980px; width:96vw; max-height:92vh; overflow:auto;"><h3 style="margin:0 0 4px;">Impor bug lama dari PDF / teks</h3>'+
+        '<div class="hint" style="margin:0 0 10px;">Format yang dibaca: baris <b>Date: 27/04/2026</b>, lalu judul project (mis. <b>Flexa.Asia</b>), lalu poin bug diawali tanda <b>-</b> atau <b>•</b>. Hasilnya bisa kamu cek dan ubah dulu sebelum disimpan.</div>'+
+        '<div class="row-flex" style="gap:8px; flex-wrap:wrap; align-items:center;"><input type="file" id="biFile" accept=".pdf,.txt,application/pdf,text/plain" style="width:auto;"><span class="hint" style="margin:0;">atau tempel teks:</span></div>'+
+        '<textarea id="biText" rows="3" placeholder="Tempel teks laporan bug di sini (opsional)" style="margin-top:6px;"></textarea>'+
+        '<div class="row-flex" style="gap:10px; flex-wrap:wrap; margin-top:6px;"><div><label style="margin:0;">Project (bila di file tidak ada judul project)</label><input type="text" id="biProj" placeholder="mis. Flexa Asia"></div><div><label style="margin:0;">Tanggal (bila di file tidak ada tanggal)</label><input type="date" id="biDate"></div></div>'+
+        '<div class="row-flex" style="margin-top:6px;"><button type="button" id="biRead" class="primary">Baca</button><span class="hint" id="biMsg" style="margin:0;"></span></div>'+
+        '<div id="biPrev" style="margin-top:12px;"></div>'+
+        '<div class="modal-actions"><button type="button" id="biX">Tutup</button></div></div>';
+      document.body.appendChild(ov);
+      const $i = q=>ov.querySelector(q); let items = [];
+      $i("#biX").onclick = ()=>ov.remove();
+      $i("#biDate").value = todayStr();
+      $i("#biFile").onchange = ()=>{ const f = $i("#biFile").files[0]; if(f && !$i("#biProj").value) $i("#biProj").value = f.name.replace(/\.[^.]+$/,"").replace(/^[0-9a-f]{8}[-_]/i,"").replace(/[_\-().]+/g," ").replace(/\b(bug|report|laporan|all|product)\b/gi," ").replace(/\b\d+\b/g," ").replace(/\s+/g," ").trim().toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()); };
+      function projSel(it, k){
+        const known = matchProject(it.projName), opts = projects.map(p=>'<option value="'+p.id+'"'+(p.id===known?' selected':'')+'>'+esc(p.name)+'</option>').join("");
+        return '<select data-k="'+k+'" data-f="proj" style="min-width:140px;"><option value="__new__"'+(known?'':' selected')+'>＋ Baru: '+esc(it.projName)+'</option>'+opts+'</select>';
+      }
+      function renderPrev(){
+        if(!items.length){ $i("#biPrev").innerHTML = '<div class="empty-state">Tidak ada bug yang terbaca. Pastikan ada baris "Date: dd/mm/yyyy" dan judul project.</div>'; return; }
+        const stOpts = ["Fixed","Open","In Progress","Rejected"].map(s=>'<option>'+s+'</option>').join("");
+        $i("#biPrev").innerHTML = '<div class="row-flex" style="gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:8px;"><b id="biCnt"></b>'+
+          '<label style="margin:0;">Ubah status semua jadi</label><select id="biStatus" style="width:auto;"><option value="">(biarkan)</option>'+stOpts+'</select><button type="button" id="biSetSt">Terapkan</button>'+
+          '<button type="button" id="biAll">Pilih semua</button><button type="button" id="biNone">Kosongkan</button></div>'+
+          '<div style="overflow:auto; max-height:46vh;"><table><thead><tr><th></th><th>Gambar</th><th>Tanggal</th><th>Project</th><th>Bug (Existing)</th><th>Status</th><th></th></tr></thead><tbody>'+
+          items.map((it,k)=>'<tr><td><input type="checkbox" data-k="'+k+'" data-f="on" style="width:auto;"'+(it.on?' checked':'')+'></td>'+
+            '<td>'+(it.img ? '<img src="'+it.img+'" style="width:54px; height:auto; border-radius:6px; border:1px solid var(--border);">' : '')+'</td>'+
+            '<td><input type="date" data-k="'+k+'" data-f="date" value="'+it.date+'" style="min-width:130px;"></td><td>'+projSel(it,k)+'</td>'+
+            '<td><textarea data-k="'+k+'" data-f="text" rows="2" style="min-width:300px;">'+esc(it.text)+'</textarea></td>'+
+            '<td><select data-k="'+k+'" data-f="status">'+["Fixed","Open","In Progress","Rejected"].map(o=>'<option'+(o===it.status?' selected':'')+'>'+o+'</option>').join("")+'</select></td>'+
+            '<td style="font-size:11px; color:var(--text-dim);">'+esc(it.note||"")+'</td></tr>').join("")+
+          '</tbody></table></div><div class="modal-actions"><button type="button" class="primary" id="biSave">Simpan yang dicentang</button></div>';
+        const cnt = ()=>{ $i("#biCnt").textContent = items.filter(x=>x.on).length+" dari "+items.length+" bug akan disimpan"; };
+        cnt();
+        $i("#biPrev").onchange = $i("#biPrev").oninput = e=>{ const t = e.target, k = t.dataset.k; if(k===undefined) return; const it = items[+k];
+          if(t.dataset.f==="on") it.on = t.checked; else it[t.dataset.f] = t.value; cnt(); };
+        $i("#biSetSt").onclick = ()=>{ const v = $i("#biStatus").value; if(!v) return; items.forEach(x=>x.status = v); renderPrev(); };
+        $i("#biAll").onclick = ()=>{ items.forEach(x=>x.on = true); renderPrev(); };
+        $i("#biNone").onclick = ()=>{ items.forEach(x=>x.on = false); renderPrev(); };
+        $i("#biSave").onclick = save;
+      }
+      async function save(){
+        const sel = items.filter(x=>x.on && x.text.trim() && x.date); if(!sel.length){ toast("Tidak ada yang dicentang."); return; }
+        const btn = $i("#biSave"); btn.disabled = true; btn.textContent = "Menyimpan…";
+        const made = {}; let ok = 0, fail = 0;
+        for(const it of sel){
+          try{
+            let pid = it.proj;
+            if(pid==="__new__"){ const nm = it.projName.trim(), key = norm(nm);
+              pid = matchProject(nm) || made[key] || (made[key] = (await db.collection("projects").add({ name:nm, createdAt:Date.now() })).id); }
+            const st = it.status || "Fixed", pr = autoPriority(it.text) || "Medium", resolved = !UNRESOLVED_STATUSES.includes(st);
+            await db.collection("entries").add({ projectId:pid, date:it.date, imageData:it.img || null, expectedImageData:null,
+              existing:it.text.trim(), expected:"", status:st, priority:pr, dueDate: resolved ? "" : autoDue(it.date, pr), dueAuto: !resolved, prioManual:false,
+              ...(resolved ? { statusChangedDate: it.date } : {}), createdAt: Date.now() });
+            ok++;
+          }catch(e){ fail++; }
+        }
+        toast(ok+" bug diimpor."+(fail ? " "+fail+" gagal." : "")+" Buka Kelola Bug lalu centang 'semua tanggal' untuk melihatnya.");
+        ov.remove();
+      }
+      $i("#biRead").onclick = async ()=>{
+        const msg = $i("#biMsg"), f = $i("#biFile").files[0], txt = $i("#biText").value; msg.textContent = "Membaca…";
+        try{
+          let lines, tbl = null; const defProj = $i("#biProj").value.trim() || "Tanpa project", defDate = $i("#biDate").value || todayStr();
+          if(f && (/\.pdf$/i.test(f.name) || f.type==="application/pdf")){ const buf = await f.arrayBuffer(); tbl = await pdfToTable(buf.slice(0)); if(!tbl || !tbl.length){ tbl = null; lines = await pdfToLines(buf); } }
+          else if(f){ lines = textToLines(await f.text()); }
+          else if(txt.trim()) lines = textToLines(txt);
+          else { msg.textContent = "Pilih file atau tempel teks dulu."; return; }
+          const seen = new Set(), exist = new Set(entries.map(e=>e.projectId+"|"+norm(e.existing)));
+          items = [];
+          const stOf = t=>/^(done|selesai|fixed|closed|ok)/i.test(t) ? "Fixed" : /progress|proses/i.test(t) ? "In Progress" : /reject|tolak/i.test(t) ? "Rejected" : "Open";
+          const src = tbl ? tbl.map(r=>({ date:defDate, proj:defProj, flag:"", text:r.text, img:r.img, status:stOf(r.status), noSt:!r.status })) : parseBugLines(lines).map(b=>({ ...b, status:"Fixed" }));
+          src.forEach(b=>{
+            const pid = matchProject(b.proj), key = norm(b.proj)+"|"+norm(b.text);
+            if(seen.has(key)) return; seen.add(key);
+            const dup = pid && exist.has(pid+"|"+norm(b.text));
+            const skipFlag = !!b.flag;
+            items.push({ ...b, projName:b.proj, proj: pid || "__new__", on: !dup && !skipFlag, note: dup ? "Sudah ada di Kelola Bug" : b.flag ? b.flag+" (bukan bug, tidak dicentang)" : b.noSt ? "Tanpa status di file, diset Open" : "" });
+          });
+          msg.textContent = items.length+" bug terbaca."; renderPrev();
+        }catch(e){ msg.textContent = "Gagal membaca: "+(e.message||e); }
+      };
+    }
+    const host = document.getElementById("btnManualRow");
+    if(host){ const b = document.createElement("button"); b.id = "btnImportBug"; b.type = "button"; b.textContent = "📥 Impor bug lama dari PDF / teks"; b.style.marginLeft = "8px"; host.after(b); b.addEventListener("click", openImport); }
+    window.__parseBugLines = parseBugLines;
+  })();
+
   document.getElementById("btnManualRow").addEventListener("click", addManualEntry);
   document.getElementById("quickDate").addEventListener("change", renderManagePanel);
   document.getElementById("showAllDates").addEventListener("change", renderManagePanel);
@@ -4204,11 +4451,11 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
             '<div class="bd-main">'+
               '<section class="bd-card"><div class="bd-card-h"><span class="bd-dot ex"></span>Existing <small>kondisi saat ini</small></div>'+
                 shotHtml(e.imageData, "Gambar existing", "mExistingImg")+
-                '<textarea id="mExisting" placeholder="Jelaskan kondisi saat ini…">'+esc(e.existing)+'</textarea>'+
+                RT.field("mExisting","Jelaskan kondisi saat ini…")+
               '</section>'+
               '<section class="bd-card"><div class="bd-card-h"><span class="bd-dot ok"></span>Expected <small>kondisi yang diharapkan</small></div>'+
                 '<div id="mExpImgWrap">'+shotHtml(e.expectedImageData, "Gambar expected", "mExpShot")+'</div>'+
-                '<textarea id="mExpected" placeholder="Jelaskan kondisi yang diharapkan…">'+esc(e.expected)+'</textarea>'+
+                RT.field("mExpected","Jelaskan kondisi yang diharapkan…")+
                 '<div class="bd-row"><button type="button" id="mAddExpImg">'+(e.expectedImageData?'Ganti gambar expected':'+ Tambah gambar expected')+'</button>'+
                   (e.expectedImageData ? '<button type="button" class="danger-outline" id="mRemoveExpImg">Hapus gambar expected</button>' : '')+'</div>'+
               '</section>'+
@@ -4238,6 +4485,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     overlay.insertAdjacentHTML("beforeend", '<button type="button" class="bd-nav prev" id="mPrev" title="Bug Open sebelumnya (tombol ← atau Alt + ←)" aria-label="Bug Open sebelumnya">‹<small>Sebelumnya</small></button><button type="button" class="bd-nav next" id="mNext" title="Bug Open berikutnya (tombol → atau Alt + →)" aria-label="Bug Open berikutnya">›<small>Berikutnya</small></button>');
     document.body.appendChild(overlay);
     const $m = q=>overlay.querySelector(q);
+    RT.mount(overlay); RT.set($m("#mExisting"), e.existingHtml, e.existing); RT.set($m("#mExpected"), e.expectedHtml, e.expected);
     let pendingExpectedImage; // undefined = tidak berubah; null = hapus; string = ganti
     const snap = ()=>JSON.stringify([$m("#mExisting").value, $m("#mExpected").value, $m("#mPriority").value, $m("#mDueDate").value, $m("#mDate").value, $m("#mProject").value, pendingExpectedImage===undefined ? 0 : 1]);
     let base = "";
@@ -4336,6 +4584,8 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       const patch = {
         existing: $m("#mExisting").value,
         expected: $m("#mExpected").value,
+        existingHtml: RT.html($m("#mExisting")),
+        expectedHtml: RT.html($m("#mExpected")),
         status: mStatusSel.value,
         priority: mPrioSel.value,
         dueDate: mDueInput.value || "",
@@ -4399,8 +4649,8 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         '<img src="'+s.previewUrl+'">'+
         '<div class="staging-fields">'+
           '<div class="full"><label>Project</label><select data-sf="projectId">'+projOpts+'</select><input type="text" data-sf="projectOther" placeholder="Nama project baru (otomatis dibuat)" style="display:none; margin-top:6px;"></div>'+
-          '<div><label>Existing</label><textarea data-sf="existing" placeholder="Kondisi saat ini">'+esc(s.existing)+'</textarea></div>'+
-          '<div><label>Expected</label><textarea data-sf="expected" placeholder="Kondisi diharapkan">'+esc(s.expected)+'</textarea></div>'+
+          '<div><label>Existing</label>'+RT.field("stx_"+s.localId+"_e","Kondisi saat ini").replace('class="rt-ed"','class="rt-ed" data-sf="existing"')+'</div>'+
+          '<div><label>Expected</label>'+RT.field("stx_"+s.localId+"_x","Kondisi diharapkan").replace('class="rt-ed"','class="rt-ed" data-sf="expected"')+'</div>'+
           '<div class="full"><label>Gambar Expected (opsional)</label><div class="mini-thumb-btn" style="align-items:flex-start;">'+
             (s.expectedPreviewUrl
               ? '<img src="'+s.expectedPreviewUrl+'" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--border);"><button class="chg" data-add-staging-exp-img>Ganti</button>'
@@ -4412,8 +4662,10 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
           '<div style="display:flex; align-items:flex-end;"><button class="danger-outline" data-remove-staging style="width:100%;">Hapus</button></div>'+
         '</div></div>';
     }).join("");
+    RT.mount(wrap);
     wrap.querySelectorAll(".staging-item").forEach(el=>{
       const s = staging.find(x=>x.localId===el.dataset.id);
+      ["existing","expected"].forEach(k=>{ const ed = el.querySelector('[data-sf="'+k+'"]'); if(ed) RT.set(ed, s[k+"Html"], s[k]); });
       el.querySelector('[data-sf="projectId"]').value = s.projectId || "";
       const pSel = el.querySelector('[data-sf="projectId"]'), pOth = el.querySelector('[data-sf="projectOther"]');
       pOth.value = s.projectOther || "";
@@ -4423,7 +4675,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       el.querySelector('[data-sf="priority"]').value = s.priority || "Medium";
       el.querySelector('[data-sf="dueDate"]').value = s.dueDate || "";
       el.querySelectorAll("[data-sf]").forEach(f=>{
-        f.addEventListener("input", ()=>{ s[f.dataset.sf]=f.value; });
+        f.addEventListener("input", ()=>{ s[f.dataset.sf]=f.value; if(f.classList.contains("rt-ed")) s[f.dataset.sf+"Html"] = RT.html(f); });
         f.addEventListener("change", ()=>{ s[f.dataset.sf]=f.value; if(f.dataset.sf==="priority") s.prioTouched = true; });
       });
       el.querySelector("[data-add-staging-exp-img]").addEventListener("click", ()=>{
@@ -4477,7 +4729,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         if(s.expectedFile){ expectedImageData = await fileToStoredImage(s.expectedFile); }
         await db.collection("entries").add({
           projectId: pid, date, imageData, expectedImageData,
-          existing: s.existing||"", expected: s.expected||"", status: s.status||"Open",
+          existing: s.existing||"", expected: s.expected||"", existingHtml: s.existingHtml||"", expectedHtml: s.expectedHtml||"", status: s.status||"Open",
           ...(function(){
             const ap = autoPriority((s.existing||"")+" "+(s.expected||""));
             const pr = (!s.prioTouched && ap) ? ap : (s.priority||"Medium");
@@ -5849,13 +6101,13 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
           (p.tagline ? '<div class="kn-dlead">'+esc(p.tagline)+'</div>' : '')+
         '</div>'+
         '<div class="kn-mbody">'+
-          sec("Deskripsi", null, p.desc ? '<div class="kn-text">'+esc(p.desc)+'</div>' : '<div class="kn-muted">Belum diisi.</div>', langPill)+
+          sec("Deskripsi", null, p.desc ? '<div class="kn-text">'+(p.descHtml ? RT.clean(p.descHtml) : esc(p.desc))+'</div>' : '<div class="kn-muted">Belum diisi.</div>', langPill)+
           sec("Fitur / modul", feats.length, chips(feats, "feat"))+
           sec("Peran pengguna", roles.length, chips(roles, "role"))+
           knUpdatesSec(p)+
           knExtraSec(p)+
           knParamSec(p)+
-          (p.note ? sec("Catatan", null, '<div class="kn-note">'+esc(p.note)+'</div>') : '')+
+          (p.note ? sec("Catatan", null, '<div class="kn-note">'+(p.noteHtml ? RT.clean(p.noteHtml) : esc(p.note))+'</div>') : '')+
         '</div>'+
         '<div class="kn-foot">'+
           '<button class="danger-outline spacer" id="kdDel">Hapus</button>'+
@@ -5910,10 +6162,10 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         '<datalist id="kfCoList">'+knCosList.map(c=>'<option value="'+esc(c)+'">').join("")+'</datalist>'+
         '<label>Bahasa default</label><div class="kn-langsel"><select id="kfLang"><option value="">(belum diatur)</option>'+Object.keys(KN_LANGS).map(k=>'<option value="'+k+'">'+KN_LANGS[k]+'</option>').join("")+'</select><span id="kfFlag"></span></div>'+
         '<label>Ringkasan satu kalimat</label><input type="text" id="kfTag" placeholder="Produk ini untuk apa?">'+
-        '<label>Deskripsi</label><textarea id="kfDesc" rows="4" placeholder="Penjelasan lebih lengkap…"></textarea>'+
+        '<label>Deskripsi</label>'+RT.field("kfDesc","Penjelasan lebih lengkap…")+''+
         '<label>Fitur / modul (satu per baris)</label><textarea id="kfFeat" rows="5"></textarea>'+
         '<label>Peran pengguna (satu per baris)</label><textarea id="kfRoles" rows="4"></textarea>'+
-        '<label>Catatan (opsional)</label><textarea id="kfNote" rows="2"></textarea>'+
+        '<label>Catatan (opsional)</label>'+RT.field("kfNote","Catatan tambahan…")+''+
         '<div class="modal-actions"><button id="kfCancel">Batal</button><button class="primary" id="kfSave">Simpan</button></div>'+
       '</div>';
     document.body.appendChild(overlay);
@@ -5924,10 +6176,10 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     $f("#kfLang").value = cur ? knLang(cur) : "";
     const showFlag = ()=>{ $f("#kfFlag").innerHTML = knFlag($f("#kfLang").value); };
     $f("#kfLang").addEventListener("change", showFlag); showFlag();
-    $f("#kfDesc").value = d.desc || "";
+    RT.mount(overlay); RT.set($f("#kfDesc"), d.descHtml, d.desc);
     $f("#kfFeat").value = (d.features||[]).join("\n");
     $f("#kfRoles").value = (d.roles||[]).join("\n");
-    $f("#kfNote").value = d.note || "";
+    RT.set($f("#kfNote"), d.noteHtml, d.note);
     overlay.onclick = ev=>{ if(ev.target===overlay) overlay.remove(); };
     $f("#kfCancel").onclick = ()=>overlay.remove();
     $f("#kfName").focus();
@@ -5936,9 +6188,9 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       if(!name){ toast("Nama produk wajib diisi."); return; }
       const data = {
         name, company: $f("#kfCo").value.trim() || "Lainnya",
-        lang: $f("#kfLang").value, tagline: $f("#kfTag").value.trim(), desc: $f("#kfDesc").value.trim(),
+        lang: $f("#kfLang").value, tagline: $f("#kfTag").value.trim(), desc: $f("#kfDesc").value.trim(), descHtml: RT.html($f("#kfDesc")),
         features: knLines($f("#kfFeat").value), roles: knLines($f("#kfRoles").value),
-        note: $f("#kfNote").value.trim()
+        note: $f("#kfNote").value.trim(), noteHtml: RT.html($f("#kfNote"))
       };
       const btn = $f("#kfSave"); btn.disabled = true;
       try{
@@ -6650,7 +6902,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
           html += '<div class="card-item" draggable="true" data-enh-open="'+e.id+'">';
           if(e.imageData) html += '<img src="'+e.imageData+'">';
           html += '<div class="enh-title">'+esc(e.title||"(tanpa judul)")+'</div>';
-          if(e.desc) html += '<div class="exc">'+esc(e.desc)+'</div>';
+          if(e.desc) html += '<div class="exc">'+(e.descHtml ? RT.clean(e.descHtml) : esc(e.desc))+'</div>';
           html += '<div class="enh-foot"><span class="enh-projchip" title="'+esc(enhProjName(e.projectId))+'">'+esc(enhProjName(e.projectId))+'</span>'+
                   '<span class="badge-priority '+(e.priority||"Medium")+'">'+(e.priority||"Medium")+'</span></div>';
           const enhLate = !!(e.dueDate && e.dueDate < todayStr() && (e.status==="Usulan" || e.status==="Dikerjakan"));
@@ -6717,7 +6969,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         '<h3 style="margin:0 0 4px; font-size:15px;">'+(cur?'Edit enhancement':'Tambah enhancement')+'</h3>'+
         '<label>Judul</label><input type="text" id="enTitle" placeholder="mis. Tambah filter tanggal di laporan">'+
         '<label>Project</label><select id="enProj">'+projects.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join("")+OTHER_OPT+'</select>'+projOtherInputHtml("enProjOther")+
-        '<label>Deskripsi</label><textarea id="enDesc" rows="4" placeholder="Apa yang ingin ditingkatkan dan kenapa?"></textarea>'+
+        '<label>Deskripsi</label>'+RT.field("enDesc","Apa yang ingin ditingkatkan dan kenapa?")+''+
         '<label>Prioritas</label><select id="enPrio">'+PRIORITY_OPTS.map(x=>'<option value="'+x+'">'+x+'</option>').join("")+'</select>'+
         '<label>Status</label><select id="enStatus">'+ENH_STATUS.map(x=>'<option value="'+x+'">'+x+'</option>').join("")+'</select>'+
         '<label>Due date (opsional)</label><input type="date" id="enDue">'+
@@ -6730,7 +6982,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     const $f = sel=>overlay.querySelector(sel);
     $f("#enTitle").value = d.title || "";
     projPickerInit($f("#enProj"), $f("#enProjOther"), d.projectId);
-    $f("#enDesc").value = d.desc || "";
+    RT.mount(overlay); RT.set($f("#enDesc"), d.descHtml, d.desc);
     $f("#enPrio").value = d.priority || "Medium";
     $f("#enStatus").value = d.status || "Usulan";
     $f("#enDue").value = d.dueDate || "";
@@ -6759,7 +7011,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       const projectId = projPickerValue($f("#enProj"), $f("#enProjOther"));
       if(!projectId){ toast("Isi nama project (Lainnya)."); return; }
       const data = {
-        title, projectId, desc: $f("#enDesc").value.trim(),
+        title, projectId, desc: $f("#enDesc").value.trim(), descHtml: RT.html($f("#enDesc")),
         priority: $f("#enPrio").value, status: $f("#enStatus").value, dueDate: $f("#enDue").value || "", imageData: img
       };
       const btn = $f("#enSave"); btn.disabled = true;
@@ -6893,7 +7145,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   // ================= catatan meeting (MoM) =================
   let momItems = [];
   db.collection("meetings").orderBy("createdAt","desc").onSnapshot(
-    snap=>{ momItems = snap.docs.map(d=>({ id:d.id, ...d.data() })); renderMom(); },
+    snap=>{ momItems = snap.docs.map(d=>({ id:d.id, ...d.data() })); renderMom(); renderDash(); },
     err=>toast("Gagal memuat catatan meeting: "+err.message)
   );
 
@@ -8369,7 +8621,53 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     if(k==="week"){ const f = weekStartStr(t); return { from:f, to:addDays(f,6) }; }
     if(k==="lastweek"){ const f = addDays(weekStartStr(t),-7); return { from:f, to:addDays(f,6) }; }
     if(k==="d7") return { from:addDays(t,-6), to:t };
+    if(k==="month") return { from:t.slice(0,8)+"01", to:t };
+    if(k==="d90") return { from:addDays(t,-89), to:t };
+    if(k==="all"){
+      const ds = [];
+      entries.forEach(e=>{ if(e.date) ds.push(e.date); });
+      dashSafe(()=>momItems).forEach(m=>{ if(m.date) ds.push(m.date); });
+      dashSafe(()=>upItems).forEach(u=>{ if(u.date) ds.push(u.date); });
+      dashSafe(()=>enhItems).forEach(x=>{ if(x.createdAt) ds.push(dayOfTs(x.createdAt)); });
+      ds.sort(); const f = ds[0] || addDays(t,-29);
+      return { from: f > addDays(t,-399) ? f : addDays(t,-399), to:t };   // grafik harian dibatasi 400 hari
+    }
     return { from:addDays(t,-29), to:t };
+  }
+  const dashSafe = f=>{ try{ return f() || []; }catch(e){ return []; } };   // data modul lain bisa belum siap saat render pertama
+  const dayOfTs = t=>new Date(t).toLocaleDateString("sv-SE",{ timeZone:"Asia/Jakarta" });
+  let workFilter = "all", workLimit = 60;
+  // ---- semua pekerjaan (lintas modul) pada rentang terpilih, terbaru di atas ----
+  function dashWorkList(r){
+    const L = [];
+    entries.forEach(e=>{
+      const t = enhProjName(e.projectId), txt = pdfText(e.existing) || "(belum diisi)";
+      if(dashIn(e.date, r)) L.push({ d:e.date, k:"bug", ic:"🐞", tag:"Bug dilaporkan", p:t, t:txt, id:e.id, st:e.status });
+      if(!dashUn(e) && dashIn(e.statusChangedDate, r)) L.push({ d:e.statusChangedDate, k:"fix", ic:"✅", tag:"Bug "+(e.status||"selesai"), p:t, t:txt, id:e.id, st:e.status });
+    });
+    dashSafe(()=>enhItems).forEach(x=>{ const d = x.createdAt ? dayOfTs(x.createdAt) : ""; if(dashIn(d, r)) L.push({ d, k:"enh", ic:"✧", tag:"Enhancement", p:enhProjName(x.projectId), t:x.title||x.name||"(tanpa judul)", st:x.status }); });
+    dashSafe(()=>momItems).forEach(m=>{ if(dashIn(m.date, r)) L.push({ d:m.date, k:"mom", ic:"✎", tag:"Meeting", p:momProjName(m.projectId), t:m.title||"(tanpa judul)" }); });
+    dashSafe(()=>upItems).forEach(u=>{
+      const kd = {update:"Update", kendala:"Kendala", todo:"To-do"}[u.kind] || "Update";
+      if(dashIn(u.date, r)) L.push({ d:u.date, k:"up", ic:"⊕", tag:kd, p:upProjName(u.projectId), t:u.title||"", st:u.status });
+      if(u.status==="Selesai" && u.doneDate && u.doneDate!==u.date && dashIn(u.doneDate, r)) L.push({ d:u.doneDate, k:"up", ic:"☑", tag:kd+" selesai", p:upProjName(u.projectId), t:u.title||"", st:u.status });
+    });
+    return L.sort((a,b)=>b.d.localeCompare(a.d));
+  }
+  function dashWorkHtml(r){
+    const all = dashWorkList(r), FT = [["all","Semua"],["bug","Bug baru"],["fix","Bug selesai"],["enh","Enhancement"],["mom","Meeting"],["up","Update lainnya"]];
+    const cnt = k=>k==="all" ? all.length : all.filter(x=>x.k===k).length;
+    const list = workFilter==="all" ? all : all.filter(x=>x.k===workFilter), shown = list.slice(0, workLimit);
+    let h = '<div class="dcard span2"><h3>Semua pekerjaan<span class="sub">'+list.length+' aktivitas pada periode ini</span></h3>'+
+      '<div class="status-summary" style="margin:0 0 10px;">'+FT.map(f=>'<button type="button" class="chip'+(workFilter===f[0]?' on':'')+'" data-work-f="'+f[0]+'" style="cursor:pointer;'+(workFilter===f[0]?' font-weight:800; outline:2px solid var(--accent);':'')+'">'+f[1]+' '+cnt(f[0])+'</button>').join("")+'</div>';
+    if(!list.length) return h+'<div class="hint" style="margin:0;">Belum ada aktivitas.</div></div>';
+    let day = "";
+    shown.forEach(x=>{
+      if(x.d!==day){ day = x.d; h += '<div style="font-weight:800; font-size:12px; color:var(--text-dim); margin:12px 0 4px;">'+esc(fmtDate(day))+'</div>'; }
+      h += '<div class="dold"'+(x.id ? ' data-dash-entry="'+x.id+'"' : '')+'><div class="t"><b>'+x.ic+' '+esc(x.tag)+' · '+esc(x.p||"-")+'</b><span>'+esc(String(x.t).slice(0,140))+'</span></div></div>';
+    });
+    if(list.length > shown.length) h += '<div style="margin-top:10px;"><button type="button" data-work-more="1">Tampilkan lebih banyak ('+(list.length-shown.length)+' lagi)</button></div>';
+    return h+'</div>';
   }
   function dateList(from, to){ const a = []; let d = from; while(d <= to && a.length < 400){ a.push(d); d = addDays(d,1); } return a; }
   const dashIn = (d, r)=>!!d && d >= r.from && d <= r.to;
@@ -8471,7 +8769,29 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       ["Tingkat penyelesaian", pc(S.donePct), S.total ? S.doneAll+" dari "+S.total+" bug sudah selesai" : "belum ada bug", "#9b51e0"]
     ];
   }
-  function buildDashPdf(){
+  const DASH_PDF_SECS = [["kpi","Kartu ringkasan (KPI)"],["res","Paling banyak dikerjakan"],["rep","Paling banyak dilaporkan"],["un","Paling banyak belum selesai"],["rem","Pengingat due date"],["scan","Ceklis Scan AI hari ini"],["proj","Tabel per project"],["work","Semua pekerjaan (daftar aktivitas)"]];
+  function dashPdfAsk(){
+    return new Promise(res=>{
+      let saved = {}; try{ saved = JSON.parse(localStorage.getItem("dashPdfSecs")||"{}"); }catch(e){}
+      const ov = document.createElement("div"); ov.className = "modal-overlay";
+      ov.innerHTML = '<div class="modal-box" style="max-width:440px;"><h3 style="margin:0 0 4px;">Export PDF dashboard</h3><div class="hint" style="margin:0 0 10px;">Centang bagian yang mau dimasukkan. Periode mengikuti pilihan di dashboard.</div>'+
+        DASH_PDF_SECS.map(x=>'<label style="display:flex; gap:8px; align-items:center; margin:6px 0; font-weight:500;"><input type="checkbox" data-sec="'+x[0]+'" style="width:auto;" '+(saved[x[0]]===false ? '' : 'checked')+'> '+x[1]+'</label>').join("")+
+        '<div class="modal-actions"><button type="button" id="dpX">Batal</button><button type="button" class="primary" id="dpOk">Buat PDF</button></div></div>';
+      document.body.appendChild(ov);
+      const done = v=>{ ov.remove(); res(v); };
+      ov.onclick = e=>{ if(e.target===ov) done(null); };
+      ov.querySelector("#dpX").onclick = ()=>done(null);
+      ov.querySelector("#dpOk").onclick = ()=>{
+        const sel = {}; ov.querySelectorAll("[data-sec]").forEach(c=>sel[c.dataset.sec] = c.checked);
+        if(!Object.values(sel).some(Boolean)){ toast("Pilih minimal satu bagian."); return; }
+        try{ localStorage.setItem("dashPdfSecs", JSON.stringify(sel)); }catch(e){}
+        done(sel);
+      };
+    });
+  }
+  function buildDashPdf(sel){
+    sel = sel || {};
+    const on = k=>sel[k] !== false;
     if(!window.jspdf){ toast("Library PDF gagal dimuat."); return; }
     const { jsPDF } = window.jspdf, T = pdfText;
     const doc = new jsPDF({ unit:"mm", format:"a4", orientation:"portrait" });
@@ -8494,9 +8814,9 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     const kp = [["Belum selesai", unres.length, "Open "+nOpen+" · In Progress "+(unres.length-nOpen), "#e0363c"], ["Lewat due date", overdue.length, "belum selesai & terlambat", "#b4232a"],
       ["Critical / High", crit.length, "belum selesai", "#e08a1c"], ["Diselesaikan", resolved.length, "pada periode ini", "#17a673"],
       ["Dilaporkan", reported.length, "bug baru pada periode ini", "#2f80ed"], ["Rata-rata umur", avgAge+" hari", "bug yang belum selesai", "#6d5ef5"]]
-      .concat(dashExtraKpis());
+      .concat(dashExtraKpis().filter((k,i)=>on("scan") || i===3));   // 3 kartu pertama = scan AI; hilang bila bagian Scan AI tidak dipilih
     const KC = 5, gw = 3, cw = (availW - gw*(KC-1))/KC, ch = 29;
-    kp.forEach((c,i)=>{
+    if(on("kpi")) kp.forEach((c,i)=>{
       const col = i%KC; if(col===0) need(ch+gw);
       const x = mx + col*(cw+gw), rgb = hex(c[3]), tw = cw - 7;
       doc.setFillColor(...rgb.map(v=>Math.round(v+(255-v)*0.9))); doc.roundedRect(x, y, cw, ch, 2.5, 2.5, "F");
@@ -8525,11 +8845,11 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       y += 4;
     };
     y += 2;
-    barList("Paling banyak dikerjakan", "bug diselesaikan", "res", "#17a673");
-    barList("Paling banyak dilaporkan", "bug baru", "rep", "#2f80ed");
-    barList("Paling banyak belum selesai", "bug aktif", "un", "#e0363c");
+    if(on("res")) barList("Paling banyak dikerjakan", "bug diselesaikan", "res", "#17a673");
+    if(on("rep")) barList("Paling banyak dilaporkan", "bug baru", "rep", "#2f80ed");
+    if(on("un")) barList("Paling banyak belum selesai", "bug aktif", "un", "#e0363c");
     // pengingat due date
-    const rem = dueReminders(today);
+    const rem = on("rem") ? dueReminders(today) : [];
     if(rem.length){
       need(14 + Math.min(rem.length,8)*6);
       doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(180,35,42); doc.text(T("Pengingat due date ("+rem.length+")"), mx, y+4);
@@ -8541,7 +8861,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     }
     // detail ceklis scan AI hari ini (per project + sub-item)
     const SS = dashScanStats();
-    if(SS.detail.length){
+    if(on("scan") && SS.detail.length){
       need(30);
       doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(31,56,100); doc.text("Ceklis Scan AI hari ini", mx, y+4);
       doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(120,128,145);
@@ -8556,16 +8876,27 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     }
     // tabel per project
     const rows = byProj.filter(x=>x.un||x.rep||x.res).sort((a,b)=>b.un-a.un).map(x=>[x.name, x.un, x.od, x.cr, x.rep, x.res]);
-    if(rows.length){
+    if(on("proj") && rows.length){
       need(30);
       doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(31,56,100); doc.text("Per project", mx, y+4);
       doc.autoTable({ startY:y+8, head:[["Project","Belum selesai","Lewat due","Critical/High","Dilaporkan","Selesai"]], body:rows,
         margin:{ left:mx, right:mx, top:top, bottom:24 }, styles:{ fontSize:9 }, headStyles:{ fillColor:[31,56,100] } });
+      y = doc.lastAutoTable.finalY + 8;
+    }
+    // semua pekerjaan lintas modul pada periode terpilih
+    if(on("work")){
+      const wl = dashWorkList(r).slice(0, 600);
+      if(wl.length){
+        need(30);
+        doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(31,56,100); doc.text(T("Semua pekerjaan ("+wl.length+")"), mx, y+4);
+        doc.autoTable({ startY:y+8, head:[["Tanggal","Jenis","Project","Keterangan"]], body:wl.map(x=>[fmtDate(x.d), T(x.tag), T(x.p||"-"), T(String(x.t).slice(0,160))]),
+          margin:{ left:mx, right:mx, top:top, bottom:24 }, styles:{ fontSize:8.5 }, headStyles:{ fillColor:[31,56,100] }, columnStyles:{ 0:{ cellWidth:24 }, 1:{ cellWidth:32 }, 2:{ cellWidth:34 } } });
+      }
     }
     pdfFooter(doc, "Dashboard QA - "+rl, mx, [pdfCreatedLine(), "Dokumen ini bersifat rahasia dan tidak boleh disebarkan tanpa izin."]);
     toast(pdfDownload(doc, "dashboard_qa_"+today+".pdf") ? "PDF dashboard berhasil dibuat." : "Gagal membuat PDF.");
   }
-  document.getElementById("dashPdf").addEventListener("click", buildDashPdf);
+  document.getElementById("dashPdf").addEventListener("click", async ()=>{ const sel = await dashPdfAsk(); if(sel) buildDashPdf(sel); });
   // ===== Pusat pengingat dashboard (bertab): enhancement Dikerjakan & Usulan, input bug terakhir per project, ceklis scan AI =====
   const REMIND = {
     enhDays: { Critical:1, High:1, Medium:2, Low:3 },  // enhancement dianggap mendesak: H-1 / H-2 / H-3 menurut prioritas (termasuk yang lewat)
@@ -8816,6 +9147,9 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       '<div class="status-summary" style="margin:0 0 8px;">'+ENH_STATUS.map(s=>'<span class="chip" style="color:'+ENH_COLOR[s]+';">'+s+': '+ec[s]+'</span>').join("")+'</div>'+
       '<div class="hint" style="margin:0;">'+(ec["Usulan"]+ec["Dikerjakan"])+' enhancement masih menunggu (Usulan + Dikerjakan).</div></div>';
 
+    // semua pekerjaan lintas modul
+    html += dashWorkHtml(r);
+
     // kata kunci bug report
     html += kwCardHtml(r);
 
@@ -8828,8 +9162,11 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     html += '</div><div class="hint">Angka "Diselesaikan" dihitung dari perubahan status yang tercatat; bug yang diselesaikan sebelum pencatatan itu ada tidak ikut terhitung. Minggu dihitung Senin sampai Minggu.</div>';
     wrap.innerHTML = html;
   }
-  document.getElementById("dashRange").addEventListener("change", renderDash);
+  document.getElementById("dashRange").addEventListener("change", ()=>{ workLimit = 60; renderDash(); });
   document.getElementById("dashWrap").addEventListener("click", e=>{
+    const wf = e.target.closest("[data-work-f]");
+    if(wf){ workFilter = wf.dataset.workF; workLimit = 60; renderDash(); return; }
+    if(e.target.closest("[data-work-more]")){ workLimit += 100; renderDash(); return; }
     const sc = e.target.closest("[data-kw-scope]");
     if(sc){ kwScope = sc.dataset.kwScope; kwActive = ""; renderDash(); return; }
     const kw = e.target.closest("[data-kw]");
@@ -9110,6 +9447,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     { label:"All Akses", note:"Akses project", icon:"⌘", action:()=>navigateTo("akses") },
     { label:"Knowledge", note:"Informasi produk", icon:"◇", action:()=>navigateTo("knowledge") },
     { label:"Akses Eksternal", note:"Link developer & dokumen", icon:"🔗", action:()=>navigateTo("ext") },
+    { label:"Dokumen Update", note:"Gambar + keterangan jadi PDF", icon:"▥", action:()=>navigateTo("docupd") },
     { label:"Konversi PDF", note:"Ubah Excel / CSV / PDF jadi PDF", icon:"⇄", action:()=>navigateTo("convert") },
     { label:"Panduan Pemakaian", note:"Cara memakai semua fitur", icon:"?", action:()=>navigateTo("guide") },
     { label:"Suara notifikasi", note:"Klik untuk aktif/nonaktif", icon:"🔔", action:()=>{ const on = !devSoundOn(); try{ localStorage.setItem("qa_dev_sound", on ? "on" : "off"); }catch(_){} devUnlock(); if(on) devPing(); toast("Suara notifikasi "+(on?"aktif":"nonaktif")+"."); } },
@@ -9393,6 +9731,140 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     pdfFooter(doc, o.title || "Dokumen", mx);
     return doc;
   }
+  // ================= Dokumen Update: gambar + keterangan -> PDF =================
+  (function docUpdateInit(){
+    const $d = id=>document.getElementById(id);
+    if(!$d("duItems")) return;
+    let items = [];   // {id, img, capHtml}
+    let ready = false, saveT = null;
+    const uid = ()=>"i"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    const introHost = $d("duIntroHost");
+    introHost.innerHTML = RT.field("duIntro", "Ringkasan singkat isi update…");
+    RT.mount(introHost);
+    const intro = $d("duIntro");
+    // ---- draft di IndexedDB ----
+    const idb = ()=>new Promise((res,rej)=>{ const r = indexedDB.open("qaDocUpdate",1); r.onupgradeneeded = ()=>r.result.createObjectStore("kv"); r.onsuccess = ()=>res(r.result); r.onerror = ()=>rej(r.error); });
+    async function idbPut(v){ try{ const db0 = await idb(); db0.transaction("kv","readwrite").objectStore("kv").put(v,"draft"); }catch(e){} }
+    async function idbGet(){ try{ const db0 = await idb(); return await new Promise(res=>{ const q = db0.transaction("kv").objectStore("kv").get("draft"); q.onsuccess = ()=>res(q.result); q.onerror = ()=>res(null); }); }catch(e){ return null; } }
+    const snapshot = ()=>({ title:$d("duTitle").value, label:$d("duLabel").value, date:$d("duDate").value, introHtml:RT.html(intro), items:items.map(i=>({ id:i.id, img:i.img, capHtml:i.capHtml, noImg:!!i.noImg })) });
+    function queueSave(){ if(!ready) return; clearTimeout(saveT); saveT = setTimeout(()=>idbPut(snapshot()), 500); stat(); }
+    function stat(){ const n = items.filter(i=>i.img).length; $d("duStat").textContent = items.length ? items.length+" bagian, "+n+" gambar. Tersimpan otomatis di browser ini." : ""; }
+    function render(){
+      const host = $d("duItems");
+      if(!items.length){ host.innerHTML = '<div class="empty-state">Belum ada isi. Klik "Tambah gambar + keterangan" atau tempel gambar dengan Ctrl+V.</div>'; stat(); return; }
+      host.innerHTML = items.map((it,k)=>
+        '<div class="du-item" data-id="'+it.id+'" style="border:1px solid var(--border,#e3e5f0); border-radius:10px; padding:10px; margin-bottom:10px;">'+
+          '<div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;"><b>Bagian '+(k+1)+'</b><span style="flex:1"></span>'+
+            '<button type="button" data-a="up" title="Naik"'+(k===0?' disabled':'')+'>↑</button><button type="button" data-a="down" title="Turun"'+(k===items.length-1?' disabled':'')+'>↓</button>'+
+            '<button type="button" class="danger-outline" data-a="del">Hapus</button></div>'+
+          (it.noImg ? '' :
+            '<div class="du-img" style="margin-bottom:8px;">'+(it.img ? '<img src="'+it.img+'" alt="" style="max-width:100%; max-height:320px; border-radius:6px; border:1px solid #e3e5f0; display:block;"> <button type="button" data-a="img" style="margin-top:6px;">Ganti gambar</button> <button type="button" data-a="rmimg" style="margin-top:6px;">Hapus gambar</button>' : '<button type="button" data-a="img">Pilih gambar…</button>')+'</div>')+
+          RT.field("duCap_"+it.id, "Keterangan gambar / isi update…")+
+        '</div>').join("");
+      RT.mount(host);
+      items.forEach(it=>{ const ed = $d("duCap_"+it.id); if(!ed) return; RT.set(ed, it.capHtml, ""); ed.addEventListener("input", ()=>{ it.capHtml = RT.html(ed); queueSave(); }); });
+      stat();
+    }
+    $d("duItems").addEventListener("click", async e=>{
+      const b = e.target.closest("button[data-a]"); if(!b) return;
+      const box = b.closest(".du-item"), k = items.findIndex(i=>i.id===box.dataset.id); if(k<0) return;
+      const a = b.dataset.a;
+      if(a==="up" && k>0){ [items[k-1],items[k]] = [items[k],items[k-1]]; }
+      else if(a==="down" && k<items.length-1){ [items[k+1],items[k]] = [items[k],items[k+1]]; }
+      else if(a==="del"){ if(!(await confirmDialog("Hapus bagian ini?"))) return; items.splice(k,1); }
+      else if(a==="rmimg"){ items[k].img = ""; }
+      else if(a==="img"){ pickImageFor(d=>{ items[k].img = d; render(); queueSave(); }); return; }
+      render(); queueSave();
+    });
+    $d("duAdd").onclick = ()=>pickImageFor(d=>{ items.push({ id:uid(), img:d, capHtml:"" }); render(); queueSave(); });
+    $d("duAddText").onclick = ()=>{ items.push({ id:uid(), img:"", capHtml:"", noImg:true }); render(); queueSave(); };
+    ["duTitle","duLabel","duDate"].forEach(id=>$d(id).addEventListener("input", queueSave));
+    intro.addEventListener("input", queueSave);
+    $d("duReset").onclick = async ()=>{
+      if(!(await confirmDialog("Kosongkan seluruh dokumen update?"))) return;
+      items = []; ["duTitle","duLabel"].forEach(id=>$d(id).value=""); $d("duDate").value = todayStr(); RT.set(intro,"",""); render(); idbPut(null);
+    };
+    // tempel gambar dari clipboard saat tab ini aktif dan fokus bukan di editor teks
+    document.addEventListener("paste", async e=>{
+      if(!$d("tab-docupd").classList.contains("active")) return;
+      if(e.target.closest && e.target.closest(".rt-ed, input, textarea")) return;
+      const f = Array.from((e.clipboardData && e.clipboardData.items) || []).map(x=>x.type.startsWith("image/") ? x.getAsFile() : null).find(Boolean);
+      if(!f) return; e.preventDefault();
+      const d = await fileToStoredImage(f); if(!d){ toast("Gambar terlalu besar."); return; }
+      items.push({ id:uid(), img:d, capHtml:"" }); render(); queueSave();
+    });
+    // ---- PDF ----
+    function blocksOf(html){
+      const t = document.createElement("div"); t.innerHTML = html||""; const out = [];
+      const txt = n=>(n.textContent||"").replace(/\s+/g," ").trim();
+      const list = (l,dep)=>{ let i=0; Array.from(l.children).forEach(li=>{
+        if(li.tagName==="LI"){ i++; const c = li.cloneNode(true); c.querySelectorAll("ul,ol").forEach(x=>x.remove()); out.push({ t:(l.tagName==="OL"? i+". " : "• ")+txt(c), dep });
+          li.querySelectorAll(":scope > ul, :scope > ol").forEach(s=>list(s,dep+1)); }
+        else if(li.tagName==="UL"||li.tagName==="OL") list(li,dep+1); }); };
+      Array.from(t.childNodes).forEach(n=>{
+        if(n.nodeType===3){ const v = n.nodeValue.trim(); if(v) out.push({ t:v, dep:0 }); }
+        else if(n.nodeType===1){ if(n.tagName==="UL"||n.tagName==="OL") list(n,0); else if(n.tagName==="H3") out.push({ t:txt(n), dep:0, h:1 }); else { const v = txt(n); if(v) out.push({ t:v, dep:0 }); } }
+      });
+      return out;
+    }
+    async function buildPdf(){
+      const { jsPDF } = window.jspdf, C = PDF_C;
+      const doc = new jsPDF({ unit:"mm", format:"a4", orientation:"portrait" });
+      const pageW = 210, pageH = 297, mx = 14, availW = pageW - mx*2, botY = pageH - 18, topY = 16;
+      const title = $d("duTitle").value.trim() || "Dokumen Update";
+      const date = $d("duDate").value ? new Date($d("duDate").value+"T00:00:00").toLocaleDateString("id-ID",{ day:"numeric", month:"long", year:"numeric" }) : "";
+      let y = pdfBanner(doc, "DOKUMEN UPDATE"+($d("duLabel").value.trim() ? "  |  "+$d("duLabel").value.trim().toUpperCase() : ""), title, date, pageW) + 8;
+      const need = h=>{ if(y + h > botY){ doc.addPage(); y = topY; } };
+      const text = bl=>{
+        bl.forEach(b=>{
+          doc.setFont("helvetica", b.h ? "bold" : "normal"); doc.setFontSize(b.h ? 11.5 : 10.5); doc.setTextColor(...(b.h ? C.accent : C.body));
+          const ind = b.dep*6, lines = doc.splitTextToSize(pdfText(b.t), availW - ind - 2);
+          lines.forEach((l,i)=>{ need(5.4); doc.text(l, mx + ind + (b.t.startsWith("•")||/^\d+\./.test(b.t)? 0 : 0) + (i&&!b.h&&/^(•|\d+\.)/.test(b.t) ? 4 : 0), y + 4); y += 5.2; });
+          y += 1.6;
+        });
+      };
+      const ib = blocksOf(RT.html(intro)); if(ib.length){ text(ib); y += 4; }
+      let n = 0;
+      for(const it of items){
+        const cb = blocksOf(it.capHtml); if(!it.img && !cb.length) continue; n++;
+        need(30);
+        doc.setFillColor(...C.chip); doc.roundedRect(mx, y, 7, 7, 1.5, 1.5, "F");
+        doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(...C.chipText); doc.text(String(n), mx+3.5, y+4.9, { align:"center" });
+        y += 10;
+        if(it.img){
+          const dm = await loadImageDims(it.img);
+          if(dm){
+            let w = Math.min(availW, dm.w*0.2646), h = w*dm.h/dm.w; const maxH = botY - topY - 20;
+            if(h > maxH){ h = maxH; w = h*dm.w/dm.h; }
+            need(h + 2);
+            doc.setDrawColor(...C.line); doc.setLineWidth(0.3); doc.roundedRect(mx, y, w, h, 1.5, 1.5, "S");
+            doc.addImage(it.img, "JPEG", mx, y, w, h, undefined, "FAST"); y += h + 4;
+          }
+        }
+        text(cb); y += 6;
+      }
+      pdfFooter(doc, title, mx, [pdfCreatedLine()]);
+      return doc;
+    }
+    $d("duPdf").onclick = async ()=>{
+      if(!items.length && !RT.html(intro)){ toast("Isi dulu dokumennya."); return; }
+      const btn = $d("duPdf"); btn.disabled = true; btn.textContent = "Membuat PDF…";
+      try{
+        const doc = await buildPdf();
+        const nm = ($d("duTitle").value.trim() || "Dokumen Update").replace(/[^\w\- ]+/g,"").trim().replace(/\s+/g,"_");
+        if(pdfDownload(doc, nm+".pdf")) toast("PDF diunduh.");
+        else toast("Gagal membuat PDF.");
+      }catch(e){ toast("Gagal membuat PDF: "+(e.message||e)); }
+      btn.disabled = false; btn.textContent = "Unduh PDF";
+    };
+    // muat draft
+    $d("duDate").value = todayStr();
+    idbGet().then(d=>{
+      if(d){ $d("duTitle").value = d.title||""; $d("duLabel").value = d.label||""; if(d.date) $d("duDate").value = d.date; RT.set(intro, d.introHtml||"", ""); items = (d.items||[]).slice(); }
+      ready = true; render();
+    });
+  })();
+
   (function convertInit(){
     const $c = id=>document.getElementById(id);
     const cv = { wb:null, name:"", sheet:"", rows:[], off:0, cw:[], an:null, doc:null, url:null, timer:null };
@@ -9404,13 +9876,19 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     }
     window.__cvHist = rows=>{
       const wrap = $c("cvHistWrap"); if(!wrap) return;
-      const list = (rows||[]).filter(r=>r.module==="Konversi PDF").slice(0,50);
-      $c("cvHistCount").textContent = list.length ? list.length+" terakhir" : "";
+      const list = (rows||[]).filter(r=>r.module==="Konversi PDF").slice(0,300);
+      $c("cvHistCount").textContent = list.length ? list.length+" dokumen" : "";
       if(!list.length){ wrap.innerHTML = '<div class="empty-state">Belum ada riwayat. Dokumen yang diunduh lewat tab ini akan tercatat di sini.</div>'; return; }
       const fmt = t=>new Intl.DateTimeFormat("id-ID",{ timeZone:"Asia/Jakarta", day:"numeric", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit", hour12:false }).format(new Date(t)).replace(/\./g,":");
       wrap.innerHTML = '<table><thead><tr><th>Waktu (WIB)</th><th>Oleh</th><th>Dokumen</th><th>Mode dan detail</th></tr></thead><tbody>'+
         list.map(r=>'<tr><td style="white-space:nowrap;">'+esc(fmt(r.at))+'</td><td>'+esc(r.by)+'</td><td><b>'+esc(r.label||"-")+'</b></td><td style="color:var(--text-dim);">'+esc(r.detail||"-")+'</td></tr>').join("")+'</tbody></table>';
     };
+    // riwayat konversi dimuat lewat query sendiri (modul = "Konversi PDF"), tidak ikut batas 300 baris log aktivitas umum
+    try{
+      _dbCol("auditLog").where("module","==","Konversi PDF").limit(1000).onSnapshot(
+        snap=>{ window.__cvHist(snap.docs.map(d=>d.data()).sort((a,b)=>(b.at||0)-(a.at||0))); },
+        err=>{ const w=$c("cvHistWrap"); if(w) w.innerHTML='<div class="empty-state">Gagal memuat riwayat: '+esc(err.message)+'</div>'; });
+    }catch(e){}
     // ---- mode "tampilan asli + ungu" untuk PDF dokumen review ----
     const mr = { file:null, name:"", pages:[], W:0, url:null, doc:null, timer:null };
     function askPdfMode(){
@@ -9711,7 +10189,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     const gEsc = t=>esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>");
     const toc = document.getElementById("gdToc"), body = document.getElementById("gdBody"), q = document.getElementById("gdSearch");
     const hay = g=>(g.title+" "+g.sum+" "+g.steps.join(" ")+" "+(g.tips||[]).join(" ")+" "+(g.keys||[]).map(k=>k.join(" ")).join(" ")).toLowerCase();
-    const TAB_NAME = { dash:"Dashboard", manage:"Kelola Bug", enh:"Enhancement", mom:"Catatan Meeting", daily:"Laporan Harian", e2e:"Uji E2E", updates:"Update Lainnya", scan:"Ceklis Scan AI", akses:"All Akses", knowledge:"Knowledge", files:"Dokumen", ext:"Akses Eksternal", convert:"Konversi PDF", audit:"Riwayat" };
+    const TAB_NAME = { dash:"Dashboard", manage:"Kelola Bug", enh:"Enhancement", mom:"Catatan Meeting", daily:"Laporan Harian", e2e:"Uji E2E", updates:"Update Lainnya", scan:"Ceklis Scan AI", akses:"All Akses", knowledge:"Knowledge", files:"Dokumen", ext:"Akses Eksternal", convert:"Konversi PDF", docupd:"Dokumen Update", audit:"Riwayat" };
     function draw(){
       const term = q.value.trim().toLowerCase(), list = GUIDE.filter(g=>!term || hay(g).includes(term));
       toc.innerHTML = list.map(g=>'<button type="button" data-gd="'+g.id+'"><span>'+g.icon+'</span><span>'+esc(g.title.split(":")[0])+'</span></button>').join("");
@@ -9751,7 +10229,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     snap=>{ auditRows = snap.docs.map(d=>d.data());
       [["auditFWho","by"],["auditFMod","module"]].forEach(([id,k])=>{ const el = document.getElementById(id), cur = el.value, first = el.options[0].outerHTML;
         el.innerHTML = first + [...new Set(auditRows.map(r=>r[k]).filter(Boolean))].sort().map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join(""); el.value = cur; });
-      renderAudit(); renderUsers(); if(window.__cvHist) window.__cvHist(auditRows); },
+      renderAudit(); renderUsers(); },
     err=>{ document.getElementById("auditWrap").innerHTML = '<div class="empty-state">Gagal memuat riwayat: '+esc(err.message)+'</div>'; }
   );
   document.getElementById("auditSearch").addEventListener("input", renderAudit);
@@ -9840,7 +10318,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     return '<div class="up-row'+(isDone?' done':'')+'" data-up="'+u.id+'">'+
       '<button type="button" class="up-check" data-up-toggle="'+u.id+'" title="'+tip+'" aria-label="'+tip+'">✓</button>'+
       '<div class="up-main"><div class="up-title">'+esc(u.title||"(tanpa judul)")+'</div>'+
-        (u.note ? '<div class="up-note">'+esc(u.note)+'</div>' : '')+
+        (u.note ? '<div class="up-note">'+(u.noteHtml ? RT.clean(u.noteHtml) : esc(u.note))+'</div>' : '')+
         '<div class="up-meta">'+meta+'</div></div>'+
       '<div class="up-actions"><button type="button" data-up-edit="'+u.id+'">Edit</button><button type="button" data-up-del="'+u.id+'" title="Hapus">✕</button></div>'+
     '</div>';
@@ -9889,13 +10367,14 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         '<label>'+(kind==="todo" ? "Dikerjakan tanggal" : "Tanggal")+'</label><input type="date" id="upfDate" value="'+esc(u.date)+'">'+
         (kind==="todo" ? '<div class="row-flex" style="gap:6px; margin-top:6px;"><button type="button" data-upd="0">Hari ini</button><button type="button" data-upd="1">Besok</button><button type="button" data-upd="2">Lusa</button></div>' : '')+
         '<label>Status</label><select id="upfStatus"><option value="Berjalan">'+cfg.run+'</option><option value="Selesai">'+cfg.done+'</option></select>'+
-        '<label>'+cfg.noteLbl+' <span class="hint" style="font-weight:400;">(opsional)</span></label><textarea id="upfNote" rows="4" placeholder="'+esc(cfg.notePh)+'">'+esc(u.note||"")+'</textarea>'+
+        '<label>'+cfg.noteLbl+' <span class="hint" style="font-weight:400;">(opsional)</span></label>'+RT.field("upfNote", cfg.notePh)+''+
         '<div class="modal-actions"><button id="upfCancel">Batal</button><button class="primary" id="upfSave">Simpan</button></div>'+
       '</div>';
     document.body.appendChild(overlay);
     const $ = id=>overlay.querySelector("#"+id);
     const sel = $("upfProj"), oth = $("upfProjOther");
     projPickerInit(sel, oth, u.projectId || "");
+    RT.mount(overlay); RT.set($("upfNote"), u.noteHtml, u.note);
     $("upfStatus").value = u.status==="Selesai" ? "Selesai" : "Berjalan";
     overlay.querySelectorAll("[data-upd]").forEach(b=>b.onclick = ()=>{ $("upfDate").value = addDays(todayStr(), +b.dataset.upd); });
     overlay.onclick = ev=>{ if(ev.target===overlay) overlay.remove(); };
@@ -9909,7 +10388,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       const projectId = sel.value==="" ? "" : projPickerValue(sel, oth);
       const status = $("upfStatus").value, date = $("upfDate").value || u.date;
       const doneDate = status==="Selesai" ? (u.status==="Selesai" && u.doneDate ? u.doneDate : todayStr()) : "";
-      const data = { title, note:$("upfNote").value.trim(), projectId, date, status, doneDate, kind };
+      const data = { title, note:$("upfNote").value.trim(), noteHtml:RT.html($("upfNote")), projectId, date, status, doneDate, kind };
       try{
         if(u.id) await db.collection("otherUpdates").doc(u.id).update(data);
         else await db.collection("otherUpdates").add({ ...data, createdAt:Date.now(), createdBy:auditWho() });
@@ -9971,7 +10450,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   // ---- "Update Lainnya": pekerjaan di luar bug report (mis. testing rate EHD BPD Sumut). Koleksi "otherUpdates" ----
   let upItems = []; // {id,title,note,projectId,date,status:"Berjalan"|"Selesai",doneDate,createdAt}
   db.collection("otherUpdates").orderBy("createdAt","desc").onSnapshot(
-    snap=>{ upItems = snap.docs.map(d=>({ id:d.id, ...d.data() })); renderUpdates(); if(typeof window.__rtRefresh === "function") window.__rtRefresh(); },
+    snap=>{ upItems = snap.docs.map(d=>({ id:d.id, ...d.data() })); renderUpdates(); renderDash(); if(typeof window.__rtRefresh === "function") window.__rtRefresh(); },
     err=>toast("Gagal memuat Update Lainnya: "+err.message)
   );
   function upProjName(id){ if(!id) return ""; if(isOtherId(id)) return id.slice(OTHER_PREFIX.length); const p = projects.find(x=>x.id===id); return p ? p.name : "(project dihapus)"; }
