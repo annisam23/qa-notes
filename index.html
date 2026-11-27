@@ -4196,34 +4196,96 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   (function bugImportInit(){
     const norm = t=>String(t||"").toLowerCase().replace(/[^a-z0-9]/g,"");
     const clean = t=>String(t||"").replace(/[​-‏⁠﻿]/g,"").replace(/ /g," ").replace(/\s+/g," ").trim();
-    // lines: [{x, text}] ; x dipakai untuk membedakan judul (rata kiri) dan lanjutan kalimat (menjorok)
-    function parseBugLines(lines){
-      const out = []; let date = "", proj = "", flag = "", cur = null, stop = false;
+    const BUL = "-•▪·●○◦■□–—";
+    const ALIAS = [[/\bflexa\b/i,"Flexa"],[/\behd\b/i,"EHD"],[/woorisk/i,"Woorisk"],[/medins/i,"Medins"],[/\belife\b/i,"Elife"],[/\berp\b/i,"ERP"],[/silogin/i,"Silogin"],[/agentic\s*ai/i,"Agentic AI"],[/\bsca\b/i,"SCA"],[/seleris\s*care|\bcare\b/i,"Seleris Care"]];
+    // tebak project dari isi kalimat: nama project yang sudah ada dulu, lalu alias umum
+    function guessProj(txt){
+      const esc = s=>s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+      const hit = projects.filter(p=>norm(p.name).length>=3).sort((a,b)=>b.name.length-a.name.length)
+        .find(p=>new RegExp("(^|[^a-z0-9])"+esc(clean(p.name))+"([^a-z0-9]|$)","i").test(txt));
+      if(hit) return hit.name;
+      const a = ALIAS.find(([rx])=>rx.test(txt)); return a ? a[1] : "";
+    }
+    // Laporan mingguan: "WEEKLY REPORT", per orang, dengan bagian progress: / done: / kendala:
+    function isWeekly(lines){
+      const tx = lines.map(l=>clean(l.text));
+      return tx.some(t=>/^\**\s*weekly\s*report\s*\**$/i.test(t)) || tx.filter(t=>new RegExp("^["+BUL+"\\s*]*(progress|done|kendala)\\s*:","i").test(t)).length >= 3;
+    }
+    function parseWeekly(lines, defProj, defDate){
+      const BUG = /\b(bugs?|bugfix(?:ing)?|perbaikan|memperbaiki|error|issue|masalah|crash|stuck)\b|\bfix(?:ed|ing)?\b(?!\s*$)|belum bisa|can'?t|cannot/i;
+      const GENERIC = /^(bug\s*fix(?:ing)?|fix(?:ing)?\s*bug|bugfix(?:ing)?)(\s+\S+){0,2}$|^kendala\s+(di\s+)?bugs?(\s+\S+)?$/i;
+      const NONE = /^(belum ada(?: kendala)?|belom ada|tidak ada|tdk ada|nihil|none|n\/a|-+)\.?$/i;
+      const SECRX = /^(in\s*progress|progress|done|kendala)\s*(?::\s*(.*))?$/i;
+      const PERSON = /^(?:(?:mas|mbak|mba|pak|bu|kak)\s+[a-z]+|[a-z]{3,12})$/i;
+      const STAT = { done:"Fixed", kendala:"Open", progress:"In Progress" };
       const minX = Math.min(...lines.map(l=>l.x).filter(v=>isFinite(v)), 1e9);
-      const IGN = /^(bug report all product|april|mei|juni|juli|agustus|maret|februari|januari|bug report|report)$/i;
+      const items = []; let date = defDate || "", sec = "", hp = "", cur = null;
+      const pushItem = (txt, x)=>{ cur = { date, sec: sec || "done", hp, text: txt, x }; items.push(cur); };
       for(const L of lines){
         const t = clean(L.text); if(!t) continue;
+        const tt = t.replace(/^\*+|\*+$/g,"").trim();
+        if(/^(weekly|test|daily)\s*report$/i.test(tt)){ cur = null; sec = ""; hp = ""; continue; }
+        const dm = /^date\s*:?\s*(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/i.exec(t);
+        if(dm){ date = dm[3]+"-"+dm[2].padStart(2,"0")+"-"+dm[1].padStart(2,"0"); sec = ""; hp = ""; cur = null; continue; }
+        const body = t.replace(new RegExp("^(?:["+BUL+"]+\\s*|\\d{1,2}[.)]\\s+|\\*+\\s+)+"),"").trim(), hasBul = body !== t;
+        if(!body) continue;
+        const sm = SECRX.exec(body);
+        if(sm){ sec = /done/i.test(sm[1]) ? "done" : /kendala/i.test(sm[1]) ? "kendala" : "progress"; cur = null;
+          const rest = clean((sm[2]||"").replace(new RegExp("^["+BUL+"\\s]+"),"")); if(rest) pushItem(rest, L.x); continue; }
+        if(!hasBul){
+          const atLeft = isFinite(L.x) ? L.x <= minX + 4 : true;
+          if(atLeft && PERSON.test(t) && !NONE.test(t) && !/^(belum|belom|nihil|none|done)$/i.test(t)){ sec = ""; hp = ""; cur = null; continue; }   // nama orang
+          if(!sec){ hp = guessProj(t) || t.replace(/\(.*?\)/g,"").replace(/[:\s]+$/,"").trim(); cur = null; continue; }                       // judul produk
+          if(/^[A-Za-z][\w .&\/-]{0,30}:$/.test(t)){ hp = guessProj(t) || t.replace(/:$/,""); cur = null; continue; }                          // sub-judul "Care:"
+          if(cur && (/^[a-z(]/.test(t) || (isFinite(L.x) && L.x > cur.x + 4))){ cur.text += " " + t; continue; }                              // lanjutan kalimat
+        }
+        pushItem(body, L.x);
+      }
+      const out = [];
+      items.forEach(it=>{
+        const txt = clean(it.text); if(!txt || NONE.test(txt) || !BUG.test(txt) || GENERIC.test(txt)) return;
+        const st = /\b(masih|belum)\b/i.test(txt) ? "Open" : STAT[it.sec];
+        out.push({ date:it.date, proj: guessProj(txt) || it.hp || defProj || "Tanpa project", flag: it.sec==="progress" ? "Progress" : "", text:txt, status:st });
+      });
+      return out.filter(x=>x.date);
+    }
+    // lines: [{x, text}] ; x dipakai untuk membedakan judul (rata kiri) dan lanjutan kalimat (menjorok)
+    function parseBugLines(lines, defProj, defDate){
+      if(isWeekly(lines)) return parseWeekly(lines, defProj, defDate);
+      const out = []; let date = defDate || "", proj = "", flag = "", cur = null, stop = false, pr = false;
+      const minX = Math.min(...lines.map(l=>l.x).filter(v=>isFinite(v)), 1e9);
+      const IGN = /^(bug report all product|april|mei|juni|juli|agustus|maret|februari|januari|bug report|report|(?:weekly|test|daily)\s*report)$/i;
+      const BULRX = new RegExp("^(?:["+BUL+"]+|\\*+(?=\\s))\\s*(.*)$");
+      for(const L of lines){
+        const t = clean(L.text); if(!t) continue;
+        if(IGN.test(t.replace(/^\*+|\*+$/g,"").trim())){ cur = null; continue; }
         if(/^[-•\s=_*]*={3,}[-•\s=_*]*$/.test(t)){ cur = null; continue; }
         if(/^(awal\s+juli|report all product)/i.test(t)){ stop = true; }
         if(stop) break;
         const dm = /^date\s*:?\s*(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/i.exec(t);
         if(dm){ date = dm[3]+"-"+dm[2].padStart(2,"0")+"-"+dm[1].padStart(2,"0"); flag = ""; cur = null; continue; }
-        const bm = /^[-•▪*·]+\s*(.*)$/.exec(t);
+        const bm = BULRX.exec(t);
         if(bm){
-          const body = clean(bm[1].replace(/^[-•▪*·\s]+/,""));
+          const body = clean(bm[1].replace(new RegExp("^["+BUL+"*\\s]+"),""));
           if(!body || /^[-=_\s]+$/.test(body)){ continue; }
-          cur = { date, proj, flag, text: body }; out.push(cur); continue;
+          cur = { date, proj, flag, text: body, status: pr ? "Open" : "Fixed" }; out.push(cur); continue;
         }
         const isHead = isFinite(L.x) ? L.x <= minX + 4 : true;
-        if(isHead || !cur){
-          if(IGN.test(t)){ cur = null; continue; }
+        const openP = (t.match(/\(/g)||[]).length, closeP = (t.match(/\)/g)||[]).length;
+        const headLike = /^(pr\s+\S|bugs?\s*:?$|next\s*targets?\s*:?$|masih\s*pr$|enhancement$)/i.test(t)
+          || (t.length <= 45 && !/[,;]$/.test(t) && /^[A-Z0-9]/.test(t) && closeP <= openP);   // huruf kecil / kurung tutup tanpa pembuka = lanjutan kalimat
+        if(!cur || (isHead && headLike)){
+          let m;
           if(/^enhancement$/i.test(t)){ flag = "Enhancement"; cur = null; continue; }
           if(/^masih\s*pr$/i.test(t)){ proj = proj || "-"; flag = "Masih PR"; cur = null; continue; }
+          if((m = /^pr\s+(\S.*)$/i.exec(t))){ proj = m[1].replace(/[:\s]+$/,""); flag = "PR"; pr = true; cur = null; continue; }   // "PR FLEXa" = project Flexa; poin langsung di bawahnya = tugas
+          if(/^bugs?\s*:?$/i.test(t)){ flag = ""; cur = null; continue; }                                                         // sub-bagian "Bug"
+          if(/^next\s*targets?\s*:?$/i.test(t)){ flag = "Next target"; cur = null; continue; }                                    // sub-bagian "Next target"
           proj = t.replace(/[:\s]+$/,""); flag = ""; cur = null; continue;
         }
         cur.text += " " + t;   // lanjutan kalimat sebelumnya
       }
-      return out.filter(x=>x.date && x.proj);
+      return out.filter(x=>{ x.proj = x.proj || defProj || "Tanpa project"; return x.date; });
     }
     async function pdfToLines(buf){
       const lib = await cvLoadPdfJs();
@@ -4283,33 +4345,68 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       let q = 0.85, url = cv.toDataURL("image/jpeg", q); while(url.length > 450000 && q > 0.45){ q -= 0.1; url = cv.toDataURL("image/jpeg", q); }
       return url;
     }
+    // ---- susun baris tabel dari satu halaman. Murni (tanpa pdf.js) supaya bisa diuji. ----
+    // its: [{s,x,y}] ; imgs: [{id,top,bot,x,url}] ; heads: [{y,dX,sX,sect}] ; carry: header halaman sebelumnya
+    const HD_RX = /^(description|keterangan|deskripsi)$/i, HA_RX = /^(attachment|lampiran|gambar)$/i, HS_RX = /^status$/i;
+    function findHeads(its){
+      const hd = its.filter(i=>HD_RX.test(i.s)), out = [];
+      hd.forEach(d=>{
+        const a = its.find(i=>HA_RX.test(i.s) && Math.abs(i.y-d.y) < 5 && i.x < d.x), s = its.find(i=>HS_RX.test(i.s) && Math.abs(i.y-d.y) < 5 && i.x > d.x);
+        if(!a || !s) return;
+        // judul bagian = baris teks terdekat di atas header, di kolom kiri (mis. "SALVION BACKOFFICE")
+        const dX = (a.x + d.x)/2, sX = (d.x + s.x)/2;
+        const above = its.filter(i=>i.y > d.y + 5 && i.y < d.y + 60 && i.x < dX).sort((p,q)=>p.y-q.y);
+        let sect = "";
+        if(above.length){ const y0 = above[0].y; sect = clean(above.filter(i=>Math.abs(i.y-y0) < 3).sort((p,q)=>p.x-q.x).map(i=>i.s).join(" ")); }
+        if(/^(reported|ditemukan|bug report|\d)|\d{1,2}\/\d{1,2}\/\d{4}/i.test(sect)) sect = "";
+        out.push({ y:d.y, dX, sX, sect });
+      });
+      return out;
+    }
+    function layoutTableRows(its, imgs, heads, carry){
+      const H = heads.slice().sort((a,b)=>b.y-a.y);
+      const headFor = top=>{ let h = null; H.forEach(x=>{ if(x.y > top - 2) h = x; }); return h || carry || null; };   // header terdekat di atas gambar
+      const rows = [];
+      imgs.map(i=>({ ...i, H:headFor(i.top) })).filter(i=>i.H && i.x < i.H.dX).sort((a,b)=>b.top-a.top || a.x-b.x).forEach(i=>{
+        const R = rows.find(q=>q.H===i.H && Math.min(q.img.top, i.top) - Math.max(q.bot, i.bot) > 4);   // tinggi gambar saling tumpang tindih = satu baris tabel
+        if(R){ R.urls.push(i.url); R.bot = Math.min(R.bot, i.bot); } else rows.push({ img:i, H:i.H, bot:i.bot, urls:[i.url], desc:[], st:[] });
+      });
+      its.filter(i=>!H.some(h=>Math.abs(h.y-i.y) < 6)).sort((a,b)=>b.y-a.y || a.x-b.x).forEach(i=>{
+        let r = null; rows.forEach(R=>{ if(i.y <= R.img.top + 22 && i.y > R.bot - 400) r = R; });
+        if(!r || i.x < r.H.dX - 3) return;
+        if(i.x >= r.H.sX) r.st.push(i.s); else r.desc.push(i);
+      });
+      return rows.map(R=>{
+        const byY = []; R.desc.forEach(i=>{ const l = byY.find(q=>Math.abs(q.y-i.y)<2.5); if(l) l.p.push(i); else byY.push({ y:i.y, p:[i] }); });
+        let text = ""; byY.sort((a,b)=>b.y-a.y).forEach(l=>{ const t = l.p.sort((a,b)=>a.x-b.x).map(q=>q.s).join(" "); text += (text && /^(\d+[.)]|[-•])\s*/.test(t) ? "\n" : (text ? " " : "")) + t; });
+        return { text:text.replace(/\s+\n/g,"\n").trim(), status:clean(R.st.join(" ")), urls:R.urls, sect:R.H.sect };
+      });
+    }
+
     async function pdfToTable(buf){
       const lib = await cvLoadPdfJs();
-      const pdf = await lib.getDocument({ data:new Uint8Array(buf) }).promise, out = []; let dX = null, sX = null, hit = false;
+      const pdf = await lib.getDocument({ data:new Uint8Array(buf) }).promise, pend = []; let carry = null, docDate = "";
       for(let p=1; p<=Math.min(pdf.numPages,150); p++){
         const page = await pdf.getPage(p), tc = await page.getTextContent();
         const its = tc.items.filter(i=>clean(i.str)).map(i=>({ s:clean(i.str), x:i.transform[4], y:i.transform[5] }));
-        const hd = its.filter(i=>/^description$/i.test(i.s)), hs = its.filter(i=>/^status$/i.test(i.s)), ha = its.filter(i=>/^attachment$/i.test(i.s));
-        if(hd.length && hs.length && ha.length){ dX = (ha[0].x + hd[0].x)/2; sX = (hd[0].x + hs[0].x)/2; hit = true; }   // judul kolom rata tengah, jadi batas kolom = titik tengah antar judul
-        if(!hit) { if(p>=2) return null; continue; }
-        const hy = hd.length ? hd[0].y : 1e9;
-        const imgs = (await pdfImageData(page, lib)).filter(i=>i.x < dX).sort((a,b)=>b.top-a.top || a.x-b.x);
-        if(!imgs.length) continue;
-        const rows = [];   // gambar dengan tinggi atas sama = satu baris tabel (bisa lebih dari satu gambar)
-        imgs.forEach(i=>{ const R = rows.find(q=>Math.min(q.img.top, i.top) - Math.max(q.bot, i.bot) > 4); if(R){ R.urls.push(i.url); R.bot = Math.min(R.bot, i.bot); } else rows.push({ img:i, bot:i.bot, urls:[i.url], desc:[], st:[] }); });
-        its.filter(i=>i.y < hy - 4 && i.x >= dX - 3).sort((a,b)=>b.y-a.y || a.x-b.x).forEach(i=>{
-          let r = null; rows.forEach(R=>{ if(i.y <= R.img.top + 22) r = R; });
-          if(!r) return;
-          if(i.x >= sX) r.st.push(i.s); else if(i.x >= dX) r.desc.push(i);
-        });
-        for(const R of rows){
-          const byY = []; R.desc.forEach(i=>{ const l = byY.find(q=>Math.abs(q.y-i.y)<2.5); if(l) l.p.push(i); else byY.push({ y:i.y, p:[i] }); });
-          let text = ""; byY.sort((a,b)=>b.y-a.y).forEach(l=>{ const t = l.p.sort((a,b)=>a.x-b.x).map(q=>q.s).join(" "); text += (text && /^(\d+[.)]|[-•])\s*/.test(t) ? "\n" : (text ? " " : "")) + t; });
-          text = text.replace(/\s+\n/g,"\n").trim();
-          if(text) out.push({ text, status:clean(R.st.join(" ")), img:await stitchImgs(R.urls) });
+        const heads = findHeads(its);
+        if(!carry && !heads.length){ if(p>=2) return null; continue; }
+        if(!docDate && heads.length){   // tanggal di judul dokumen (di atas tabel pertama), mis. 16/09/2026
+          const top = heads.reduce((m,h)=>Math.max(m,h.y), 0);
+          const dm = its.filter(i=>i.y > top).map(i=>/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/.exec(i.s)).find(Boolean);
+          if(dm) docDate = dm[3]+"-"+dm[2].padStart(2,"0")+"-"+dm[1].padStart(2,"0");
         }
+        const imgs = await pdfImageData(page, lib);
+        layoutTableRows(its, imgs, heads, carry).forEach(r=>{
+          if(!r.text && !r.status && pend.length) pend[pend.length-1].urls.push(...r.urls);   // baris hanya gambar = lanjutan screenshot bug sebelumnya
+          else if(r.text) pend.push(r);
+        });
+        if(heads.length) carry = heads.slice().sort((a,b)=>a.y-b.y)[0];
       }
-      return hit ? out : null;
+      if(!carry) return null;
+      const out = [];
+      for(const R of pend) out.push({ text:R.text, status:R.status, sect:R.sect, date:docDate, img:await stitchImgs(R.urls) });
+      return out;
     }
     function textToLines(txt){
       const raw = String(txt||"").replace(/\r/g,"").split("\n");
@@ -4324,10 +4421,10 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     function openImport(){
       const ov = document.createElement("div"); ov.className = "modal-overlay";
       ov.innerHTML = '<div class="modal-box" style="max-width:980px; width:96vw; max-height:92vh; overflow:auto;"><h3 style="margin:0 0 4px;">Impor bug lama dari PDF / teks</h3>'+
-        '<div class="hint" style="margin:0 0 10px;">Format yang dibaca: baris <b>Date: 27/04/2026</b>, lalu judul project (mis. <b>Flexa.Asia</b>), lalu poin bug diawali tanda <b>-</b> atau <b>•</b>. Hasilnya bisa kamu cek dan ubah dulu sebelum disimpan.</div>'+
+        '<div class="hint" style="margin:0 0 10px;">Format yang dibaca: (1) <b>Date: 27/04/2026</b> → judul project (mis. <b>Flexa.Asia</b>) → poin bug diawali <b>-</b>, <b>•</b> atau nomor; (2) <b>Test report</b>: judul <b>PR Flexa</b> dengan sub-bagian <b>Bug</b> / <b>Next target</b>; (3) <b>Weekly report</b> per orang (progress / done / kendala) — hanya baris yang menyebut bug/fix/perbaikan/issue yang diambil. Baris PR, Next target, dan progress ikut tampil tapi tidak dicentang. Hasilnya bisa kamu cek dan ubah dulu sebelum disimpan.</div>'+
         '<div class="row-flex" style="gap:8px; flex-wrap:wrap; align-items:center;"><input type="file" id="biFile" accept=".pdf,.txt,application/pdf,text/plain" style="width:auto;"><span class="hint" style="margin:0;">atau tempel teks:</span></div>'+
         '<textarea id="biText" rows="3" placeholder="Tempel teks laporan bug di sini (opsional)" style="margin-top:6px;"></textarea>'+
-        '<div class="row-flex" style="gap:10px; flex-wrap:wrap; margin-top:6px;"><div><label style="margin:0;">Project (bila di file tidak ada judul project)</label><input type="text" id="biProj" placeholder="mis. Flexa Asia"></div><div><label style="margin:0;">Tanggal (bila di file tidak ada tanggal)</label><input type="date" id="biDate"></div></div>'+
+        '<div class="row-flex" style="gap:10px; flex-wrap:wrap; margin-top:6px;"><div><label style="margin:0;">Project (bila di file tidak ada judul project)</label><input type="text" id="biProj" list="biProjList" placeholder="ketik atau pilih project"><datalist id="biProjList">'+projects.map(p=>'<option value="'+esc(p.name)+'">').join("")+'</datalist></div><div><label style="margin:0;">Tanggal (bila di file tidak ada tanggal)</label><input type="date" id="biDate"></div></div>'+
         '<div class="row-flex" style="margin-top:6px;"><button type="button" id="biRead" class="primary">Baca</button><span class="hint" id="biMsg" style="margin:0;"></span></div>'+
         '<div id="biPrev" style="margin-top:12px;"></div>'+
         '<div class="modal-actions"><button type="button" id="biX">Tutup</button></div></div>';
@@ -4335,17 +4432,29 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       const $i = q=>ov.querySelector(q); let items = [];
       $i("#biX").onclick = ()=>ov.remove();
       $i("#biDate").value = todayStr();
-      $i("#biFile").onchange = ()=>{ const f = $i("#biFile").files[0]; if(f && !$i("#biProj").value) $i("#biProj").value = f.name.replace(/\.[^.]+$/,"").replace(/^[0-9a-f]{8}[-_]/i,"").replace(/[_\-().]+/g," ").replace(/\b(bug|report|laporan|all|product)\b/gi," ").replace(/\b\d+\b/g," ").replace(/\s+/g," ").trim().toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()); };
+      $i("#biFile").onchange = ()=>{ const f = $i("#biFile").files[0]; if(f && !$i("#biProj").value) $i("#biProj").value = f.name.replace(/\.[^.]+$/,"").replace(/^[0-9a-f]{8}[-_]/i,"").replace(/[_\-().]+/g," ").replace(/\b(bug|report|laporan|all|product|docx?|pdf|untitled|document|copy|update)\b/gi," ").replace(/\b\d+\b/g," ").replace(/\s+/g," ").trim().toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()); };
       function projSel(it, k){
-        const known = matchProject(it.projName), opts = projects.map(p=>'<option value="'+p.id+'"'+(p.id===known?' selected':'')+'>'+esc(p.name)+'</option>').join("");
-        return '<select data-k="'+k+'" data-f="proj" style="min-width:140px;"><option value="__new__"'+(known?'':' selected')+'>＋ Baru: '+esc(it.projName)+'</option>'+opts+'</select>';
+        const opts = projects.map(p=>'<option value="'+p.id+'"'+(p.id===it.proj?' selected':'')+'>'+esc(p.name)+'</option>').join("");
+        return '<select data-k="'+k+'" data-f="proj" style="min-width:140px;"><option value="__new__"'+(it.proj==="__new__"?' selected':'')+'>＋ Baru: '+esc(it.projName)+'</option>'+opts+'</select>';
       }
+      let baseProj = "";
+      const projOpts = ()=>projects.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join("");
+      const titleCase = t=>String(t||"").toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
+      const sectList = ()=>Array.from(new Set(items.map(x=>x.sect).filter(Boolean)));
+      function projBulk(){
+        const sects = sectList();
+        let h = '<div class="row-flex" style="gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;"><label style="margin:0;">Pindahkan yang dicentang ke project</label><select id="biBulkProj" style="width:auto; min-width:160px;"><option value="">(pilih project)</option>'+projOpts()+'<option value="__new__">＋ Project baru…</option></select><button type="button" id="biBulkGo">Terapkan</button></div>';
+        if(sects.length) h += '<div style="margin-bottom:8px; padding:8px 10px; border:1px solid var(--border); border-radius:10px;"><div class="hint" style="margin:0 0 6px;">File ini punya beberapa bagian. Pilih project untuk setiap bagian sekaligus:</div><div class="row-flex" style="gap:8px 14px; flex-wrap:wrap;">'+
+          sects.map((sc,i)=>'<label style="margin:0; font-size:12px;">'+esc(sc)+' ('+items.filter(x=>x.sect===sc).length+') <select data-sect="'+i+'" style="width:auto; min-width:150px;"><option value="">(biarkan)</option>'+projOpts()+'<option value="__new__:file">＋ Baru: '+esc(baseProj||"Tanpa project")+'</option><option value="__new__:sect">＋ Baru: '+esc(titleCase(sc))+'</option></select></label>').join("")+'</div></div>';
+        return h;
+      }
+      function setProj(list, v, name){ list.forEach(it=>{ if(v==="__new__"){ it.proj = "__new__"; it.projName = name; } else it.proj = v; }); }
       function renderPrev(){
-        if(!items.length){ $i("#biPrev").innerHTML = '<div class="empty-state">Tidak ada bug yang terbaca. Pastikan ada baris "Date: dd/mm/yyyy" dan judul project.</div>'; return; }
+        if(!items.length){ $i("#biPrev").innerHTML = '<div class="empty-state">Tidak ada bug yang terbaca. Pastikan ada baris "Date: dd/mm/yyyy" (atau isi kolom Tanggal) dan judul project (atau isi kolom Project).</div>'; return; }
         const stOpts = ["Fixed","Open","In Progress","Rejected"].map(s=>'<option>'+s+'</option>').join("");
         $i("#biPrev").innerHTML = '<div class="row-flex" style="gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:8px;"><b id="biCnt"></b>'+
           '<label style="margin:0;">Ubah status semua jadi</label><select id="biStatus" style="width:auto;"><option value="">(biarkan)</option>'+stOpts+'</select><button type="button" id="biSetSt">Terapkan</button>'+
-          '<button type="button" id="biAll">Pilih semua</button><button type="button" id="biNone">Kosongkan</button></div>'+
+          '<button type="button" id="biAll">Pilih semua</button><button type="button" id="biNone">Kosongkan</button></div>'+projBulk()+
           '<div style="overflow:auto; max-height:46vh;"><table><thead><tr><th></th><th>Gambar</th><th>Tanggal</th><th>Project</th><th>Bug (Existing)</th><th>Status</th><th></th></tr></thead><tbody>'+
           items.map((it,k)=>'<tr><td><input type="checkbox" data-k="'+k+'" data-f="on" style="width:auto;"'+(it.on?' checked':'')+'></td>'+
             '<td>'+(it.img ? '<img src="'+it.img+'" style="width:54px; height:auto; border-radius:6px; border:1px solid var(--border);">' : '')+'</td>'+
@@ -4362,6 +4471,19 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         $i("#biAll").onclick = ()=>{ items.forEach(x=>x.on = true); renderPrev(); };
         $i("#biNone").onclick = ()=>{ items.forEach(x=>x.on = false); renderPrev(); };
         $i("#biSave").onclick = save;
+        $i("#biBulkGo").onclick = ()=>{
+          let v = $i("#biBulkProj").value; if(!v){ toast("Pilih project tujuan dulu."); return; }
+          const sel = items.filter(x=>x.on); if(!sel.length){ toast("Tidak ada yang dicentang."); return; }
+          let nm = ""; if(v==="__new__"){ nm = (prompt("Nama project baru:", baseProj||"")||"").trim(); if(!nm) return; const ex = matchProject(nm); if(ex) v = ex; }
+          setProj(sel, v, nm); renderPrev();
+        };
+        $i("#biPrev").querySelectorAll("[data-sect]").forEach(sel=>sel.onchange = ()=>{
+          const sc = sectList()[+sel.dataset.sect], v = sel.value; if(!v) return;
+          const list = items.filter(x=>x.sect===sc);
+          if(v.startsWith("__new__")){ const nm = v==="__new__:sect" ? titleCase(sc) : (baseProj||"Tanpa project"); const ex = matchProject(nm); setProj(list, ex || "__new__", nm); }
+          else setProj(list, v, "");
+          renderPrev();
+        });
       }
       async function save(){
         const sel = items.filter(x=>x.on && x.text.trim() && x.date); if(!sel.length){ toast("Tidak ada yang dicentang."); return; }
@@ -4393,13 +4515,14 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
           const seen = new Set(), exist = new Set(entries.map(e=>e.projectId+"|"+norm(e.existing)));
           items = [];
           const stOf = t=>/^(done|selesai|fixed|closed|ok)/i.test(t) ? "Fixed" : /progress|proses/i.test(t) ? "In Progress" : /reject|tolak/i.test(t) ? "Rejected" : "Open";
-          const src = tbl ? tbl.map(r=>({ date:defDate, proj:defProj, flag:"", text:r.text, img:r.img, status:stOf(r.status), noSt:!r.status })) : parseBugLines(lines).map(b=>({ ...b, status:"Fixed" }));
+          baseProj = defProj;
+          const src = tbl ? tbl.map(r=>({ date:r.date||defDate, proj:(r.sect && guessProj(r.sect)) || defProj, sect:r.sect||"", flag:"", text:r.text, img:r.img, status:stOf(r.status), noSt:!r.status })) : parseBugLines(lines, defProj, defDate).map(b=>({ status:"Fixed", ...b }));
           src.forEach(b=>{
             const pid = matchProject(b.proj), key = norm(b.proj)+"|"+norm(b.text);
             if(seen.has(key)) return; seen.add(key);
             const dup = pid && exist.has(pid+"|"+norm(b.text));
             const skipFlag = !!b.flag;
-            items.push({ ...b, projName:b.proj, proj: pid || "__new__", on: !dup && !skipFlag, note: dup ? "Sudah ada di Kelola Bug" : b.flag ? b.flag+" (bukan bug, tidak dicentang)" : b.noSt ? "Tanpa status di file, diset Open" : "" });
+            items.push({ ...b, projName:b.proj, proj: pid || "__new__", on: !dup && !skipFlag, note: (b.sect ? b.sect+" · " : "") + (dup ? "Sudah ada di Kelola Bug" : b.flag ? b.flag+" (bukan bug, tidak dicentang)" : b.noSt ? "Tanpa status di file, diset Open" : "") });
           });
           msg.textContent = items.length+" bug terbaca."; renderPrev();
         }catch(e){ msg.textContent = "Gagal membaca: "+(e.message||e); }
@@ -10598,7 +10721,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
     const from = defaults.from || todayStr();
     const to = defaults.to || from;
     const preStatuses = defaults.statuses || STATUS_OPTS;
-    let tplPref = "1"; try{ tplPref = localStorage.getItem("qa_pdf_tpl") === "2" ? "2" : "1"; }catch(_){}
+    let tplPref = "1"; try{ const t = localStorage.getItem("qa_pdf_tpl"); tplPref = (t === "2" || t === "3") ? t : "1"; }catch(_){}
     const overlay = document.createElement("div");
     overlay.className = "modal-overlay";
     overlay.innerHTML =
@@ -10606,8 +10729,9 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
         '<h3 style="margin:0 0 4px;">Opsi Export PDF</h3>'+
         '<label>Template PDF</label>'+
         '<div class="col-picker-list" style="grid-template-columns:1fr;">'+
-          '<label><input type="radio" name="cpTpl" value="1" '+(tplPref==="2"?'':'checked')+'> Template 1 — Tabel (ringkas, gambar kecil)</label>'+
+          '<label><input type="radio" name="cpTpl" value="1" '+(tplPref==="1"?'checked':'')+'> Template 1 — Tabel (ringkas, gambar kecil)</label>'+
           '<label><input type="radio" name="cpTpl" value="2" '+(tplPref==="2"?'checked':'')+'> Template 2 — Gambar besar (per bug, teks di bawah gambar)</label>'+
+          '<label><input type="radio" name="cpTpl" value="3" '+(tplPref==="3"?'checked':'')+'> Template 3 — Bug Report QA (Attachment | Keterangan | Status, seperti laporan Flexa / Salvion; pilihan kolom di bawah diabaikan)</label>'+
         '</div>'+
         '<label>Status yang di-export</label>'+
         '<div class="col-picker-list">'+
@@ -10658,7 +10782,7 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
       }
       const selected = {};
       overlay.querySelectorAll("[data-col]").forEach(cb=>{ selected[cb.dataset.col] = cb.checked; });
-      const tplEl = overlay.querySelector('[name="cpTpl"]:checked'), tpl = tplEl && tplEl.value === "2" ? "2" : "1";
+      const tplEl = overlay.querySelector('[name="cpTpl"]:checked'), tpl = tplEl && (tplEl.value === "2" || tplEl.value === "3") ? tplEl.value : "1";
       try{ localStorage.setItem("qa_pdf_tpl", tpl); }catch(_){}
       overlay.remove();
       onConfirm(selected, { statuses, allDates, from:f, to:t, carry: carryCb.checked, ai: overlay.querySelector("#cpAi").checked, tpl });
@@ -10722,7 +10846,49 @@ window.KN_SEED = [{"name": "TSS (Takaful Smart Submit)", "company": "PT Seleris 
   }
 
   // ================= PDF export (jsPDF + AutoTable) =================
+  // Template 3: format laporan bug QA — judul, tanggal, "Reported by", tabel Attachment | Keterangan | Status
+  async function buildQaTemplatePdf(title, rows, includeProjectCol, filenameBase){
+    if(!window.jspdf){ toast("Library PDF gagal dimuat."); return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:"mm", format:"a4", orientation:"portrait" });
+    const pageW = doc.internal.pageSize.getWidth(), mx = 16, availW = pageW - mx*2, IMGW = 56, STW = 26, MAXH = 150;
+    const T = (typeof title === "string") ? { main:title } : title, parts = T.main.split(" \u2014 ");
+    const projLabel = (parts.length > 1 ? parts.slice(1).join(" - ") : T.main);
+    const multi = !!includeProjectCol && new Set(rows.map(r=>r.projectName).filter(Boolean)).size > 1;
+    const repDate = rows.reduce((m,r)=>(r.date && r.date > m ? r.date : m), "") || todayStr();
+    doc.setTextColor(0,0,0); doc.setFont("helvetica","bold"); doc.setFontSize(20);
+    doc.text(pdfText("BUG REPORT" + (multi ? "" : " " + projLabel.toUpperCase())), pageW/2, 24, { align:"center" });
+    doc.setFont("helvetica","normal"); doc.setFontSize(11);
+    doc.text(fmtDate(repDate), pageW/2, 31, { align:"center" });
+    doc.text("Reported by QA Seleris", pageW - mx, 40, { align:"right" });
+    doc.text("Ditemukan " + rows.length + " bug.", mx, 40);
+    const infos = await Promise.all(rows.map(async r=>{ if(!r.imageData) return null; const d = await loadImageDims(r.imageData); return d ? { url:r.imageData, w:d.w, h:d.h } : null; }));
+    const body = [], meta = []; let lastProj = null;
+    rows.forEach((r,i)=>{
+      if(multi && r.projectName !== lastProj){ lastProj = r.projectName; body.push([{ content:pdfText(r.projectName) || "-", colSpan:3, styles:{ fontStyle:"bold", fillColor:[238,238,252], halign:"left" } }]); meta.push(null); }
+      const info = infos[i]; let dw = 0, dh = 0;
+      if(info){ const sc = Math.min((IMGW-4)/info.w, MAXH/info.h); dw = info.w*sc; dh = info.h*sc; }
+      const desc = [pdfText(r.existing) || "-"].concat(r.expected ? ["", "Expected: " + pdfText(r.expected)] : []).join("\n");
+      body.push([{ content:"", styles:{ minCellHeight: info ? dh + 4 : 10 } }, desc, r.status === "Fixed" ? "DONE" : String(r.status || "").toUpperCase()]);
+      meta.push(info ? { info, dw, dh } : null);
+    });
+    doc.autoTable({
+      startY: 46, margin:{ left:mx, right:mx, top:16, bottom:17 }, tableWidth: availW,
+      head:[["Attachment","Keterangan","Status"]], body, theme:"grid",
+      styles:{ font:"helvetica", fontSize:10.5, textColor:[0,0,0], cellPadding:2.5, valign:"top", lineColor:[0,0,0], lineWidth:0.3, overflow:"linebreak" },
+      headStyles:{ fillColor:[255,255,0], textColor:[0,0,0], fontStyle:"bold", halign:"center" },
+      columnStyles:{ 0:{ cellWidth:IMGW }, 1:{ cellWidth:availW - IMGW - STW }, 2:{ cellWidth:STW } },
+      didDrawCell: d=>{
+        if(d.section !== "body" || d.column.index !== 0) return;
+        const m = meta[d.row.index]; if(!m) return;
+        try{ doc.addImage(m.info.url, /^data:image\/png/i.test(m.info.url) ? "PNG" : "JPEG", d.cell.x + (d.cell.width - m.dw)/2, d.cell.y + 2, m.dw, m.dh); }catch(e){}
+      }
+    });
+    pdfFooter(doc, "Bug Report - " + pdfText(multi ? "Semua Project" : projLabel), mx);
+    toast(pdfDownload(doc, filenameBase + "_qa.pdf") ? "PDF Bug Report berhasil dibuat." : "Gagal membuat PDF.");
+  }
   async function buildAndSavePdf(title, rows, includeProjectCol, filenameBase, selectedCols, aiRows, tpl){
+    if(tpl === "3") return buildQaTemplatePdf(title, rows, includeProjectCol, filenameBase);
     tpl = tpl === "2" ? "2" : "1";
     if(!window.jspdf){ toast("Library PDF gagal dimuat."); return; }
     const { jsPDF } = window.jspdf;
